@@ -1,0 +1,1 @@
+../../../devcontext/.claude/CRITICAL_FILE_PLACEMENT_RULES.md

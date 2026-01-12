@@ -1,0 +1,1 @@
+../../../devcontext/.claude/commands/zerodb-table-insert.md

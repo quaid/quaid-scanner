@@ -1,0 +1,1 @@
+../../../devcontext/.claude/STRAPI_GUIDELINES.md

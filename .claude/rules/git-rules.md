@@ -1,0 +1,1 @@
+../../../devcontext/.claude/git-rules.md
