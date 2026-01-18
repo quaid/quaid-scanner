@@ -4,9 +4,11 @@
 
 **Product:** `oss-repo-check` - A Strategic Repository Health Orchestrator
 
-**Vision:** Transform from a basic documentation linter into a comprehensive OSS health auditor that evaluates security, legal compliance, community health, AI-readiness, and inclusive practices. Designed for Open Source Program Offices (OSPOs), engineering managers, and AI agents evaluating tool safety.
+**Vision:** Evolve from mechanical *verification* (does this file exist?) to intelligent *valuation* (what is the semantic quality, strategic intent, and sociotechnical health of this project?). This tool supports the full lifecycle of open source engagement: **Attracting Users**, **Growing Participants**, and **Cultivating Contributors** as defined by The Open Source Way 2.0.
 
 **Platform:** Node.js package with Claude Code skills integration, leveraging AINative services for semantic analysis, persistent storage, and intelligent reporting.
+
+**Paradigm:** The most significant risks to modern projects are not syntactical errors in code, but sociotechnical failures—burnout, toxic exclusionary cultures, legal ambiguity, and supply chain fragility. Therefore, this tool prioritizes "Health as Code," treating community documentation and governance structures with the same rigor as the software itself.
 
 ---
 
@@ -34,6 +36,86 @@ Modern open source risk management extends beyond code quality:
 | **D** | AI-Native & Agentic Readiness | HuggingFace Model Cards |
 | **E** | Inclusive Language & Accessibility | Inclusive Naming Initiative |
 | **F** | Technical Rigor & Automation | SemVer, Linting Standards |
+
+---
+
+## Maturity Context Scoring
+
+Scoring must be **contextual**. A "Sandbox" project (experimental, 1 maintainer) should not be penalized for lacking the rigorous governance of a "Graduated" project (production, 50 maintainers).
+
+### Maturity Levels
+
+| Level | Description | Expected Characteristics |
+|-------|-------------|-------------------------|
+| **Sandbox** | Early-stage, experimental | Single maintainer OK, basic docs, learning project |
+| **Incubating** | Growing adoption | 2-3 maintainers, complete docs, active community |
+| **Graduated** | Production-ready | 3+ maintainers, governance docs, foundation/corporate backing possible |
+| **Archived** | Maintenance mode | Stable, feature-complete, security patches only |
+
+### Detection Strategy
+
+**Auto-Detection Signals (default):**
+
+| Signal | Sandbox | Incubating | Graduated |
+|--------|---------|------------|-----------|
+| Stars | < 100 | 100-1000 | > 1000 |
+| Contributors (6mo) | 1-2 | 3-10 | > 10 |
+| Release count | 0-2 | 3-10 | > 10 |
+| Days since release | Any | < 365 | < 180 |
+| Has GOVERNANCE.md | No | Optional | Yes |
+| Has SECURITY.md | Optional | Yes | Yes |
+| CI/CD configured | Optional | Yes | Yes |
+
+**Override via CLI:**
+```bash
+oss-repo-check . --maturity sandbox      # Expect less
+oss-repo-check . --maturity graduated    # Expect enterprise-grade
+oss-repo-check . --maturity auto         # Default: auto-detect
+```
+
+**Override via Config:**
+```yaml
+# .oss-repo-check.yaml
+maturity: incubating
+```
+
+### Contextual Scoring Modifiers
+
+| Check | Sandbox Impact | Incubating Impact | Graduated Impact |
+|-------|----------------|-------------------|------------------|
+| Bus Factor = 1 | INFO | WARNING | CRITICAL |
+| No GOVERNANCE.md | INFO | WARNING | CRITICAL |
+| No SECURITY.md | WARNING | CRITICAL | CRITICAL |
+| Response Time > 7d | INFO | WARNING | CRITICAL |
+| Single vendor >80% | INFO | INFO | WARNING |
+
+---
+
+## External Tool Strategy
+
+### Shell Out (Authoritative External Tools)
+
+| Tool | Rationale |
+|------|-----------|
+| **OpenSSF Scorecard CLI** | Industry-standard 18-point security checklist; too complex to reimplement correctly; frequent updates |
+
+**Implementation:**
+```bash
+# Execute scorecard via containerized CLI
+docker run -e GITHUB_AUTH_TOKEN gcr.io/openssf/scorecard:stable \
+  --repo=github.com/owner/repo --format=json
+```
+
+**Fallback:** When Scorecard unavailable (no Docker, network issues), implement local subset of checks.
+
+### Native Implementation (Full Control)
+
+| Domain | Rationale |
+|--------|-----------|
+| **License Scanning** | Simple SPDX matching + compatibility matrix; no external dependencies needed |
+| **Community Metrics** | Git log parsing + GitHub API; GrimoireLab too heavy for lightweight CLI |
+| **Inclusive Language** | Regex patterns; configurable word lists |
+| **Documentation Quality** | Section detection + semantic search via ZeroDB |
 
 ---
 
@@ -133,18 +215,29 @@ Modern open source risk management extends beyond code quality:
 **I want** OpenSSF Scorecard metrics
 **So that** I can assess supply chain security
 
+> **Implementation Strategy:** Shell out to OpenSSF Scorecard CLI (authoritative, frequently updated) with local fallback when unavailable.
+
 **Acceptance Criteria:**
 
 | # | Criterion | Verification |
 |---|-----------|--------------|
-| 2.1.1 | Query OpenSSF Scorecard API: `GET https://api.securityscorecards.dev/projects/github.com/{owner}/{repo}` | API response 200 |
-| 2.1.2 | Parse all 18 check categories from response | All categories extracted |
-| 2.1.3 | Map Scorecard checks to findings: score < 5 = CRITICAL, 5-7 = WARNING, >= 8 = PASS | Mapping correct |
-| 2.1.4 | Handle API unavailable: fall back to local checks with `scorecard_api: false` flag | Graceful degradation |
-| 2.1.5 | Cache API responses in **ZeroDB Tables** with 24-hour TTL | Cache hit on repeat scan |
-| 2.1.6 | Store historical scores in **ZeroDB PostgreSQL** table `scorecard_history(repo, date, score, checks_json)` | Insert succeeds |
-| 2.1.7 | Calculate trend: compare current score to 7-day, 30-day, 90-day averages | Trend direction reported |
-| 2.1.8 | Local fallback checks: Binary-Artifacts, Branch-Protection, CI-Tests, Code-Review, Dependency-Update-Tool, Maintained, Pinned-Dependencies, SAST, Security-Policy, Signed-Releases, Token-Permissions, Vulnerabilities | 12 local checks implemented |
+| 2.1.1 | **Primary:** Execute OpenSSF Scorecard via Docker CLI | Shell execution |
+
+```bash
+docker run -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
+  gcr.io/openssf/scorecard:stable \
+  --repo=github.com/{owner}/{repo} \
+  --format=json
+```
+
+| 2.1.2 | **Alternative:** Query Scorecard API if Docker unavailable: `GET https://api.securityscorecards.dev/projects/github.com/{owner}/{repo}` | API fallback |
+| 2.1.3 | Parse all 18 check categories from JSON output | All categories extracted |
+| 2.1.4 | Map Scorecard checks to findings: score < 5 = CRITICAL, 5-7 = WARNING, >= 8 = PASS | Mapping correct |
+| 2.1.5 | Handle both Docker and API unavailable: fall back to local checks with `scorecard_source: local` flag | Graceful degradation |
+| 2.1.6 | Cache responses in **ZeroDB Tables** with 24-hour TTL | Cache hit on repeat scan |
+| 2.1.7 | Store historical scores in **ZeroDB PostgreSQL** table `scorecard_history(repo, date, score, checks_json, source)` | Insert succeeds |
+| 2.1.8 | Calculate trend: compare current score to 7-day, 30-day, 90-day averages | Trend direction reported |
+| 2.1.9 | **Local Fallback Checks** (when Scorecard unavailable): | Native implementation |
 
 **OpenSSF Scorecard Checks Reference:**
 
@@ -370,36 +463,51 @@ Modern open source risk management extends beyond code quality:
 
 ---
 
-### Story 3.4: Bus Factor Analysis (GOV-04)
+### Story 3.4: Bus Factor & Vendor Neutrality Analysis (GOV-04)
 **As a** risk manager
-**I want** bus factor calculation
-**So that** I can assess maintainer concentration risk
+**I want** bus factor and vendor concentration analysis
+**So that** I can assess maintainer concentration risk and vendor lock-in
 
 **Acceptance Criteria:**
 
 | # | Criterion | Verification |
 |---|-----------|--------------|
-| 3.4.1 | Query git log for last 6 months: `git log --since="6 months ago" --format="%ae"` | Git command |
+| 3.4.1 | Query git log for last 12 months: `git log --since="12 months ago" --format="%ae"` | Git command |
 | 3.4.2 | Normalize email addresses (lowercase, map known aliases) | Email normalization |
-| 3.4.3 | Calculate commits per unique contributor | Count aggregation |
-| 3.4.4 | **Bus Factor** = minimum contributors needed to account for 50% of commits | Calculation |
-| 3.4.5 | **Elephant Factor** = % of commits from top contributor | Calculation |
-| 3.4.6 | CRITICAL if Bus Factor = 1 | Threshold check |
-| 3.4.7 | WARNING if Bus Factor <= 2 or Elephant Factor > 50% | Threshold check |
-| 3.4.8 | PASS if Bus Factor >= 3 and Elephant Factor < 50% | Threshold check |
-| 3.4.9 | Query GitHub API for org affiliation of top contributors | API integration |
-| 3.4.10 | WARNING if >70% of commits from single organization | Org concentration |
-| 3.4.11 | Store contributor distribution in **ZeroDB PostgreSQL** | Data persistence |
-| 3.4.12 | Report: bus factor, elephant factor, top 5 contributors with % | Summary generation |
+| 3.4.3 | **Exclude unidentifiable domains:** Filter out `noreply@github.com`, `users.noreply.github.com` from domain analysis | Privacy handling |
+| 3.4.4 | For GitHub noreply addresses, extract username but mark domain as "unknown" | Username extraction |
+| 3.4.5 | Calculate commits per unique contributor | Count aggregation |
+| 3.4.6 | **Bus Factor** = minimum contributors needed to account for 50% of commits | Calculation |
+| 3.4.7 | **Elephant Factor** = % of commits from top contributor | Calculation |
+| 3.4.8 | CRITICAL if Bus Factor = 1 (maturity-aware: INFO for Sandbox) | Threshold check |
+| 3.4.9 | WARNING if Bus Factor <= 2 or Elephant Factor > 50% | Threshold check |
+| 3.4.10 | PASS if Bus Factor >= 3 and Elephant Factor < 50% | Threshold check |
 
-**Story Points:** 3
+**Vendor Neutrality Analysis:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 3.4.11 | Extract email domains from top 10 committers (by commit count) | Domain extraction |
+| 3.4.12 | Group commits by corporate domain (e.g., `@google.com`, `@microsoft.com`, `@amazon.com`) | Domain grouping |
+| 3.4.13 | **Single Vendor Concentration:** Calculate % of commits from largest single domain | Percentage |
+| 3.4.14 | WARNING if >70% of commits from single corporate domain | Vendor lock-in risk |
+| 3.4.15 | CRITICAL if >90% from single corporate domain (for Graduated maturity) | High lock-in |
+| 3.4.16 | Cross-reference with governance model: Flag contradiction if "Meritocracy" claimed but single vendor | Consistency check |
+| 3.4.17 | **Succession Planning:** Scan governance docs for "Emeritus", "succession", "handover" | Keyword detection |
+| 3.4.18 | INFO if no succession planning documented (for projects with Bus Factor <= 2) | Planning gap |
+| 3.4.19 | Store contributor distribution and vendor analysis in **ZeroDB PostgreSQL** | Data persistence |
+| 3.4.20 | Report: bus factor, elephant factor, top 5 contributors with %, vendor concentration %, succession plan status | Summary generation |
+
+**AINative Integration:** Track vendor concentration trends over time in ZeroDB
+
+**Story Points:** 5
 
 ---
 
-### Story 3.5: Asset Protection Check (GOV-05)
+### Story 3.5: Asset Protection & Legal Barrier Automation (GOV-05)
 **As a** legal advisor
-**I want** trademark and export control checks
-**So that** I can verify commercial OSS compliance
+**I want** trademark, export control, and contribution agreement checks
+**So that** I can verify commercial OSS compliance and contributor friction
 
 **Acceptance Criteria:**
 
@@ -407,60 +515,293 @@ Modern open source risk management extends beyond code quality:
 |---|-----------|--------------|
 | 3.5.1 | Check for trademark files: `TRADEMARK`, `TRADEMARKS.md`, `docs/trademark*` | File detection |
 | 3.5.2 | Check for export control: `EXPORT`, `ECCN`, pattern "Export Control" in README | Text search |
-| 3.5.3 | Check for CLA: `CLA.md`, `.github/CLA.md`, "CLA" section in CONTRIBUTING | File/section detection |
-| 3.5.4 | Check for DCO: "DCO", "Developer Certificate of Origin", "Signed-off-by" requirement | Text search |
-| 3.5.5 | INFO if no trademark policy (recommended for projects with brand) | Finding generated |
-| 3.5.6 | INFO if no CLA/DCO (recommended for corporate contributions) | Finding generated |
-| 3.5.7 | PASS if CLA or DCO documented | Presence check |
-| 3.5.8 | Detect CLA bot integration: `.clabot`, `cla-assistant` in workflows | File/config detection |
+| 3.5.3 | INFO if no trademark policy (recommended for projects with established brand) | Finding generated |
 
-**Story Points:** 2
+**CLA/DCO Automation Detection:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 3.5.4 | Check for CLA documentation: `CLA.md`, `.github/CLA.md`, "CLA" section in CONTRIBUTING | File/section detection |
+| 3.5.5 | Check for DCO requirement: "DCO", "Developer Certificate of Origin", "Signed-off-by" | Text search |
+| 3.5.6 | **Bot Automation Detection:** | GitHub App check |
+
+| CLA/DCO Bot | Detection Method |
+|-------------|------------------|
+| `cla-assistant` | `.github/workflows/*` containing `cla-assistant/github-action` |
+| `cla-bot` | `.clabot` config file |
+| `dco-app` | Workflow containing `dcoapp/dco-action` |
+| `probot-dco` | `.github/dco.yml` |
+| `easycla` | Workflow containing `easycla` |
+
+| 3.5.7 | **Status Check Verification:** Check branch protection for required "license/cla" or "dco" status | API check |
+| 3.5.8 | **Friction Classification:** | Assessment |
+
+| CLA/DCO State | Classification | Friction Level |
+|---------------|----------------|----------------|
+| Automated bot + docs | **Low Friction** | Click-through or commit sign-off |
+| Docs only, no automation | **Medium Friction** | Manual process |
+| Required but not documented | **High Friction** | Contributor confusion |
+| Manual CLA (print/sign/scan) | **Very High Friction** | Barrier to casual contributors |
+
+| 3.5.9 | WARNING if CLA/DCO required but no automation detected | High friction |
+| 3.5.10 | Scan CONTRIBUTING.md for manual CLA instructions (print, sign, scan, email) | Anti-pattern detection |
+| 3.5.11 | WARNING if manual CLA process detected | Antiquated process |
+| 3.5.12 | INFO if no CLA/DCO (acceptable for permissive licenses; recommended for corporate contributions) | Neutral finding |
+| 3.5.13 | PASS if CLA/DCO with automation configured | Low friction |
+| 3.5.14 | Report: CLA/DCO present, automation type, friction level, trademark status | Summary generation |
+
+**AINative Integration:** Track legal infrastructure patterns across repositories in ZeroDB
+
+**Story Points:** 3
 
 ---
 
 ## Epic 4: Community Health (Pillar C)
 
-> **Note:** Detailed acceptance criteria for this epic pending Open Source Way guidebook research.
+> Based on The Open Source Way 2.0 framework: Attracting Users → Growing Participants → Cultivating Contributors
 
-### Story 4.1: Time-to-First-Response (COM-01)
+### Story 4.1: Time-to-First-Human-Response (COM-01)
 **As a** community manager
-**I want** response time metrics
-**So that** I can assess community engagement
+**I want** human response time metrics (excluding bots)
+**So that** I can assess genuine community engagement
 
 **Acceptance Criteria:**
 
 | # | Criterion | Verification |
 |---|-----------|--------------|
 | 4.1.1 | Query GitHub GraphQL for issues/PRs created in last 90 days | API query |
-| 4.1.2 | Calculate time from creation to first non-author comment | Time delta |
-| 4.1.3 | Exclude bot comments from "first response" calculation | Bot detection |
-| 4.1.4 | Calculate: median, p90, p99 response times | Statistical measures |
-| 4.1.5 | Categorize: Healthy (<48h median), Slow (48h-1wk), Dormant (>1wk) | Threshold classification |
-| 4.1.6 | Separate metrics for Issues vs Pull Requests | Split calculation |
-| 4.1.7 | Store time series in **ZeroDB PostgreSQL** | Data persistence |
+| 4.1.2 | Calculate time from creation to first **human** comment | Time delta |
+| 4.1.3 | **Bot Filtering (Pattern Heuristics):** | Bot exclusion |
 
-**AINative Integration:** Track historical responsiveness trends in ZeroDB
+**Bot Detection Patterns:**
+| Pattern | Examples | Regex |
+|---------|----------|-------|
+| `[bot]` suffix | `dependabot[bot]`, `renovate[bot]` | `\[bot\]$` |
+| `-bot` suffix | `github-actions-bot`, `stale-bot` | `-bot$` |
+| Known bot names | `codecov`, `netlify`, `vercel`, `sonarcloud` | Configurable list |
+| Boilerplate content | "Thanks for your submission!", "This issue has been marked as stale" | Content heuristics |
+
+| 4.1.4 | **Configurable bot list** via `.oss-repo-check.yaml`: `bots.additional: ["my-custom-bot"]` | Config support |
+| 4.1.5 | Calculate: median, p90, p99 response times | Statistical measures |
+| 4.1.6 | **Health Thresholds:** | Threshold classification |
+
+| Median Response | Classification | Rationale |
+|-----------------|----------------|-----------|
+| < 48 hours | **Healthy** | Promotes high contributor retention |
+| 48h - 7 days | **Warning** | Risk of engagement drop-off |
+| > 7 days | **Critical Risk** | High likelihood of "shouting into the void" sentiment |
+
+| 4.1.7 | Separate metrics for Issues vs Pull Requests | Split calculation |
+| 4.1.8 | Flag if PR response time >> Issue response time (contributor friction) | Comparison |
+| 4.1.9 | Store time series in **ZeroDB PostgreSQL** table `response_metrics(repo, date, median_issue, median_pr, p90, p99)` | Data persistence |
+| 4.1.10 | Compare current 30-day median to historical 365-day median | Trend detection |
+| 4.1.11 | **Latency Drift Alert:** WARNING if recent median > 200% of historical average | Burnout indicator |
+
+**AINative Integration:** Track historical responsiveness trends in ZeroDB PostgreSQL; alert on degradation
 
 **Story Points:** 5
 
 ---
 
 ### Story 4.2: Contributor Funnel Analysis (COM-02)
-_Acceptance criteria pending Open Source Way research_
+**As an** OSPO manager
+**I want** contributor pipeline metrics
+**So that** I can identify retention issues and nurture talent
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 4.2.1 | Parse git log for last 12 months: `git log --since="12 months ago" --format="%ae"` | Git command |
+| 4.2.2 | Normalize email addresses (lowercase, map `noreply.github.com` to username) | Email normalization |
+| 4.2.3 | **Exclude `noreply@github.com`** from identifiable domain analysis | Privacy handling |
+| 4.2.4 | Count commits per unique contributor | Aggregation |
+| 4.2.5 | **Cohort Segmentation:** | Classification |
+
+| Cohort | Commit Count | Description |
+|--------|--------------|-------------|
+| **Casual** | 1-5 commits | One-time or drive-by contributors |
+| **Regular** | 6-50 commits | Consistent contributors |
+| **Core** | 50+ commits | Maintainers and key contributors |
+
+| 4.2.6 | Calculate conversion rates: `(Regular / Casual)` and `(Core / Regular)` | Funnel metrics |
+| 4.2.7 | Benchmark: Healthy funnel has >10% Casual→Regular conversion | Threshold |
+| 4.2.8 | **Churn Alert:** Flag if Active Regular (last 90 days) declining while Casual increasing | Pattern detection |
+| 4.2.9 | Track cohort sizes over time in **ZeroDB PostgreSQL** | Historical storage |
+| 4.2.10 | Report: cohort counts, conversion rates, trend direction | Summary output |
+| 4.2.11 | **"Revolving Door" Warning:** If >80% of contributors are Casual, flag retention issue | Anti-pattern |
+
+**AINative Integration:** Store contributor funnel history in ZeroDB for trend analysis
 
 **Story Points:** 5
 
 ---
 
-### Story 4.3: Zombie Project Detection (COM-03)
-_Acceptance criteria pending Open Source Way research_
+### Story 4.3: Maintainer Burnout Detection (COM-03)
+**As a** project stakeholder
+**I want** burnout risk indicators
+**So that** I can intervene before maintainer collapse
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 4.3.1 | Query GitHub API for issues/PRs opened and closed in last 90 days | API query |
+| 4.3.2 | **Closure Ratio** = `(Closed Issues + Closed PRs) / (Opened Issues + Opened PRs)` | Calculation |
+| 4.3.3 | **Burnout Thresholds:** | Classification |
+
+| Closure Ratio | Classification | Interpretation |
+|---------------|----------------|----------------|
+| ≈ 1.0 | **Sustainable** | Team keeping pace with demand |
+| 0.8 - 1.0 | **Manageable** | Slight backlog accumulation |
+| < 0.8 | **Burnout Risk** | Backlog growing faster than capacity |
+| < 0.5 | **Critical** | Team overwhelmed; intervention needed |
+
+| 4.3.4 | **Latency Drift:** Compare median response (30 days) vs (365 days) | Trend analysis |
+| 4.3.5 | WARNING if recent latency > 200% of historical | Capacity collapse signal |
+| 4.3.6 | **Zombie Project Detection:** Flag if closure ratio < 0.5 AND last release > 180 days | Combined signal |
+| 4.3.7 | **Open Issue Age Analysis:** Calculate median age of open issues | Backlog health |
+| 4.3.8 | WARNING if median open issue age > 90 days | Stale backlog |
+| 4.3.9 | Cross-reference with Bus Factor (Story 3.4): Burnout + Bus Factor 1 = CRITICAL | Combined risk |
+| 4.3.10 | Store burnout metrics in **ZeroDB PostgreSQL** for trending | Historical data |
+| 4.3.11 | Report: closure ratio, latency drift %, median issue age, zombie risk flag | Summary output |
+
+**AINative Integration:** Track burnout indicators over time; correlate with Bus Factor for compound risk
+
+**Story Points:** 5
+
+---
+
+### Story 4.4: Psychological Safety Artifacts (COM-04)
+**As a** potential contributor
+**I want** visible DEI infrastructure
+**So that** I feel safe participating in the community
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 4.4.1 | Check for CODE_OF_CONDUCT.md or CODE-OF-CONDUCT.md | File detection |
+| 4.4.2 | CRITICAL if no Code of Conduct found (for Incubating/Graduated maturity) | Maturity-aware |
+| 4.4.3 | **Enforcement Clarity:** Scan CoC for enforcement keywords: | Keyword detection |
+
+| Required Keywords | Purpose |
+|-------------------|---------|
+| "report" OR "reporting" | How to report violations |
+| "enforcement" OR "consequence" | What happens to violators |
+| Contact method (email, form link) | Actual reporting mechanism |
+
+| 4.4.4 | WARNING if CoC exists but lacks enforcement mechanism | Performative CoC |
+| 4.4.5 | Scan GOVERNANCE.md for enforcement terms: "Committee", "Ombudsperson", "Anonymity" | Governance integration |
+| 4.4.6 | **All-Contributors Bot Detection:** Check for `.all-contributorsrc` file | File detection |
+| 4.4.7 | INFO: "Project recognizes non-code contributions" if all-contributors configured | Positive signal |
+| 4.4.8 | Check all-contributors config for contribution types beyond `code`: `doc`, `design`, `translation`, `eventOrganizing` | Diversity indicator |
+| 4.4.9 | Check README for "Contributors" section or all-contributors badge | Visibility |
+| 4.4.10 | **Inclusive Governance:** Scan governance docs for explicit inclusion language | Content analysis |
+| 4.4.11 | Store DEI artifact presence in **ZeroDB Tables** | Metadata storage |
+
+**AINative Integration:** Track DEI maturity over time in ZeroDB
 
 **Story Points:** 3
 
 ---
 
-### Story 4.4: DEI Artifact Validation (COM-04)
-_Acceptance criteria pending Open Source Way research_
+### Story 4.5: Stale Bot Aggression Check (COM-05)
+**As a** new contributor
+**I want** fair automation policies
+**So that** my contributions aren't prematurely closed
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 4.5.1 | Detect stale bot configurations: `.github/stale.yml`, `.github/workflows/stale.yml`, `action.yml` with `actions/stale` | File detection |
+| 4.5.2 | Parse YAML for `daysUntilStale` and `daysUntilClose` settings | Config parsing |
+| 4.5.3 | **Aggression Thresholds:** | Classification |
+
+| days-before-close | Classification | Impact |
+|-------------------|----------------|--------|
+| < 14 days | **Hostile** | Alienates contributors with other commitments |
+| 14-29 days | **Aggressive** | May frustrate slower responders |
+| 30-60 days | **Reasonable** | Balances hygiene with patience |
+| > 60 days | **Lenient** | Low-volume projects appropriate |
+
+| 4.5.4 | WARNING if `daysUntilClose < 30` | Aggressive policy |
+| 4.5.5 | CRITICAL if `daysUntilClose < 14` | Hostile pattern |
+| 4.5.6 | **Exemption Verification:** Check for exempt labels in config | Config parsing |
+| 4.5.7 | WARNING if config lacks exemptions for: `security`, `bug`, `pinned`, `good first issue` | Missing exemptions |
+| 4.5.8 | Check stale bot message content for welcoming vs dismissive tone | Content analysis |
+| 4.5.9 | INFO: Suggest adding exemption labels if missing | Recommendation |
+| 4.5.10 | Report: stale bot present, close threshold, exempt labels, aggression level | Summary output |
+
+**Story Points:** 2
+
+---
+
+### Story 4.6: Support Channel Clarity (COM-06)
+**As a** new user
+**I want** clear guidance on where to ask questions
+**So that** I don't clutter the issue tracker with support requests
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 4.6.1 | Check for SUPPORT.md or `.github/SUPPORT.md` | File detection |
+| 4.6.2 | Check README for "Support", "Getting Help", or "Questions" section | Section detection |
+| 4.6.3 | **Channel Distinction Analysis:** Verify separate channels documented for: | Content analysis |
+
+| Need | Expected Channel | Anti-Pattern |
+|------|------------------|--------------|
+| Bug reports | GitHub Issues | N/A |
+| Feature requests | GitHub Issues OR Discussions | N/A |
+| General questions | Discussions, Discord, Slack, Stack Overflow, mailing list | GitHub Issues |
+
+| 4.6.4 | WARNING if documentation encourages GitHub Issues for "help" questions | Maintainer burnout risk |
+| 4.6.5 | Check for GitHub Discussions enabled (via API) | API check |
+| 4.6.6 | INFO: "Consider enabling GitHub Discussions for Q&A" if not enabled | Recommendation |
+| 4.6.7 | Detect community links: Discord invite, Slack link, mailing list | Link detection |
+| 4.6.8 | Verify community links are functional (HTTP HEAD request, check for 404/expired) | Link validation |
+| 4.6.9 | WARNING if support links return 404 or Discord invite expired | Broken links |
+| 4.6.10 | PASS if SUPPORT.md present with distinct channels for bugs vs questions | Complete support docs |
+| 4.6.11 | Report: support doc present, channels found, broken links | Summary output |
+
+**Story Points:** 3
+
+---
+
+### Story 4.7: Funding Infrastructure (COM-07)
+**As a** project sustainability advocate
+**I want** funding mechanism detection
+**So that** I can assess financial sustainability options
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 4.7.1 | Check for `.github/FUNDING.yml` | File detection |
+| 4.7.2 | Parse FUNDING.yml for valid platform keys: | YAML parsing |
+
+| Platform Key | Service |
+|--------------|---------|
+| `github` | GitHub Sponsors |
+| `patreon` | Patreon |
+| `open_collective` | Open Collective |
+| `ko_fi` | Ko-fi |
+| `tidelift` | Tidelift |
+| `community_bridge` | Linux Foundation |
+| `custom` | Custom URLs |
+
+| 4.7.3 | Validate YAML syntax (valid keys, proper format) | Schema validation |
+| 4.7.4 | **Link Health Check:** HTTP HEAD request to funding URLs | HTTP check |
+| 4.7.5 | WARNING if any funding link returns 404 or error | Broken funding |
+| 4.7.6 | Check README for sponsorship badges/buttons | Badge detection |
+| 4.7.7 | INFO: "Funding infrastructure present" if FUNDING.yml configured | Positive signal |
+| 4.7.8 | INFO: "No funding infrastructure detected" (neutral, not negative) | Absent signal |
+| 4.7.9 | Cross-reference with maturity: Graduated projects without funding = INFO | Maturity context |
+| 4.7.10 | Report: platforms configured, link health, badge presence | Summary output |
+
+**AINative Integration:** Track funding configuration across scanned repos in ZeroDB
 
 **Story Points:** 2
 
@@ -830,6 +1171,100 @@ model-index:
 
 ---
 
+### Story 7.4: Release Cadence & Project Vitality (TECH-04)
+**As a** potential adopter
+**I want** release health metrics
+**So that** I can distinguish active projects from abandonware
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 7.4.1 | Query git tags and GitHub Releases API | Data retrieval |
+| 7.4.2 | Calculate `days_since_release` from most recent semantic version tag | Date calculation |
+| 7.4.3 | **Vitality Classification:** | Threshold check |
+
+| Days Since Release | Classification | Risk Level |
+|-------------------|----------------|------------|
+| < 90 days | **Active** | Low - regular maintenance |
+| 90-365 days | **Stable** | Medium - may be mature/complete |
+| 365-730 days | **Potentially Dormant** | High - needs investigation |
+| > 730 days | **Likely Abandoned** | Critical - adoption risk |
+
+| 7.4.4 | Cross-reference with commit activity: if commits but no releases, flag "unreleased work" | Combined signal |
+| 7.4.5 | **Release Frequency:** Calculate average days between releases (last 2 years) | Frequency metric |
+| 7.4.6 | **Semantic Versioning Hygiene:** Validate tags match SemVer pattern | Regex: `^v?\d+\.\d+\.\d+` |
+
+| Tagging Pattern | Assessment |
+|-----------------|------------|
+| Consistent SemVer | **Professional** - automated dependency management friendly |
+| Mixed patterns | **Warning** - inconsistent release process |
+| No semantic tags | **Poor** - difficult for adopters to track versions |
+
+| 7.4.7 | WARNING if tags don't follow SemVer (e.g., `release-2023`, `build-123`) | Pattern mismatch |
+| 7.4.8 | **Artifact Signing Verification:** Check releases for cryptographic signatures | Security maturity |
+
+| Signature Type | Files | Assessment |
+|----------------|-------|------------|
+| PGP/GPG | `.asc`, `.sig` | High security maturity |
+| Sigstore/cosign | `.sig`, `.bundle` | Modern signing |
+| SLSA provenance | `.intoto.jsonl` | Supply chain attestation |
+| No signatures | N/A | Standard (not a finding for most projects) |
+
+| 7.4.9 | INFO if release artifacts have cryptographic signatures (positive signal) | Security bonus |
+| 7.4.10 | **Pre-release Detection:** Flag if only pre-release versions (alpha, beta, rc) available | Stability indicator |
+| 7.4.11 | WARNING if project has pre-releases but no stable release | Not production ready |
+| 7.4.12 | Store release metrics in **ZeroDB PostgreSQL** for trending | Historical data |
+| 7.4.13 | Report: latest version, days since release, release frequency, signing status, vitality classification | Summary output |
+
+**AINative Integration:** Track release cadence trends across repositories in ZeroDB
+
+**Story Points:** 3
+
+---
+
+### Story 7.5: Interaction Template Validation (TECH-05)
+**As a** project maintainer
+**I want** issue/PR template validation
+**So that** contributors have a smooth experience filing reports
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 7.5.1 | Detect issue templates: `.github/ISSUE_TEMPLATE/`, `.github/ISSUE_TEMPLATE.md` | File detection |
+| 7.5.2 | Detect PR templates: `.github/pull_request_template.md`, `.github/PULL_REQUEST_TEMPLATE/` | File detection |
+| 7.5.3 | **YAML Front-Matter Validation:** Parse templates for valid YAML between `---` markers | YAML parsing |
+| 7.5.4 | ERROR if YAML syntax invalid (broken template frustrates users) | Syntax check |
+| 7.5.5 | Check for required YAML fields: `name`, `description`, `labels` | Field validation |
+| 7.5.6 | WARNING if `labels` field missing (missed auto-triage opportunity) | Missing field |
+| 7.5.7 | **Body Content Validation:** | Content analysis |
+
+| Element | Purpose | Detection |
+|---------|---------|-----------|
+| HTML comments (`<!-- -->`) | Guide users on what to write | Comment blocks |
+| Placeholder text | Show expected format | Template strings |
+| Checkboxes (`- [ ]`) | Structured requirements | Markdown syntax |
+| Section headers | Organize information | `##` headers |
+
+| 7.5.8 | INFO if template lacks guidance comments (missed "don't make me think" opportunity) | UX check |
+| 7.5.9 | **Template Coverage:** Check for common template types | Type detection |
+
+| Template Type | Purpose | Detection |
+|---------------|---------|-----------|
+| Bug report | Structured bug filing | `bug` in name/labels |
+| Feature request | New functionality | `feature` or `enhancement` in name |
+| Question | Support (should redirect to Discussions) | `question` in name |
+| Security | Private vulnerability reporting | Links to security contact |
+
+| 7.5.10 | PASS if bug and feature templates present with valid YAML | Minimum coverage |
+| 7.5.11 | WARNING if no issue templates configured | Missing templates |
+| 7.5.12 | Report: templates found, YAML validity, guidance quality | Summary output |
+
+**Story Points:** 2
+
+---
+
 ## Epic 8: Reporting & Output
 
 ### Story 8.1: JSON Report Generator
@@ -1048,18 +1483,31 @@ oss-repo-check/
 
 ## Story Point Summary
 
-| Epic | Stories | Total Points |
-|------|---------|--------------|
-| Epic 1: Core Infrastructure | 3 | 10 |
-| Epic 2: Security | 5 | 22 |
-| Epic 3: Governance | 5 | 23 |
-| Epic 4: Community | 4 | 15 |
-| Epic 5: AI-Native | 4 | 12 |
-| Epic 6: Inclusive | 3 | 11 |
-| Epic 7: Technical | 3 | 6 |
-| Epic 8: Reporting | 3 | 11 |
-| Epic 9: Claude Integration | 2 | 5 |
-| **Total** | **32** | **115** |
+| Epic | Stories | Total Points | Key Focus |
+|------|---------|--------------|-----------|
+| Epic 1: Core Infrastructure | 3 | 10 | CLI, Orchestrator, Config |
+| Epic 2: Security | 5 | 22 | OpenSSF Scorecard, Supply Chain |
+| Epic 3: Governance | 5 | 26 | License, Bus Factor, Vendor Neutrality |
+| Epic 4: Community | 7 | 25 | OSW 2.0 Framework, Burnout Detection |
+| Epic 5: AI-Native | 4 | 12 | Model Cards, Agentic Rules |
+| Epic 6: Inclusive | 3 | 11 | INI Terms, Diminishing Language |
+| Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality |
+| Epic 8: Reporting | 3 | 11 | JSON/Markdown, Historical Trends |
+| Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server |
+| **Total** | **37** | **133** | |
+
+### Change Log from v2.0 to v2.1
+
+| Change | Impact |
+|--------|--------|
+| Added maturity-context scoring (auto-detect + override) | Contextual findings |
+| Expanded Epic 4 with Open Source Way 2.0 research | +3 stories, +10 points |
+| Added vendor neutrality analysis to Story 3.4 | +2 points |
+| Expanded CLA/DCO automation in Story 3.5 | +1 point |
+| Added Release Cadence & Vitality (Story 7.4) | +3 points |
+| Added Interaction Template Validation (Story 7.5) | +2 points |
+| Clarified OpenSSF Scorecard shell-out strategy | Implementation clarity |
+| Added bot filtering patterns (configurable) | Accurate human response metrics |
 
 ---
 
@@ -1067,21 +1515,31 @@ oss-repo-check/
 
 ### Phase 1: Foundation (Stories: 1.1-1.3, 6.1-6.3)
 - Core infrastructure and CLI
+- Maturity-context auto-detection
 - Inclusive language checks (fully specified)
 - Basic markdown/JSON reporting
 
 ### Phase 2: Security & Governance (Stories: 2.1-2.5, 3.1-3.5)
-- OpenSSF Scorecard integration
-- License compliance scanning
+- OpenSSF Scorecard integration (shell-out + local fallback)
+- License compliance scanning (native implementation)
+- Vendor neutrality analysis
+- CLA/DCO automation detection
 - ZeroDB integration for storage
 
-### Phase 3: Community & AI (Stories: 4.1-4.4, 5.1-5.4)
-- CHAOSS metrics implementation (pending research)
-- AI-readiness checks
-- Historical trending
+### Phase 3: Community Health (Stories: 4.1-4.7, 7.4-7.5)
+- Open Source Way 2.0 framework implementation
+- Time-to-first-human-response (bot filtering)
+- Contributor funnel analysis
+- Maintainer burnout detection
+- Stale bot aggression check
+- Support channel clarity
+- Release cadence & vitality
+- Template validation
 
-### Phase 4: Polish & Integration (Stories: 7.1-7.3, 8.1-8.3, 9.1-9.2)
+### Phase 4: AI & Polish (Stories: 5.1-5.4, 7.1-7.3, 8.1-8.3, 9.1-9.2)
+- AI-readiness checks (Model Cards, agentic rules)
 - Technical rigor checks
+- Historical trending in ZeroDB
 - Claude Code skill
 - MCP server integration
 
@@ -1102,12 +1560,18 @@ oss-repo-check/
 
 ## References
 
-- [OpenSSF Scorecard](https://scorecard.dev)
-- [CHAOSS Metrics](https://chaoss.community)
-- [Inclusive Naming Initiative](https://inclusivenaming.org)
-- [Inclusive Naming Word Lists JSON](https://inclusivenaming.org/word-lists/index.json)
-- [The Open Source Way](https://www.theopensourceway.org)
-- [SPDX License List](https://spdx.dev)
-- [ClearlyDefined](https://clearlydefined.io)
-- [HuggingFace Model Cards](https://huggingface.co/docs/hub/model-cards)
-- [AINative ZeroDB](https://ainative.studio)
+### Standards & Frameworks
+- [OpenSSF Scorecard](https://scorecard.dev) - Supply chain security metrics
+- [CHAOSS Metrics](https://chaoss.community) - Community health measurement
+- [The Open Source Way 2.0](https://www.theopensourceway.org) - Community management framework
+- [Inclusive Naming Initiative](https://inclusivenaming.org) - Terminology guidance
+- [Inclusive Naming Word Lists JSON](https://inclusivenaming.org/word-lists/index.json) - Machine-readable term list
+- [SPDX License List](https://spdx.dev) - License identifiers
+- [ClearlyDefined](https://clearlydefined.io) - License data API
+- [HuggingFace Model Cards](https://huggingface.co/docs/hub/model-cards) - AI documentation standard
+
+### AINative Services
+- [AINative ZeroDB](https://ainative.studio) - Vector search, PostgreSQL, File Storage
+
+### Project Documentation
+- [Open Source Way et al Expansions](./Open_Source_Way_et_al_expansions.md) - Strategic roadmap and detailed feature specifications
