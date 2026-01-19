@@ -121,13 +121,214 @@ docker run -e GITHUB_AUTH_TOKEN gcr.io/openssf/scorecard:stable \
 
 ## AINative Services Integration
 
+### Core Storage Services
+
 | Service | Use Case | Benefit |
 |---------|----------|---------|
 | **ZeroDB Vector Search** | Semantic license matching, governance classification | AI-powered content analysis |
 | **ZeroDB PostgreSQL** | Store scan results, track historical trends | Persistent audit trail |
-| **ZeroDB File Storage** | Cache reports, store badge assets | Fast retrieval |
+| **ZeroDB File Storage** | Cache reports, store badge assets, SPDX data | Fast retrieval |
 | **ZeroDB Tables** | NoSQL storage for scan metadata | Flexible schema |
-| **AINative API** | Semantic analysis of documentation quality | Intelligent scoring |
+
+### Enhanced AI Services
+
+| Service | Endpoint | Use Case in oss-repo-check |
+|---------|----------|---------------------------|
+| **Embeddings Generation** | AI Provider Factory | Generate embeddings for semantic analysis |
+| **Memory API** | `POST /{project_id}/database/memory/store` | Store scan context for multi-repo analysis |
+| **Memory Search** | `POST /{project_id}/database/memory/search` | Find similar past scans, retrieve context |
+| **RLHF Feedback** | `POST /{project_id}/rlhf/feedback` | Collect user corrections on findings |
+| **Quantum Search** | `POST /{project_id}/database/vectors/quantum-search` | Find repos with similar health profiles |
+
+### Embeddings-Powered Analysis
+
+The following checks benefit from semantic embeddings beyond keyword matching:
+
+#### License Matching (Story 3.1, 3.2)
+```
+Input: Non-standard LICENSE text
+↓
+Embedding Generation (Cohere/OpenAI)
+↓
+Vector Similarity Search against SPDX embeddings
+↓
+Output: "92% match to Apache-2.0 with custom attribution clause"
+```
+
+**Implementation:**
+- Pre-compute embeddings for all SPDX license templates (store in ZeroDB)
+- On scan: embed LICENSE file content
+- Similarity search with threshold: >0.95 = exact match, 0.85-0.95 = variant, <0.85 = unknown
+
+#### Governance Classification (Story 3.3)
+```
+Input: GOVERNANCE.md content
+↓
+Embedding + Classification prompt
+↓
+AI Provider (Claude/GPT-4)
+↓
+Output: { model: "Foundation-backed", confidence: 0.87, signals: ["TSC", "charter", "voting"] }
+```
+
+**Reference Embeddings to Pre-compute:**
+| Governance Model | Example Sources |
+|------------------|-----------------|
+| BDFL | Python, Linux (historical) |
+| Foundation | Apache, CNCF, Linux Foundation projects |
+| Corporate | Google projects, Microsoft projects |
+| Community/Consensus | Rust, Node.js |
+| Meritocracy | Apache projects |
+
+#### CONTRIBUTING.md Quality (Story 6.3)
+```
+Input: CONTRIBUTING.md content
+↓
+Section embeddings vs "Gold Standard" template
+↓
+Gap Analysis
+↓
+Output: { completeness: 72%, missing: ["testing instructions", "code style guide"] }
+```
+
+**Gold Standard Sections (embed as reference):**
+- Environment setup
+- Running tests
+- Code style guide
+- Pull request process
+- Issue triage process
+- Communication channels
+
+#### Model Card Completeness (Story 5.1)
+```
+Input: README.md for ML repo
+↓
+Semantic section detection (not just header matching)
+↓
+Output: Detected sections even without standard headers
+```
+
+**Why Embeddings Help:**
+- README says "What this model should NOT be used for" → matches "Limitations" section semantically
+- README says "How we trained it" → matches "Training Data" section
+- README says "Potential harms" → matches "Ethical Considerations" section
+
+### Memory API for Multi-Repo Context
+
+When scanning multiple repositories (OSPO portfolio analysis):
+
+```
+Scan Repo A
+↓
+Store context in Memory API:
+{
+  repo: "org/repo-a",
+  health_score: 7.2,
+  key_findings: ["bus_factor_1", "no_security_md"],
+  scanned_at: "2026-01-18T..."
+}
+↓
+Scan Repo B
+↓
+Memory Search: "Find similar repos by finding profile"
+↓
+Output: "Repo B has similar issues to Repo A (scanned 2 days ago)"
+```
+
+**Use Cases:**
+- Portfolio-wide vulnerability patterns
+- Cross-repo governance consistency
+- Identifying repos that need similar fixes
+
+### RLHF Feedback Loop
+
+Collect user corrections to improve detection accuracy:
+
+```
+Scan produces: "CRITICAL: Non-inclusive term 'master' in src/config.py:47"
+↓
+User marks: "False positive - this is 'masterpiece' not 'master'"
+↓
+RLHF API: Store feedback
+{
+  finding_id: "inc-001",
+  user_verdict: "false_positive",
+  context: "masterpiece",
+  correct_action: "ignore"
+}
+↓
+Over time: Improve regex patterns, add exceptions
+```
+
+**Feedback Categories:**
+| Category | User Action | System Learning |
+|----------|-------------|-----------------|
+| False Positive | "Not an issue" | Add to exception patterns |
+| False Negative | "Missed this" | Expand detection patterns |
+| Severity Wrong | "Should be WARNING not CRITICAL" | Adjust thresholds |
+| Good Catch | "Helpful finding" | Reinforce pattern |
+
+### Quantum Search for Similar Repos
+
+Find repositories with similar health profiles:
+
+```
+After scanning current repo:
+{
+  security_score: 6.5,
+  governance_score: 8.0,
+  community_score: 4.2,  // Low
+  ai_readiness: 7.5,
+  inclusive_score: 9.0
+}
+↓
+Quantum Search: "Find repos with similar community score issues"
+↓
+Output: [
+  { repo: "similar-org/project-x", community_score: 4.5, fixed_via: "added SUPPORT.md" },
+  { repo: "other-org/project-y", community_score: 3.8, fixed_via: "enabled Discussions" }
+]
+↓
+Recommendation: "Projects with similar community health issues improved by adding SUPPORT.md"
+```
+
+### Integration Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        oss-repo-check CLI                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │   Scanner   │  │  Reporters  │  │   Config    │  │    Cache    │ │
+│  │ Orchestrator│  │  (MD/JSON)  │  │   Loader    │  │   Manager   │ │
+│  └──────┬──────┘  └─────────────┘  └─────────────┘  └──────┬──────┘ │
+│         │                                                   │        │
+│         │         ┌─────────────────────────────────────────┼────┐   │
+│         │         │           AINative Client               │    │   │
+│         │         ├─────────────────────────────────────────┼────┤   │
+│         ▼         │                                         ▼    │   │
+│  ┌─────────────┐  │  ┌──────────┐  ┌──────────┐  ┌──────────────┐│   │
+│  │  Semantic   │◄─┼─►│ Vectors  │  │ Memory   │  │    Files     ││   │
+│  │  Analyzer   │  │  │   API    │  │   API    │  │    API       ││   │
+│  └─────────────┘  │  └──────────┘  └──────────┘  └──────────────┘│   │
+│                   │                                              │   │
+│                   │  ┌──────────┐  ┌──────────┐  ┌──────────────┐│   │
+│                   │  │PostgreSQL│  │  RLHF    │  │   Quantum    ││   │
+│                   │  │  Tables  │  │   API    │  │   Search     ││   │
+│                   │  └──────────┘  └──────────┘  └──────────────┘│   │
+│                   └──────────────────────────────────────────────┘   │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │     AINative Studio API       │
+                    │   api.ainative.studio/v1/     │
+                    ├───────────────────────────────┤
+                    │  Kong Gateway (rate limiting) │
+                    └───────────────────────────────┘
+```
 
 ---
 
