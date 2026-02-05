@@ -1,0 +1,60 @@
+{
+  "name": "quaid-scanner",
+  "version": "0.1.0",
+  "description": "Agent-first OSS repository health scanner based on CHAOSS metrics, The Open Source Way 2.0, and Inclusive Naming Initiative",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "quaid-scanner": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/ --ext .ts",
+    "lint:fix": "eslint src/ --ext .ts --fix",
+    "prepublishOnly": "npm run build && npm run test:coverage",
+    "scan": "node dist/cli.js"
+  },
+  "keywords": [
+    "opensource",
+    "community",
+    "health",
+    "scanner",
+    "inclusive",
+    "chaoss",
+    "metrics",
+    "documentation",
+    "contributor-experience"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AINative-Studio/oss-repo-check"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "glob": "^10.4.5",
+    "octokit": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.12",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^8.57.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
