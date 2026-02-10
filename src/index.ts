@@ -37,3 +37,10 @@ export {
   type ScanHistoryRecord,
   type TrendData,
 } from './types/index.js';
+
+// Scanner plugin system
+export { ScannerRegistry } from './scanner/registry.js';
+export { Orchestrator, type OrchestratorResult } from './scanner/orchestrator.js';
+
+// Configuration
+export { DEFAULT_CONFIG, buildConfig, validateTarget } from './config.js';
