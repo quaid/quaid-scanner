@@ -1,60 +1,91 @@
-# oss-repo-check
+# quaid-scanner
 
-> Built with Semantic Seed TDD standards and AINative services
+Agent-first open source repository health scanner based on [CHAOSS metrics](https://chaoss.community/), [The Open Source Way 2.0](https://www.theopensourceway.org/), and the [Inclusive Naming Initiative](https://inclusivenaming.org/).
+
+## What It Does
+
+Evaluates repositories across six strategic pillars to produce a comprehensive health assessment:
+
+| Pillar | Weight | Focus |
+|--------|--------|-------|
+| Security | 25% | Supply chain integrity, dependency pinning, branch protection |
+| Governance | 20% | Licensing, governance structure, bus factor, vendor neutrality |
+| Community | 15% | Response times, contributor funnel, burnout signals |
+| AI-Readiness | 15% | Model cards and agentic rules |
+| Inclusive Language | 15% | Accessible, welcoming language in docs and code |
+| Technical Rigor | 10% | Release cadence, interaction templates |
 
 ## Quick Start
 
 ```bash
-# Install dependencies
-npm install  # or pip install -r requirements.txt
+npm install -g quaid-scanner
 
-# Copy environment config
-cp .env.example .env
-# Edit .env with your values
+# Scan a local repository
+quaid-scanner /path/to/repo
 
-# Run development server
-npm run dev  # or python main.py
+# Scan a GitHub repository
+GITHUB_TOKEN=ghp_xxxx quaid-scanner https://github.com/owner/repo
+
+# Scan current directory
+quaid-scanner .
 ```
+
+## Requirements
+
+- Node.js >= 18.0.0
+- Git (for local repository scanning)
+- GitHub token (optional, enables API-dependent scanners)
+
+## CLI Options
+
+```
+quaid-scanner [options] [target]
+
+Options:
+  --depth <level>       quick, standard, or thorough (default: standard)
+  --format <type>       json or markdown (default: json)
+  --output <file>       Write output to file
+  --config <file>       Path to .quaid-scanner.yaml
+  --threshold <score>   Minimum score (0-10); exit 1 if below
+  --maturity <level>    sandbox, incubating, graduated, archived, or auto
+  --quiet               Suppress progress output
+  --verbose             Show detailed progress
+```
+
+## Configuration
+
+Place a `.quaid-scanner.yaml` in your repository root:
+
+```yaml
+depth: standard
+threshold: 6.0
+pillars:
+  disabledScanners:
+    - vendor-neutrality
+inclusive:
+  excludePatterns:
+    - "vendor/**"
+```
+
+See the [Configuration Reference](docs/usage/configuration.md) for all options.
+
+## Documentation
+
+- [Getting Started](docs/usage/getting-started.md) - Installation, CLI reference, scan depth
+- [Scanner Reference](docs/usage/scanners.md) - All 35+ checks across six pillars
+- [Configuration](docs/usage/configuration.md) - `.quaid-scanner.yaml` options
+- [Examples](docs/usage/examples.md) - CI/CD, agent workflows, security audits
 
 ## Development
 
-This project uses Test-Driven Development with AINative services integration.
-
-### Available Commands
-
-**ZeroDB Operations:**
-- `/zerodb-vector-*` - Vector embeddings and semantic search
-- `/zerodb-table-*` - NoSQL table operations
-- `/zerodb-file-*` - File storage operations
-- `/zerodb-memory-*` - Agent memory operations
-- `/zerodb-postgres-*` - PostgreSQL database operations
-
-**Google Analytics:**
-- `/ga-*` - GA4 data queries and reporting
-
-**Documentation:**
-- See `.claude/commands/ZERODB-GUIDE.md` for full ZeroDB documentation
-
-## Project Structure
-
+```bash
+git clone https://github.com/AINative-Studio/oss-repo-check.git
+cd oss-repo-check
+npm install
+npm run build
+npm test
 ```
-src/           # Source code
-tests/         # Test suites
-  unit/        # Unit tests
-  integration/ # Integration tests
-  functional/  # E2E/API tests
-docs/          # Documentation
-.claude/       # Claude Code configuration
-  commands/    # Slash commands (symlinked)
-  skills/      # Skills (symlinked)
-  rules/       # Coding standards (symlinked)
-```
-
-## Important Rules
-
-See `.claude/rules/git-rules.md` for commit message requirements.
-**No AI attribution in commits** - this is enforced.
 
 ## License
 
-See LICENSE file for details.
+Apache-2.0
