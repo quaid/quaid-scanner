@@ -167,6 +167,7 @@ The token needs `repo` read access. For public repositories, a fine-grained toke
 
 ## Next Steps
 
+- [Agentic Usage Guide](./agentic-usage.md) for prompt patterns, agent workflows, and actionable findings
 - [Configuration Reference](./configuration.md) for `.quaid-scanner.yaml` options
 - [Scanner Reference](./scanners.md) for the full list of checks
 - [Examples](./examples.md) for common workflow patterns
