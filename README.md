@@ -72,6 +72,7 @@ See the [Configuration Reference](docs/usage/configuration.md) for all options.
 ## Documentation
 
 - [Getting Started](docs/usage/getting-started.md) - Installation, CLI reference, scan depth
+- [Agentic Usage](docs/usage/agentic-usage.md) - Prompt patterns, agent workflows, actionable findings
 - [Scanner Reference](docs/usage/scanners.md) - All 35+ checks across six pillars
 - [Configuration](docs/usage/configuration.md) - `.quaid-scanner.yaml` options
 - [Examples](docs/usage/examples.md) - CI/CD, agent workflows, security audits
