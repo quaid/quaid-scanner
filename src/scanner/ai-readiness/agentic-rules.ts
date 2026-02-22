@@ -2,7 +2,8 @@
  * Multi-Model Agentic Rule Detection scanner.
  *
  * Detects AI coding agent configuration files for Claude Code, Cursor,
- * Copilot, Gemini, Cody, Amazon Q, Windsurf, and generic agentic configs.
+ * Copilot, Gemini, Cody, Amazon Q, Windsurf, OpenClaw, AINative,
+ * .agents/ spec, and generic agentic configs.
  * Parses CLAUDE.md for structural quality.
  */
 
@@ -48,6 +49,9 @@ export class AgenticRulesScanner implements Scanner {
       this.detectCody(repoPath, detectedAgents);
       this.detectAmazonQ(repoPath, detectedAgents);
       this.detectWindsurf(repoPath, detectedAgents);
+      this.detectOpenClaw(repoPath, detectedAgents);
+      this.detectAINative(repoPath, detectedAgents);
+      this.detectAgentsSpec(repoPath, detectedAgents);
       this.detectGeneric(repoPath, detectedAgents);
     } catch {
       // Handle missing repo path
@@ -168,6 +172,51 @@ export class AgenticRulesScanner implements Scanner {
 
     if (files.length > 0) {
       agents['windsurf'] = { agent: 'Windsurf/Codeium', files };
+    }
+  }
+
+  private detectOpenClaw(repoPath: string, agents: Record<string, AgentDetection>): void {
+    const files: string[] = [];
+
+    if (this.fileExists(repoPath, 'SOUL.md')) files.push('SOUL.md');
+    if (this.fileExists(repoPath, 'HEARTBEAT.md')) files.push('HEARTBEAT.md');
+    if (this.dirExists(repoPath, '.openclaw')) files.push('.openclaw/');
+
+    if (files.length > 0) {
+      agents['openclaw'] = { agent: 'OpenClaw', files };
+    }
+  }
+
+  private detectAINative(repoPath: string, agents: Record<string, AgentDetection>): void {
+    const files: string[] = [];
+
+    if (this.dirExists(repoPath, '.ainative')) {
+      files.push('.ainative/');
+      if (this.dirExists(repoPath, '.ainative/skills')) files.push('.ainative/skills/');
+      if (this.dirExists(repoPath, '.ainative/rules')) files.push('.ainative/rules/');
+      if (this.dirExists(repoPath, '.ainative/commands')) files.push('.ainative/commands/');
+    }
+
+    if (files.length > 0) {
+      agents['ainative'] = { agent: 'AINative', files };
+    }
+  }
+
+  private detectAgentsSpec(repoPath: string, agents: Record<string, AgentDetection>): void {
+    const files: string[] = [];
+
+    if (this.dirExists(repoPath, '.agents')) {
+      files.push('.agents/');
+      if (this.fileExists(repoPath, '.agents/manifest.yaml')) files.push('.agents/manifest.yaml');
+      if (this.dirExists(repoPath, '.agents/prompts')) files.push('.agents/prompts/');
+      if (this.dirExists(repoPath, '.agents/policies')) files.push('.agents/policies/');
+      if (this.dirExists(repoPath, '.agents/skills')) files.push('.agents/skills/');
+      if (this.dirExists(repoPath, '.agents/modes')) files.push('.agents/modes/');
+      if (this.dirExists(repoPath, '.agents/scopes')) files.push('.agents/scopes/');
+    }
+
+    if (files.length > 0) {
+      agents['agents-spec'] = { agent: '.agents/ Spec (AGENTS-1)', files };
     }
   }
 

@@ -239,6 +239,130 @@ Run npm test to test.
     });
   });
 
+  describe('OpenClaw detection', () => {
+    it('detects SOUL.md', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'SOUL.md'),
+        '# Identity\nI am a helpful assistant.\n\n## Communication Style\nFriendly and direct.',
+      );
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['openclaw']).toBeDefined();
+    });
+
+    it('detects HEARTBEAT.md', async () => {
+      fs.writeFileSync(path.join(tmpDir, 'HEARTBEAT.md'), '# Heartbeat Checklist\n- [ ] Check logs');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['openclaw']).toBeDefined();
+    });
+
+    it('detects .openclaw/ directory', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.openclaw'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.openclaw', 'openclaw.json'), '{"model": "opus"}');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['openclaw']).toBeDefined();
+    });
+
+    it('lists all OpenClaw files detected', async () => {
+      fs.writeFileSync(path.join(tmpDir, 'SOUL.md'), '# Identity\nAssistant.');
+      fs.writeFileSync(path.join(tmpDir, 'HEARTBEAT.md'), '# Checklist');
+      fs.mkdirSync(path.join(tmpDir, '.openclaw'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.openclaw', 'openclaw.json'), '{}');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      const openclaw = agents['openclaw'] as { files: string[] };
+      expect(openclaw.files).toContain('SOUL.md');
+      expect(openclaw.files).toContain('HEARTBEAT.md');
+      expect(openclaw.files).toContain('.openclaw/');
+    });
+  });
+
+  describe('AINative detection', () => {
+    it('detects .ainative/ directory', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.ainative'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.ainative', 'config.yaml'), 'version: 1');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['ainative']).toBeDefined();
+    });
+
+    it('detects .ainative/skills/', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.ainative', 'skills'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.ainative', 'skills', 'review.md'), '# Code Review');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['ainative']).toBeDefined();
+    });
+
+    it('detects .ainative/rules/', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.ainative', 'rules'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.ainative', 'rules', 'git.md'), '# Git Rules');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['ainative']).toBeDefined();
+    });
+
+    it('detects .ainative/commands/', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.ainative', 'commands'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.ainative', 'commands', 'deploy.md'), '# Deploy');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['ainative']).toBeDefined();
+    });
+
+    it('lists all AINative files detected', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.ainative', 'skills'), { recursive: true });
+      fs.mkdirSync(path.join(tmpDir, '.ainative', 'rules'), { recursive: true });
+      fs.mkdirSync(path.join(tmpDir, '.ainative', 'commands'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.ainative', 'skills', 'review.md'), '# review');
+      fs.writeFileSync(path.join(tmpDir, '.ainative', 'rules', 'git.md'), '# git');
+      fs.writeFileSync(path.join(tmpDir, '.ainative', 'commands', 'deploy.md'), '# deploy');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      const ainative = agents['ainative'] as { files: string[] };
+      expect(ainative.files).toContain('.ainative/');
+      expect(ainative.files).toContain('.ainative/skills/');
+      expect(ainative.files).toContain('.ainative/rules/');
+      expect(ainative.files).toContain('.ainative/commands/');
+    });
+  });
+
+  describe('.agents/ spec detection', () => {
+    it('detects .agents/ directory with manifest.yaml', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.agents'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.agents', 'manifest.yaml'), 'version: "1.0"');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      expect(agents['agents-spec']).toBeDefined();
+    });
+
+    it('detects .agents/prompts/ and .agents/policies/', async () => {
+      fs.mkdirSync(path.join(tmpDir, '.agents', 'prompts'), { recursive: true });
+      fs.mkdirSync(path.join(tmpDir, '.agents', 'policies'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.agents', 'prompts', 'base.md'), '# Base prompt');
+      fs.writeFileSync(path.join(tmpDir, '.agents', 'policies', 'safety.yaml'), 'deny: []');
+
+      const findings = await scanner.run(makeContext());
+      const agents = findings.find((f) => f.category === 'agentic-rules')!.metadata?.detectedAgents as Record<string, unknown>;
+      const spec = agents['agents-spec'] as { files: string[] };
+      expect(spec.files).toContain('.agents/');
+      expect(spec.files).toContain('.agents/prompts/');
+      expect(spec.files).toContain('.agents/policies/');
+    });
+  });
+
   describe('generic agentic files', () => {
     it('detects AGENTS.md', async () => {
       fs.writeFileSync(path.join(tmpDir, 'AGENTS.md'), '# Agent Guidelines');
