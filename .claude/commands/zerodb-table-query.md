@@ -1,1 +1,0 @@
-../../../devcontext/.claude/commands/zerodb-table-query.md

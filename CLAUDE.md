@@ -1,40 +1,57 @@
-# oss-repo-check - Project Memory
+# quaid-scanner - Project Memory
 
-> Last Updated: 2026-01-12
-> Project Root: /home/quaid/Documents/Projects/ainative-studio/src/oss-repo-check
+> Last Updated: 2026-04-24
+> Project Root: /Users/karstenwade/Projects/quaid-scanner
 
 ## Critical Rules
 
 ### 1. Git Commits
 - Zero tolerance for AI attribution
 - No "Claude", "Anthropic", "Generated with", "Co-Authored-By" in commits
-- Hook blocks forbidden text
+- commit-msg hook enforces this
 
 ### 2. File Placement
 - Docs → `docs/{category}/`
-- No root `.md` files (except README.md)
+- No root `.md` files (except README.md and CLAUDE.md)
 
 ### 3. Testing (MANDATORY)
 - 80%+ coverage required
 - All features tested
 - TDD approach preferred
+- `npm test` runs vitest
 
 ### 4. Code Quality
-- Type hints all functions
+- TypeScript strict mode, type hints on all functions
 - Docstrings for public methods
 - Clean, readable code
+
+## Project Overview
+
+Agent-first OSS repository health scanner based on:
+- CHAOSS metrics
+- The Open Source Way 2.0
+- Inclusive Naming Initiative
+
+TypeScript CLI and library. Publishes to npm as `quaid-scanner`.
 
 ## Project Structure
 
 ```
-oss-repo-check/
-├── CLAUDE.md              # This file (project-specific)
-├── .claude/
-│   ├── commands/          # Symlinks to devcontext commands
-│   ├── skills/            # Symlinks to core skills
-│   └── rules/             # Symlinks to devcontext rules
-├── src/                   # Source code
-├── tests/                 # Test suites
+quaid-scanner/
+├── CLAUDE.md              # This file (project-specific context)
+├── .claude -> core/.claude  # Symlink — shared commands/skills/rules
+├── .ainative -> core/.ainative  # Symlink — universal AI coding rules
+├── .env                   # Local secrets (gitignored)
+├── src/
+│   ├── cli.ts             # CLI entrypoint
+│   ├── config.ts
+│   ├── index.ts           # Library entrypoint
+│   ├── scanner/           # Scanner implementations
+│   └── types/
+├── tests/
+│   ├── cli/
+│   ├── scanner/
+│   └── setup/
 └── docs/                  # Documentation
 ```
 
@@ -47,33 +64,38 @@ oss-repo-check/
 - `/zerodb-memory-*` - Agent memory operations
 - `/zerodb-postgres-*` - PostgreSQL database operations
 
-### Google Analytics
-- `/ga-*` - GA4 data queries and reporting
+### Workflow
+- `/git-workflow` - Commit/PR standards
+- `/mandatory-tdd` - TDD enforcement
+- `/delivery-checklist` - Pre-delivery checks
 
 ## Environment Variables
 
-Key variables configured in `.env`:
-- AI Provider Keys (OpenAI, Anthropic, Gemini, Cohere, Mistral, Meta)
-- GitHub Token
-- AWS Credentials
-- Database URLs (PostgreSQL, Redis)
-- ZeroDB S3 Configuration
+Key variables in `.env`:
+- `ZERODB_PROJECT_ID` / `ZERODB_API_KEY` / `ZERODB_API_URL` — ZeroDB (zerolocal at localhost:8100)
+- `AINATIVE_API_KEY` / `AINATIVE_API_URL` — AINative API
+- `GITHUB_PERSONAL_ACCESS_TOKEN` — required for scanning repos
 
 ## Common Tasks
 
-### Add New Feature
-1. Create tests first (TDD)
-2. Implement feature
-3. Ensure tests pass
+### Add New Scanner
+1. Write tests first (TDD)
+2. Implement scanner in `src/scanner/`
+3. Ensure `npm run test:coverage` passes at 80%+
 4. Commit (NO AI ATTRIBUTION)
 
 ### Run Tests
 ```bash
-# Add appropriate test command for your language/framework
-npm test  # or pytest, cargo test, etc.
+npm test                 # watch mode
+npm run test:coverage    # coverage report
+```
+
+### Build
+```bash
+npm run build            # tsc
 ```
 
 ## Final Reminder
-1. No "Claude"/"Anthropic"
-2. No AI attribution in commits
-3. Tests executed before committing
+1. No "Claude"/"Anthropic" in commits
+2. No AI attribution — ever
+3. Tests before committing
