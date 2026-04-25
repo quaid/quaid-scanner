@@ -2,16 +2,19 @@
 
 /**
  * CLI entry point for quaid-scanner
- *
- * Parses command-line arguments and builds the scanner configuration.
- * Actual scan execution is handled by the orchestrator (Story 1.3b).
  */
 
 import { Command } from 'commander';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { buildConfig, validateTarget } from './config.js';
+import { buildContext } from './context-builder.js';
+import { createDefaultRegistry } from './scanner/registry-factory.js';
+import { Orchestrator } from './scanner/orchestrator.js';
+import { buildScanReport, serializeJson } from './reporters/json.js';
+import { renderMarkdown } from './reporters/markdown.js';
+import { OutputFormat } from './types/index.js';
 
 /** Result of parsing CLI arguments */
 export interface ParseResult {
@@ -127,15 +130,51 @@ async function main(): Promise<void> {
       validatedTarget.type === 'github'
         ? `github:${validatedTarget.value}`
         : validatedTarget.value;
-    console.log(`Scanning: ${targetDisplay}`);
-    console.log(`Depth: ${config.depth}`);
-    console.log(`Format: ${config.format}`);
+    console.error(`Scanning: ${targetDisplay}`);
+    console.error(`Depth: ${config.depth} | Format: ${config.format}`);
   }
 
-  // Placeholder: orchestrator integration happens in Story 1.3b
-  console.log(
-    'Scan orchestrator not yet implemented. Configuration parsed successfully.',
-  );
+  const version = getVersion();
+  const context = buildContext(validatedTarget, config, version);
+
+  if (config.verbose) {
+    context.emit = (event) => {
+      if (event.type === 'scanner:complete') {
+        console.error(`  ✓ ${event.scanner} (${event.findingCount} findings, ${event.durationMs}ms)`);
+      }
+    };
+  }
+
+  const registry = createDefaultRegistry();
+  const orchestrator = new Orchestrator(registry);
+  const result = await orchestrator.run(context);
+
+  const report = buildScanReport(validatedTarget, result, config, context.maturity, version);
+
+  // Populate git metadata from context
+  report.metadata.commitSha = context.git.commitSha;
+  report.metadata.branch = context.git.branch;
+  report.metadata.remoteUrl = context.git.remoteUrl;
+
+  const output =
+    config.format === OutputFormat.MARKDOWN
+      ? renderMarkdown(report)
+      : serializeJson(report);
+
+  if (config.output) {
+    writeFileSync(config.output, output, 'utf-8');
+    if (!config.quiet) console.error(`Output written to ${config.output}`);
+  } else {
+    process.stdout.write(output + '\n');
+  }
+
+  if (!config.quiet) {
+    console.error(`\nScore: ${result.overallScore.toFixed(1)}/10 (${result.riskLevel})`);
+  }
+
+  // Exit codes: 0 = low risk (≥8), 1 = medium (5–7.9), 2 = high/critical (<5) or threshold missed
+  if (!result.thresholdPassed) process.exit(2);
+  process.exit(result.overallScore >= 8.0 ? 0 : result.overallScore >= 5.0 ? 1 : 2);
 }
 
 // Only run main() when executed directly, not when imported for testing
