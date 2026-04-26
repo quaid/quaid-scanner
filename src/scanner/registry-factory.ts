@@ -48,7 +48,10 @@ import { InclusiveDocScanner } from './inclusive/doc-scanner.js';
 
 // Technical
 import { InteractionTemplateScanner } from './technical/interaction-templates.js';
+import { LinterConfigScanner } from './technical/linter-config.js';
 import { ReleaseCadenceScanner } from './technical/release-cadence.js';
+import { SemVerValidationScanner } from './technical/semver-validation.js';
+import { TestCoverageScanner } from './technical/test-coverage.js';
 
 export function createDefaultRegistry(): ScannerRegistry {
   const registry = new ScannerRegistry();
@@ -101,7 +104,10 @@ export function createDefaultRegistry(): ScannerRegistry {
 
   // Technical
   registry.register(new InteractionTemplateScanner());
+  registry.register(new LinterConfigScanner());
   registry.register(new ReleaseCadenceScanner());
+  registry.register(new SemVerValidationScanner());
+  registry.register(new TestCoverageScanner());
 
   return registry;
 }
