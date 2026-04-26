@@ -199,7 +199,6 @@ export class TokenPermissionsScanner implements Scanner {
   ): void {
     let currentJob: string | null = null;
     let inJobBlock = false;
-    let jobIndent = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -210,7 +209,6 @@ export class TokenPermissionsScanner implements Scanner {
         const jobMatch = trimmed.match(/^(\s{2,})(\w[\w-]*)\s*:/);
         if (jobMatch && jobMatch[1].length === 2) {
           currentJob = jobMatch[2];
-          jobIndent = 2;
         }
       }
 

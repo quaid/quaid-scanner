@@ -1,5 +1,15 @@
 {
   "mcpServers": {
+    "quaid-scanner": {
+      "command": "node",
+      "args": ["dist/mcp.js"],
+      "env": {
+        "ZERODB_API_KEY": "${ZERODB_API_KEY}",
+        "ZERODB_PROJECT_ID": "${ZERODB_PROJECT_ID}",
+        "ZERODB_API_URL": "${ZERODB_API_URL}",
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
     "github": {
       "command": "npx",
       "args": [

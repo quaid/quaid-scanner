@@ -1,1 +1,0 @@
-../../../devcontext/.claude/commands/ga-search-schema.md

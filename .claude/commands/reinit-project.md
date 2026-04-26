@@ -1,1 +1,0 @@
-../../../devcontext/.claude/commands/reinit-project.md

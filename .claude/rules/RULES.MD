@@ -1,1 +1,0 @@
-../../../devcontext/.claude/RULES.MD

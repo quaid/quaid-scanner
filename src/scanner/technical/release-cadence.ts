@@ -98,7 +98,7 @@ export class ReleaseCadenceScanner implements Scanner {
         encoding: 'utf-8',
         timeout: 10000,
       });
-      gitTags = (typeof raw === 'string' ? raw : raw.toString('utf-8'))
+      gitTags = String(raw)
         .split('\n')
         .map((t) => t.trim())
         .filter((t) => t.length > 0);

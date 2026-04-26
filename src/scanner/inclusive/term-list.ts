@@ -5,7 +5,7 @@
  * remote sources, and user configuration.
  */
 
-import type { InclusiveConfig, TermDefinition } from '../../types/index.js';
+import type { InclusiveConfig } from '../../types/index.js';
 
 export interface LoadedTerm {
   term: string;

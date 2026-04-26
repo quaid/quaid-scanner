@@ -28,6 +28,8 @@ export const DEFAULT_CONFIG: ScannerConfig = {
   githubToken: null,
   zerodbApiKey: null,
   zerodbProjectId: null,
+  ecosystem: false,
+  ecosystemDepth: 'static',
   pillars: {
     disabled: [],
     weights: {},
@@ -104,6 +106,14 @@ export function buildConfig(
 
   if (cliOptions.verbose === true) {
     config.verbose = true;
+  }
+
+  if (cliOptions.ecosystem === true) {
+    config.ecosystem = true;
+  }
+
+  if (cliOptions.ecosystemDepth === 'assisted') {
+    config.ecosystemDepth = 'assisted';
   }
 
   if (typeof cliOptions.maturity === 'string') {

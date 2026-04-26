@@ -1,1 +1,0 @@
-../../../devcontext/.claude/commands/ga-quick-report.md

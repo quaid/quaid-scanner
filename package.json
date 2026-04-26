@@ -2,6 +2,7 @@
   "name": "quaid-scanner",
   "version": "0.1.0",
   "description": "Agent-first OSS repository health scanner based on CHAOSS metrics, The Open Source Way 2.0, and Inclusive Naming Initiative",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

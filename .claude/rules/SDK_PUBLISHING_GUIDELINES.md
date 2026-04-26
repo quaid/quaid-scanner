@@ -1,1 +1,0 @@
-../../../devcontext/.claude/SDK_PUBLISHING_GUIDELINES.md

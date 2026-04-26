@@ -1,1 +1,0 @@
-../../../devcontext/.claude/commands/init-new-project.md

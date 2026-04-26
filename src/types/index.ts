@@ -100,7 +100,9 @@ export type ScanEvent =
   | { type: 'scan:start'; repoPath: string; depth: ScanDepth }
   | { type: 'scanner:start'; scanner: string; pillar: Pillar }
   | { type: 'scanner:complete'; scanner: string; findingCount: number; durationMs: number }
-  | { type: 'scan:complete'; totalFindings: number; durationMs: number };
+  | { type: 'scan:complete'; totalFindings: number; durationMs: number }
+  | { type: 'ecosystem:start' }
+  | { type: 'ecosystem:complete'; dataSource: string };
 
 // --- Report Output Types ---
 
@@ -117,6 +119,7 @@ export interface ScanReport {
   findings: Finding[];
   recommendations: Recommendation[];
   metadata: RepoMetadata;
+  ecosystem?: import('../ecosystem/types.js').EcosystemIntelligence;
 }
 
 export interface PillarScore {
@@ -166,6 +169,8 @@ export interface ScannerConfig {
   githubToken: string | null;
   zerodbApiKey: string | null;
   zerodbProjectId: string | null;
+  ecosystem: boolean;
+  ecosystemDepth: 'static' | 'assisted';
   pillars: PillarConfig;
   bots: BotFilterConfig;
   inclusive: InclusiveConfig;
