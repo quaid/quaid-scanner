@@ -14,6 +14,7 @@ import { createDefaultRegistry } from './scanner/registry-factory.js';
 import { Orchestrator } from './scanner/orchestrator.js';
 import { buildScanReport, serializeJson } from './reporters/json.js';
 import { renderMarkdown } from './reporters/markdown.js';
+import { EcosystemOrchestrator } from './ecosystem/orchestrator.js';
 import { OutputFormat } from './types/index.js';
 
 /** Result of parsing CLI arguments */
@@ -83,7 +84,9 @@ function createProgram(): Command {
       'auto',
     )
     .option('--quiet', 'Suppress progress output')
-    .option('--verbose', 'Show detailed progress');
+    .option('--verbose', 'Show detailed progress')
+    .option('--ecosystem', 'Run ecosystem intelligence analysis (rivals, partners, communities)')
+    .option('--ecosystem-depth <level>', 'Ecosystem analysis depth: static or assisted', 'static');
 
   // Prevent commander from calling process.exit on errors during testing
   program.exitOverride();
@@ -155,6 +158,23 @@ async function main(): Promise<void> {
   report.metadata.commitSha = context.git.commitSha;
   report.metadata.branch = context.git.branch;
   report.metadata.remoteUrl = context.git.remoteUrl;
+
+  // Ecosystem intelligence (opt-in, non-scoring)
+  if (config.ecosystem) {
+    if (!config.quiet) context.emit({ type: 'ecosystem:start' });
+    try {
+      const ecoContext = {
+        ...context,
+        existingReport: report,
+        zerodbAvailable: !!(config.zerodbApiKey && config.zerodbProjectId),
+      };
+      const ecoOrchestrator = new EcosystemOrchestrator();
+      report.ecosystem = await ecoOrchestrator.analyze(ecoContext);
+      if (!config.quiet) context.emit({ type: 'ecosystem:complete', dataSource: report.ecosystem.dataSource });
+    } catch (err) {
+      if (!config.quiet) console.error(`Ecosystem analysis failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 
   const output =
     config.format === OutputFormat.MARKDOWN
