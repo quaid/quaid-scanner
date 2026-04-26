@@ -104,6 +104,75 @@ describe('SemVerValidationScanner', () => {
     expect(findings.every((f) => f.pillar === Pillar.TECHNICAL)).toBe(true);
   });
 
+  it('returns empty array and INFO when execSync throws', async () => {
+    mockedExec.execSync = vi.fn().mockImplementation(() => { throw new Error('git not found'); });
+    mockedFs.existsSync = vi.fn().mockReturnValue(false);
+
+    const findings = await scanner.run(makeContext());
+    // getGitTags returns [] on error, so we get the no-tags INFO finding
+    expect(findings.length).toBeGreaterThan(0);
+    const infoFindings = findings.filter((f) => f.severity === Severity.INFO);
+    expect(infoFindings.length).toBeGreaterThan(0);
+  });
+
+  it('returns WARNING when 70-99% of tags follow SemVer', async () => {
+    // 3 valid semver tags + 1 non-semver = 75% ratio, hits the >= 0.7 WARNING branch
+    mockedExec.execSync = vi.fn().mockReturnValue('v1.0.0\nv1.1.0\nv2.0.0\nbad-tag\n');
+    mockedFs.existsSync = vi.fn().mockReturnValue(false);
+
+    const findings = await scanner.run(makeContext());
+    const warnings = findings.filter((f) => f.severity === Severity.WARNING);
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0].message).toMatch(/do not follow SemVer/);
+  });
+
+  it('returns WARNING when CHANGELOG exists but is missing entries for recent tags', async () => {
+    // All tags are valid SemVer, CHANGELOG exists but does NOT contain the version strings
+    mockedExec.execSync = vi.fn().mockReturnValue('v1.0.0\nv1.1.0\n');
+    mockedFs.existsSync = vi.fn().mockImplementation((p: unknown) =>
+      String(p).toUpperCase().includes('CHANGELOG'),
+    );
+    // CHANGELOG content has no version headers — only "## Unreleased"
+    mockedFs.readFileSync = vi.fn().mockReturnValue('## Unreleased\n\n- Some unreleased change\n');
+
+    const findings = await scanner.run(makeContext());
+    const warnings = findings.filter((f) => f.severity === Severity.WARNING);
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0].message).toMatch(/CHANGELOG missing entries for/);
+    expect(warnings[0].metadata).toHaveProperty('missingVersions');
+  });
+
+  it('returns false from changelogMentionsVersion when readFileSync throws', async () => {
+    // Trigger the catch block in changelogMentionsVersion by having readFileSync throw
+    mockedExec.execSync = vi.fn().mockReturnValue('v1.0.0\n');
+    mockedFs.existsSync = vi.fn().mockImplementation((p: unknown) =>
+      String(p).toUpperCase().includes('CHANGELOG'),
+    );
+    mockedFs.readFileSync = vi.fn().mockImplementation(() => { throw new Error('permission denied'); });
+
+    const findings = await scanner.run(makeContext());
+    // readFileSync throws → changelogMentionsVersion returns false → all tags missing from changelog
+    const warnings = findings.filter((f) => f.severity === Severity.WARNING);
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0].message).toMatch(/CHANGELOG missing entries for/);
+  });
+
+  it('counts version by bare string when prefixed v tag matches bare form in changelog', async () => {
+    // content.includes(version) is false but content.includes(bare) is true
+    // e.g., tag is "v1.0.0", changelog contains "1.0.0" but not "v1.0.0"
+    mockedExec.execSync = vi.fn().mockReturnValue('v1.0.0\n');
+    mockedFs.existsSync = vi.fn().mockImplementation((p: unknown) =>
+      String(p).toUpperCase().includes('CHANGELOG'),
+    );
+    // Only the bare "1.0.0" form — not "v1.0.0"
+    mockedFs.readFileSync = vi.fn().mockReturnValue('## 1.0.0\n\n- Initial release\n');
+
+    const findings = await scanner.run(makeContext());
+    // Changelog covers the release via bare version, so no missing-entry warning
+    const passes = findings.filter((f) => f.severity === Severity.PASS);
+    expect(passes.some((f) => f.message.includes('CHANGELOG'))).toBe(true);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
