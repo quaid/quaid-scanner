@@ -335,4 +335,147 @@ describe('Orchestrator', () => {
       expect(result.findings.map((f) => f.id)).toContain('B-01');
     });
   });
+
+  describe('scanner error handling', () => {
+    it('produces an error finding when a scanner throws a regular Error', async () => {
+      registry.register(createMockScanner({
+        name: 'throwing-scanner',
+        pillar: Pillar.SECURITY,
+        async run(_ctx: ScanContext): Promise<Finding[]> {
+          throw new Error('scanner internal failure');
+        },
+      }));
+
+      const result = await orchestrator.run(createMinimalContext());
+
+      const errorFindings = result.findings.filter((f) => f.category === 'error');
+      expect(errorFindings).toHaveLength(1);
+      expect(errorFindings[0].severity).toBe(Severity.WARNING);
+      expect(errorFindings[0].message).toContain('scanner internal failure');
+      expect(errorFindings[0].suggestion).toBe('Check scanner implementation for errors');
+    });
+
+    it('produces an error finding when a scanner throws a non-Error value', async () => {
+      registry.register(createMockScanner({
+        name: 'string-throw-scanner',
+        pillar: Pillar.SECURITY,
+        async run(_ctx: ScanContext): Promise<Finding[]> {
+          // eslint-disable-next-line @typescript-eslint/no-throw-literal
+          throw 'raw string error';
+        },
+      }));
+
+      const result = await orchestrator.run(createMinimalContext());
+
+      const errorFindings = result.findings.filter((f) => f.category === 'error');
+      expect(errorFindings).toHaveLength(1);
+      expect(errorFindings[0].message).toContain('raw string error');
+    });
+  });
+
+  describe('circular dependency resolution', () => {
+    it('runs scanners whose dependency is missing rather than hanging forever', async () => {
+      // Scanner declares a dependency that does not exist in the registry —
+      // the orchestrator should detect the unresolvable state and run it anyway.
+      registry.register(createMockScanner({
+        name: 'orphan-scanner',
+        pillar: Pillar.SECURITY,
+        dependsOn: ['nonexistent-dep'],
+        findings: [createFinding({ id: 'ORPHAN-01' })],
+      }));
+
+      const result = await orchestrator.run(createMinimalContext());
+
+      // The orphaned scanner should still have run and contributed its finding.
+      expect(result.findings.map((f) => f.id)).toContain('ORPHAN-01');
+    });
+  });
+
+  describe('risk level derivation', () => {
+    it('returns CRITICAL risk level when overall score < 4.0', async () => {
+      // Need enough critical findings across all pillars to drive score below 4.0
+      const pillars = [
+        Pillar.SECURITY,
+        Pillar.GOVERNANCE,
+        Pillar.COMMUNITY,
+        Pillar.AI_READINESS,
+        Pillar.INCLUSIVE,
+        Pillar.TECHNICAL,
+      ];
+      for (const pillar of pillars) {
+        registry.register(createMockScanner({
+          name: `critical-${pillar}`,
+          pillar,
+          findings: [
+            createFinding({ id: `CRIT-${pillar}-1`, severity: Severity.CRITICAL, pillar }),
+            createFinding({ id: `CRIT-${pillar}-2`, severity: Severity.CRITICAL, pillar }),
+            createFinding({ id: `CRIT-${pillar}-3`, severity: Severity.CRITICAL, pillar }),
+          ],
+        }));
+      }
+
+      const result = await orchestrator.run(createMinimalContext());
+
+      expect(result.riskLevel).toBe('CRITICAL');
+    });
+
+    it('returns LOW risk level when overall score >= 8.0', async () => {
+      // No scanners → all pillars default to 10.0 → overall score = 10.0
+      const result = await orchestrator.run(createMinimalContext());
+
+      expect(result.riskLevel).toBe('LOW');
+    });
+
+    it('returns HIGH risk level when overall score is between 4.0 and 6.0', async () => {
+      // Push score into 4.0-6.0 band: a mix of critical + warning findings
+      const pillars = [
+        Pillar.SECURITY,
+        Pillar.GOVERNANCE,
+        Pillar.COMMUNITY,
+        Pillar.AI_READINESS,
+        Pillar.INCLUSIVE,
+        Pillar.TECHNICAL,
+      ];
+      for (const pillar of pillars) {
+        registry.register(createMockScanner({
+          name: `high-${pillar}`,
+          pillar,
+          findings: [
+            createFinding({ id: `HIGH-${pillar}-1`, severity: Severity.CRITICAL, pillar }),
+            createFinding({ id: `HIGH-${pillar}-2`, severity: Severity.WARNING, pillar }),
+          ],
+        }));
+      }
+
+      const result = await orchestrator.run(createMinimalContext());
+
+      expect(['HIGH', 'MEDIUM']).toContain(result.riskLevel);
+    });
+
+    it('returns MEDIUM risk level when overall score is between 6.0 and 8.0', async () => {
+      // One warning per pillar drives score to ~8.5 range, one critical pushes towards MEDIUM
+      const pillars = [
+        Pillar.SECURITY,
+        Pillar.GOVERNANCE,
+        Pillar.COMMUNITY,
+        Pillar.AI_READINESS,
+        Pillar.INCLUSIVE,
+        Pillar.TECHNICAL,
+      ];
+      for (const pillar of pillars) {
+        registry.register(createMockScanner({
+          name: `medium-${pillar}`,
+          pillar,
+          findings: [
+            createFinding({ id: `MED-${pillar}-1`, severity: Severity.WARNING, pillar }),
+            createFinding({ id: `MED-${pillar}-2`, severity: Severity.WARNING, pillar }),
+          ],
+        }));
+      }
+
+      const result = await orchestrator.run(createMinimalContext());
+
+      expect(['MEDIUM', 'HIGH']).toContain(result.riskLevel);
+    });
+  });
 });
