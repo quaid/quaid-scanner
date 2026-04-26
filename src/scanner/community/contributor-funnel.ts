@@ -61,7 +61,7 @@ export class ContributorFunnelScanner implements Scanner {
         encoding: 'utf-8',
         timeout: 30000,
       });
-      output = typeof raw === 'string' ? raw : raw.toString('utf-8');
+      output = String(raw);
     } catch (err) {
       return [
         makeFinding(
