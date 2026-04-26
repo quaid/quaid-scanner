@@ -41,6 +41,29 @@ export {
 // Scanner plugin system
 export { ScannerRegistry } from './scanner/registry.js';
 export { Orchestrator, type OrchestratorResult } from './scanner/orchestrator.js';
+export { createDefaultRegistry } from './scanner/registry-factory.js';
 
 // Configuration
 export { DEFAULT_CONFIG, buildConfig, validateTarget } from './config.js';
+
+// Reporters
+export { buildScanReport, serializeJson } from './reporters/json.js';
+export { renderMarkdown } from './reporters/markdown.js';
+export { renderTrendAscii, alertOnDrop } from './reporters/trend.js';
+
+// Persistence
+export { ZeroDBClient } from './integrations/zerodb-client.js';
+export { storeScanHistory, queryTrend, mapReportToHistoryRecord } from './integrations/scan-history.js';
+
+// Ecosystem Intelligence
+export { EcosystemOrchestrator } from './ecosystem/orchestrator.js';
+export type {
+  EcosystemIntelligence,
+  EcosystemProfile,
+  EcosystemActor,
+  UserCommunity,
+  EcosystemRecommendation,
+  EcosystemContext,
+  EcosystemAnalyzer,
+  EcosystemDataSource,
+} from './ecosystem/types.js';

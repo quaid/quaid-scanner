@@ -1843,6 +1843,122 @@ model-index:
 
 ---
 
+## Epic 10: Ecosystem Intelligence
+
+Strategic analysis of the competitive and cooperative OSS landscape. **Not a scored pillar** — does not affect `overallScore`. Opt-in via `--ecosystem` flag.
+
+### Story 10.1: Domain Detection
+**As a** developer running quaid-scanner
+**I want** the tool to identify my project's domain
+**So that** ecosystem analysis is relevant to my space
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 10.1.1 | `DomainDetector` scores README/package.json keywords against 30-domain taxonomy | Unit test |
+| 10.1.2 | Detects primary language (TypeScript, Python, Go, Rust, etc.) | Unit test |
+| 10.1.3 | Falls back to `general` domain when no keywords match | Unit test |
+| 10.1.4 | `detectedTopics` array lists top-5 matched domains | Output check |
+
+**Story Points:** 2
+
+---
+
+### Story 10.2: Foundation & Standards Mapping
+**As a** maintainer
+**I want** to know which foundations and standards apply to my domain
+**So that** I can pursue alignment and certification
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 10.2.1 | `FoundationMapper` maps 30 domains to foundations (CNCF, OpenSSF, LF AI&Data, Apache, etc.) | Unit test |
+| 10.2.2 | `standards` array lists applicable standards (OCI, SLSA, CHAOSS, OpenTelemetry, etc.) | Output check |
+| 10.2.3 | Deduplicates foundations when profile already has entries | Unit test |
+
+**Story Points:** 2
+
+---
+
+### Story 10.3: Rival & Partner Discovery
+**As a** maintainer
+**I want** to know which projects are my rivals and potential partners
+**So that** I can differentiate and collaborate strategically
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 10.3.1 | `RivalFinder` returns static rivals from `DOMAIN_TO_RIVALS` taxonomy | Unit test |
+| 10.3.2 | `similarityScore: null` for static-only rivals | Output check |
+| 10.3.3 | ZeroDB vector search augments results when available (similarity > 0.75) | Integration test |
+| 10.3.4 | `PartnerFinder` reads package.json/requirements.txt/go.mod deps | Unit test |
+| 10.3.5 | `PartnerFinder` detects README "integrates with" mentions | Unit test |
+| 10.3.6 | Deduplicates by name (case-insensitive) | Unit test |
+
+**Story Points:** 3
+
+---
+
+### Story 10.4: Community Mapping
+**As a** maintainer
+**I want** a list of relevant communities to join
+**So that** I can increase my project's visibility and gather users
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 10.4.1 | `CommunityMapper` returns communities from static taxonomy | Unit test |
+| 10.4.2 | Detects Discord/Slack/Reddit/GitHub Discussions URLs in README | Unit test |
+| 10.4.3 | Does not duplicate URLs found in both README and taxonomy | Unit test |
+| 10.4.4 | Communities have `relevance: 'high' | 'medium' | 'low'` | Output check |
+
+**Story Points:** 2
+
+---
+
+### Story 10.5: Strategy Recommendations
+**As a** maintainer
+**I want** actionable strategic recommendations
+**So that** I know what to do next to grow my project's ecosystem position
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 10.5.1 | `StrategyAdvisor` returns ≤8 recommendations sorted by impact×effort | Unit test |
+| 10.5.2 | Foundation recommendation present when `ecosystems` non-empty | Unit test |
+| 10.5.3 | Standards recommendation present when `standards` non-empty | Unit test |
+| 10.5.4 | Differentiation recommendation present when rivals exist | Unit test |
+| 10.5.5 | All recommendations have `effort`, `impact`, and `resources` fields | Output check |
+
+**Story Points:** 2
+
+---
+
+### Story 10.6: CLI Integration & Output
+**As a** developer
+**I want** `--ecosystem` flag to add intelligence to JSON/Markdown output
+**So that** I can include it in CI reports or read it in the terminal
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 10.6.1 | `--ecosystem` flag triggers `EcosystemOrchestrator.analyze()` after scan | CLI test |
+| 10.6.2 | `report.ecosystem` is populated; `overallScore` unchanged | Integration test |
+| 10.6.3 | `dataSource: 'static'` when ZeroDB unavailable | Output check |
+| 10.6.4 | `dataSource: 'zerodb-assisted'` or `'zerodb-full'` when ZeroDB connected | Integration test |
+| 10.6.5 | Ecosystem section appears in Markdown output | CLI test |
+| 10.6.6 | `disclaimer` field present in all outputs | Output check |
+
+**Story Points:** 2
+
+---
+
 ## Epic 9: Claude Code Integration
 
 ### Story 9.1: Claude Skill Definition
@@ -1954,11 +2070,20 @@ quaid-scanner/
 | Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality |
 | Epic 8: Reporting | 4 | 11 | JSON/Markdown, Historical Trends |
 | Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server |
-| **Total** | **53** | **128** | |
+| Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy |
+| **Total** | **59** | **141** | |
 
 ---
 
 ### Change Log
+
+#### v2.2 Changes (from v2.1)
+
+| Change | Impact |
+|--------|--------|
+| **Add Epic 10: Ecosystem Intelligence** | New `--ecosystem` flag, `EcosystemOrchestrator`, domain taxonomy, rival/partner/community analysis, strategy advisor |
+| **Story point total: 128 → 141** | 6 new stories, 13 new points |
+| **ScanReport.ecosystem? optional field** | Non-breaking addition; does not affect overallScore |
 
 #### v2.1 Changes (from v2.0)
 
