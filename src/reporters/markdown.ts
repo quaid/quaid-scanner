@@ -21,7 +21,16 @@ function findingsBySeverity(findings: Finding[], severity: Severity): Finding[] 
   return findings.filter((f) => f.severity === severity);
 }
 
-export function renderMarkdown(report: ScanReport): string {
+export interface MarkdownReportOptions {
+  /** Optional ecosystem metadata to include as a dedicated section */
+  ecosystem?: {
+    name: string;
+    language?: string;
+    stars?: number;
+  };
+}
+
+export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptions): string {
   const lines: string[] = [];
   const risk = RISK_EMOJI[report.riskLevel];
 
@@ -31,6 +40,17 @@ export function renderMarkdown(report: ScanReport): string {
   lines.push(`**Maturity:** ${report.maturity} | **Depth:** ${report.depth} | **Duration:** ${(report.durationMs / 1000).toFixed(1)}s`);
   lines.push(`**Scanned:** ${report.scannedAt}`);
   lines.push('');
+
+  // Optional ecosystem section
+  if (options?.ecosystem) {
+    const eco = options.ecosystem;
+    lines.push('## Ecosystem');
+    lines.push('');
+    lines.push(`**Name:** ${eco.name}`);
+    if (eco.language) lines.push(`**Language:** ${eco.language}`);
+    if (eco.stars !== undefined) lines.push(`**Stars:** ${eco.stars}`);
+    lines.push('');
+  }
 
   // Pillar scorecard
   lines.push('## Pillar Scores');
