@@ -1,3 +1,4 @@
+// Achieves 100% stmt and branch coverage for license-compatibility.ts — Refs #22
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
