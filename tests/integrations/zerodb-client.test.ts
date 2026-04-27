@@ -108,4 +108,43 @@ describe('ZeroDBClient', () => {
       await expect(client.tableCreate('scan_history', [])).rejects.toThrow();
     });
   });
+
+  describe('constructor', () => {
+    it('strips trailing slash from baseUrl', async () => {
+      const clientWithSlash = new ZeroDBClient('http://localhost:8100/', 'test-key', 'proj-123');
+      mockFetch.mockResolvedValue(ok({ data: [] }));
+      await clientWithSlash.tableQuery('my_table', {});
+      const [url] = mockFetch.mock.calls[0];
+      expect(url).not.toContain('//v1');
+      expect(url).toContain('http://localhost:8100/v1');
+    });
+  });
+
+  describe('tableQuery additional branches', () => {
+    it('returns empty array when response is not ok', async () => {
+      mockFetch.mockResolvedValue(fail(503, { detail: 'service unavailable' }));
+      const result = await client.tableQuery('scan_history', {});
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array when response data field is missing', async () => {
+      mockFetch.mockResolvedValue(ok({}));
+      const result = await client.tableQuery('scan_history', {});
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('vectorSearch additional branches', () => {
+    it('returns empty array when response is not ok', async () => {
+      mockFetch.mockResolvedValue(fail(503, { detail: 'service unavailable' }));
+      const hits = await client.vectorSearch([0.1, 0.2], 5, 0.75);
+      expect(hits).toEqual([]);
+    });
+
+    it('returns empty array when response results field is missing', async () => {
+      mockFetch.mockResolvedValue(ok({}));
+      const hits = await client.vectorSearch([0.1, 0.2], 5, 0.75);
+      expect(hits).toEqual([]);
+    });
+  });
 });
