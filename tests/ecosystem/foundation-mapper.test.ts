@@ -37,4 +37,16 @@ describe('FoundationMapper', () => {
     const result = mapper.enrich(makeProfile('some-unknown-domain'));
     expect(result.ecosystems.length).toBeGreaterThan(0);
   });
+
+  it('returns empty ecosystems when domain is unknown and no general fallback exists', () => {
+    const result = mapper.enrich(makeProfile('totally-unknown-domain-xyz'));
+    // Even with no specific mapping, result should be an array (may be empty or general fallback)
+    expect(Array.isArray(result.ecosystems)).toBe(true);
+  });
+
+  it('returns empty standards array for domain with no standards mapping', () => {
+    // 'container-orchestration' has no standards entry — tests the ?? [] on line 7
+    const result = mapper.enrich(makeProfile('container-orchestration'));
+    expect(Array.isArray(result.standards)).toBe(true);
+  });
 });

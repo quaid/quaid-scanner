@@ -75,4 +75,27 @@ describe('upsertRepoProfile', () => {
 
     await expect(upsertRepoProfile(makeReport(), makeProfile(), client)).resolves.not.toThrow();
   });
+
+  it('uses repo as name fallback when repo string contains no slash', async () => {
+    const client = {
+      vectorUpsert: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ZeroDBClient;
+
+    const report = makeReport({ repo: 'monorepo' });
+    await upsertRepoProfile(report, makeProfile(), client);
+    expect(client.vectorUpsert).toHaveBeenCalledWith(
+      'monorepo',
+      expect.any(Array),
+      expect.objectContaining({ name: 'monorepo', repo: 'monorepo' }),
+    );
+  });
+});
+
+describe('buildProfileEmbedding with missing pillars', () => {
+  it('returns 0 for pillar scores when a pillar is absent from the report', () => {
+    const partialReport = makeReport({ pillars: {} as unknown as Record<Pillar, ReturnType<typeof makeReport>['pillars'][Pillar]> });
+    const vector = buildProfileEmbedding(partialReport, makeProfile());
+    const pillarSlice = vector.slice(0, 6);
+    expect(pillarSlice.every((v) => v === 0)).toBe(true);
+  });
 });
