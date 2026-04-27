@@ -3,7 +3,7 @@ import type { EcosystemProfile } from './types.js';
 
 export class FoundationMapper {
   enrich(profile: EcosystemProfile): EcosystemProfile {
-    const ecosystems = DOMAIN_TO_FOUNDATIONS[profile.domain] ?? DOMAIN_TO_FOUNDATIONS['general'] ?? [];
+    const ecosystems = DOMAIN_TO_FOUNDATIONS[profile.domain] ?? DOMAIN_TO_FOUNDATIONS['general']!;
     const standards = DOMAIN_TO_STANDARDS[profile.domain] ?? [];
 
     return {

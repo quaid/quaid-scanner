@@ -89,6 +89,22 @@ describe('upsertRepoProfile', () => {
       expect.objectContaining({ name: 'monorepo', repo: 'monorepo' }),
     );
   });
+
+  it('falls back to repo when split produces an empty segment', async () => {
+    const client = {
+      vectorUpsert: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ZeroDBClient;
+
+    // An empty repo string causes split('/').pop() to return '' (falsy),
+    // triggering the || repo fallback on the name field.
+    const report = makeReport({ repo: '' });
+    await upsertRepoProfile(report, makeProfile(), client);
+    expect(client.vectorUpsert).toHaveBeenCalledWith(
+      '',
+      expect.any(Array),
+      expect.objectContaining({ name: '', repo: '' }),
+    );
+  });
 });
 
 describe('buildProfileEmbedding with missing pillars', () => {
