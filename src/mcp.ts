@@ -196,7 +196,7 @@ process.stdin.on('data', (chunk: string) => {
   }
 });
 
-async function handleRequest(req: MCPRequest): Promise<void> {
+export async function handleRequest(req: MCPRequest): Promise<void> {
   if (req.method === 'initialize') {
     ok(req.id, {
       protocolVersion: '2024-11-05',
