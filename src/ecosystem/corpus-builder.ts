@@ -35,7 +35,7 @@ export async function upsertRepoProfile(
     const vector = buildProfileEmbedding(report, profile);
     const metadata = {
       repo: report.repo,
-      name: report.repo.split('/').pop() ?? report.repo,
+      name: report.repo.split('/').pop() || report.repo,
       domain: profile.domain,
       overallScore: report.overallScore,
       primaryLanguage: profile.primaryLanguage,
