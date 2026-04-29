@@ -224,4 +224,64 @@ body:
       expect(findings.length).toBeGreaterThan(0);
     });
   });
+
+  describe('branch coverage — uncovered paths', () => {
+    it('sets allValid=false when a .yml issue template has no front matter (lines 151-152)', async () => {
+      const templateDir = path.join(tmpDir, '.github', 'ISSUE_TEMPLATE');
+      fs.mkdirSync(templateDir, { recursive: true });
+      // .yml file with no --- front-matter block: extractFrontMatter returns null,
+      // triggering the else-if branch that sets allValid = false
+      fs.writeFileSync(
+        path.join(templateDir, 'bad-template.yml'),
+        'body:\n  - type: textarea\n    attributes:\n      label: No front matter here\n',
+      );
+
+      const findings = await scanner.run(makeContext());
+      // allValid=false means we do NOT get the PASS finding for YAML front matter
+      const yamlPassFinding = findings.find(
+        (f) => f.message.includes('YAML front matter is valid') && f.severity === Severity.PASS,
+      );
+      expect(yamlPassFinding).toBeUndefined();
+      // We should still get the "N issue template(s) found" info finding
+      const templateFinding = findings.find((f) => f.message.includes('issue template'));
+      expect(templateFinding).toBeDefined();
+    });
+
+    it('catches readFileSync error for PR template path when file is unreadable (line 206)', async () => {
+      // Create a directory at the location of a known PR template path so existsSync
+      // returns true, but readFileSync on a directory throws EISDIR
+      const githubDir = path.join(tmpDir, '.github');
+      fs.mkdirSync(githubDir, { recursive: true });
+      // Make pull_request_template.md a directory — existsSync passes, readFileSync throws
+      fs.mkdirSync(path.join(githubDir, 'pull_request_template.md'));
+
+      const findings = await scanner.run(makeContext());
+      // The scanner catches the error and continues — no PR template finding
+      const prFinding = findings.find(
+        (f) => f.message.includes('PR template found'),
+      );
+      expect(prFinding).toBeUndefined();
+    });
+
+    it('catches readFileSync error inside PULL_REQUEST_TEMPLATE dir when entry is unreadable (line 222)', async () => {
+      // Ensure none of the root PR template paths exist
+      const githubDir = path.join(tmpDir, '.github');
+      fs.mkdirSync(githubDir, { recursive: true });
+
+      // Create the PULL_REQUEST_TEMPLATE directory
+      const prTemplateDir = path.join(tmpDir, '.github', 'PULL_REQUEST_TEMPLATE');
+      fs.mkdirSync(prTemplateDir, { recursive: true });
+
+      // Place a sub-directory inside it: readdirSync will return it, but
+      // readFileSync on a directory entry throws EISDIR
+      fs.mkdirSync(path.join(prTemplateDir, 'not-a-file.md'));
+
+      const findings = await scanner.run(makeContext());
+      // The scanner catches the error — prTemplateContent stays null, no PR finding
+      const prFinding = findings.find(
+        (f) => f.message.includes('PR template found'),
+      );
+      expect(prFinding).toBeUndefined();
+    });
+  });
 });
