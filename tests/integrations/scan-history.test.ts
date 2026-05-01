@@ -86,10 +86,13 @@ describe('storeScanHistory', () => {
 });
 
 describe('queryTrend', () => {
+  const day = 86_400_000;
+  const now = Date.now();
+
   it('returns declining trend when latest score dropped >5%', async () => {
     const rows = [
-      { row_data: { scanned_at: '2026-04-22T00:00:00Z', overall_score: 8.0, commit_sha: 'a1' } },
-      { row_data: { scanned_at: '2026-04-23T00:00:00Z', overall_score: 7.0, commit_sha: 'a2' } },
+      { row_data: { scanned_at: new Date(now - 2 * day).toISOString(), overall_score: 8.0, commit_sha: 'a1' } },
+      { row_data: { scanned_at: new Date(now - 1 * day).toISOString(), overall_score: 7.0, commit_sha: 'a2' } },
     ];
     const client = makeMockClient({ tableQuery: vi.fn().mockResolvedValue(rows) });
     const trend = await queryTrend('acme/my-project', 7, client);
@@ -100,8 +103,8 @@ describe('queryTrend', () => {
 
   it('returns improving trend when score increased', async () => {
     const rows = [
-      { row_data: { scanned_at: '2026-04-22T00:00:00Z', overall_score: 6.0, commit_sha: 'a1' } },
-      { row_data: { scanned_at: '2026-04-23T00:00:00Z', overall_score: 8.0, commit_sha: 'a2' } },
+      { row_data: { scanned_at: new Date(now - 2 * day).toISOString(), overall_score: 6.0, commit_sha: 'a1' } },
+      { row_data: { scanned_at: new Date(now - 1 * day).toISOString(), overall_score: 8.0, commit_sha: 'a2' } },
     ];
     const client = makeMockClient({ tableQuery: vi.fn().mockResolvedValue(rows) });
     const trend = await queryTrend('acme/my-project', 7, client);
@@ -110,8 +113,8 @@ describe('queryTrend', () => {
 
   it('returns stable when change is within 5%', async () => {
     const rows = [
-      { row_data: { scanned_at: '2026-04-22T00:00:00Z', overall_score: 7.0, commit_sha: 'a1' } },
-      { row_data: { scanned_at: '2026-04-23T00:00:00Z', overall_score: 7.2, commit_sha: 'a2' } },
+      { row_data: { scanned_at: new Date(now - 2 * day).toISOString(), overall_score: 7.0, commit_sha: 'a1' } },
+      { row_data: { scanned_at: new Date(now - 1 * day).toISOString(), overall_score: 7.2, commit_sha: 'a2' } },
     ];
     const client = makeMockClient({ tableQuery: vi.fn().mockResolvedValue(rows) });
     const trend = await queryTrend('acme/my-project', 7, client);
