@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-04
+
+Bugfix release. All fixes relate to remote (GitHub URL) scanning correctness and output fidelity.
+
+### Fixed
+
+- **Remote repo file scanning** — when scanning a GitHub URL, file-based scanners (inclusive
+  language, technical rigor, governance) were running against quaid-scanner's own local source
+  tree instead of the target repository. `buildContext` now clones the target to a temp directory
+  via `git clone --depth 1` and removes it after the scan. (#63, #64)
+- **Private repo cloning** — the GitHub token is now included in the clone URL so private
+  repositories can be scanned when `GITHUB_TOKEN` or `GITHUB_PERSONAL_ACCESS_TOKEN` is set. (#63)
+- **GitHub token not read from environment** — `buildConfig` previously left `githubToken: null`
+  unless a caller explicitly set it. It now reads `GITHUB_TOKEN`, falling back to
+  `GITHUB_PERSONAL_ACCESS_TOKEN`. All GitHub API–backed checks (branch protection, OpenSSF
+  Scorecard, issue closure, response time) now activate automatically when the token is available
+  in the environment. (#61, #65)
+- **Finding severity serialized as integer** — `serializeJson` emitted severity as the raw enum
+  integer (e.g. `2`) instead of the human-readable label (`"CRITICAL"`). Agents and humans
+  using `jq` filters like `.severity == "CRITICAL"` now work correctly. (#62, #66)
+- **`mcp.ts` not updated for `buildContext` return type** — the MCP server's `scan_repository`
+  handler was not destructuring the new `{ context, cleanup }` return shape, causing all MCP
+  scans to throw. Fixed alongside removal of an unused `CollaborationSpectrum` import in
+  `src/graph/collaboration-scorer.ts`. (#54)
+
+### Changed
+
+- `package.json` `repository.url` normalized to `git+https://github.com/quaid/quaid-scanner.git`
+  (npm-canonical format). (#54)
+- README updated: scanner count corrected to 41, `GITHUB_PERSONAL_ACCESS_TOKEN` fallback
+  documented, `.env` sourcing pattern added, new **Portfolio Scanning** section with agent
+  workflow and report template reference, pillar key in example output corrected to `ai_readiness`.
+
 ## [0.1.0] - 2026-05-03
 
 First public release of quaid-scanner — an agent-first OSS repository health scanner
@@ -121,5 +154,6 @@ built on CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initi
 - 74 test files, 1285 tests, ≥80% statement and branch coverage enforced via vitest thresholds
 - `prepublishOnly` script runs build + full test suite before any npm publish
 
+[0.1.1]: https://github.com/quaid/quaid-scanner/releases/tag/v0.1.1
 [0.1.0]: https://github.com/quaid/quaid-scanner/releases/tag/v0.1.0
-[Unreleased]: https://github.com/quaid/quaid-scanner/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/quaid/quaid-scanner/compare/v0.1.1...HEAD

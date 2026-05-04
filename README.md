@@ -32,8 +32,11 @@ npx quaid-scanner . --depth quick
 # Scan the current directory
 quaid-scanner .
 
-# Scan a GitHub repository
+# Scan a GitHub repository (public or private)
 GITHUB_TOKEN=ghp_xxxx quaid-scanner https://github.com/owner/repo
+
+# GITHUB_PERSONAL_ACCESS_TOKEN is also accepted as a fallback
+GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxx quaid-scanner https://github.com/owner/repo
 
 # Scan with markdown output to file
 quaid-scanner . --format markdown --output report.md
@@ -48,11 +51,18 @@ quaid-scanner . --ecosystem
 quaid-scanner . --depth thorough --ecosystem --format markdown --output full-report.md
 ```
 
+**Using a `.env` file?** Variables must be exported to reach the scanner process:
+
+```bash
+set -a; source .env; set +a
+quaid-scanner https://github.com/owner/repo --depth quick
+```
+
 ---
 
 ## What It Scans
 
-46 checks across six weighted pillars:
+41 scanners across six weighted pillars:
 
 | Pillar | Weight | What it measures |
 |--------|--------|-----------------|
@@ -110,7 +120,7 @@ Options:
     "security": { "score": 6.1, "weight": 0.25 },
     "governance": { "score": 8.4, "weight": 0.20 },
     "community": { "score": 7.8, "weight": 0.15 },
-    "ai-readiness": { "score": 5.5, "weight": 0.15 },
+    "ai_readiness": { "score": 5.5, "weight": 0.15 },
     "inclusive": { "score": 9.0, "weight": 0.15 },
     "technical": { "score": 7.0, "weight": 0.10 }
   },
@@ -124,10 +134,12 @@ Options:
     }
   ],
   "recommendations": [
-    { "priority": 1, "action": "Add package-lock.json to version control" }
+    { "priority": 1, "action": "Add package-lock.json to version control", "impact": "high", "effort": "low" }
   ]
 }
 ```
+
+Severity values are always human-readable strings: `"PASS"`, `"INFO"`, `"WARNING"`, `"CRITICAL"`.
 
 ---
 
@@ -153,7 +165,7 @@ Full options: [docs/usage/configuration.md](docs/usage/configuration.md)
 
 ## Agentic Use
 
-quaid-scanner is designed **agent-first**. JSON output is the primary interface; markdown is secondary.
+quaid-scanner is designed **agent-first**. JSON output is the primary interface; markdown is secondary. The full value of the tool emerges when an agent drives the complete workflow end-to-end.
 
 ### Claude Code Skill
 
@@ -247,6 +259,53 @@ Full agentic patterns: [docs/usage/agentic-usage.md](docs/usage/agentic-usage.md
 
 ---
 
+## Portfolio Scanning
+
+The recommended agent workflow for auditing an organization's OSS portfolio:
+
+### 1 — Scan all repos in parallel
+
+```bash
+# Scan every repo in an org
+for repo in repo-a repo-b repo-c; do
+  quaid-scanner "https://github.com/org/${repo}" \
+    --depth quick --format json --quiet \
+    --output "/tmp/scan-${repo}.json" &
+done
+wait
+```
+
+### 2 — Fill the report template
+
+Open `docs/scans/portfolio-report-template.md`. Each section contains inline agent instructions (as HTML comments) explaining exactly how to populate it from the scan JSON files:
+
+- Executive summary with cross-portfolio patterns
+- Score table (all repos, all pillars)
+- Per-repo analysis with pillar bars, grouped findings, and recommendations
+- Backlog appendix with user stories derived from findings
+
+The template includes a **Common Story Templates** bank that maps finding categories (e.g. `vendor-neutrality`, `openssf-scorecard`, `dependency-pinning`) to pre-written `As a [role], I want … so that …` stories — copy rather than compose.
+
+### 3 — Turn stories into issues
+
+```
+Read the backlog appendix from the portfolio report.
+For each user story, open a GitHub issue in the relevant repo
+with the story as the description and the finding category as a label.
+```
+
+### Example portfolio prompt (all-in-one)
+
+```
+Scan all public repos in the org https://github.com/my-org using
+quaid-scanner --depth quick --format json --quiet, one scan per repo in parallel.
+Then fill docs/scans/portfolio-report-template.md from the scan results,
+following the agent instructions in each section.
+Save the completed report to docs/scans/my-org-report-YYYY-MM-DD.md.
+```
+
+---
+
 ## Ecosystem Intelligence
 
 The `--ecosystem` flag runs a parallel analysis that does **not** affect `overallScore`:
@@ -325,10 +384,11 @@ npm run test:coverage
 | Doc | Contents |
 |-----|---------|
 | [Getting Started](docs/usage/getting-started.md) | Installation, first scan, scan depth |
-| [Scanner Reference](docs/usage/scanners.md) | All 46 checks with thresholds and remediation |
+| [Scanner Reference](docs/usage/scanners.md) | All 41 scanners with thresholds and remediation |
 | [Agentic Usage](docs/usage/agentic-usage.md) | Prompt patterns, agent workflows, MCP setup |
 | [Configuration](docs/usage/configuration.md) | `.quaid-scanner.yaml` full reference |
 | [Examples](docs/usage/examples.md) | CI/CD, portfolio scanning, security audits |
+| [Portfolio Report Template](docs/scans/portfolio-report-template.md) | Agent-fillable template for org-wide health reports |
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "quaid-scanner",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Agent-first OSS repository health scanner based on CHAOSS metrics, The Open Source Way 2.0, and Inclusive Naming Initiative",
   "type": "module",
   "main": "dist/index.js",
@@ -42,7 +42,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/quaid/quaid-scanner"
+    "url": "git+https://github.com/quaid/quaid-scanner.git"
   },
   "homepage": "https://github.com/quaid/quaid-scanner#readme",
   "bugs": {
