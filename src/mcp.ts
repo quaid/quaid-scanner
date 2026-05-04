@@ -153,28 +153,34 @@ async function executeScanTool(params: Record<string, unknown>): Promise<unknown
 
   const validatedTarget = validateTarget(path);
   const version = getVersion();
-  const context = buildContext(validatedTarget, config, version);
+  const { context, cleanup } = buildContext(validatedTarget, config, version);
 
-  const registry = createDefaultRegistry();
-  const orchestrator = new Orchestrator(registry);
-  const result = await orchestrator.run(context);
+  let result;
+  let report;
+  try {
+    const registry = createDefaultRegistry();
+    const orchestrator = new Orchestrator(registry);
+    result = await orchestrator.run(context);
 
-  const report = buildScanReport(validatedTarget, result, config, context.maturity, version);
-  report.metadata.commitSha = context.git.commitSha;
-  report.metadata.branch = context.git.branch;
-  report.metadata.remoteUrl = context.git.remoteUrl;
+    report = buildScanReport(validatedTarget, result, config, context.maturity, version);
+    report.metadata.commitSha = context.git.commitSha;
+    report.metadata.branch = context.git.branch;
+    report.metadata.remoteUrl = context.git.remoteUrl;
 
-  if (ecosystem) {
-    const ecoContext = {
-      ...context,
-      existingReport: report,
-      zerodbAvailable: !!(config.zerodbApiKey && config.zerodbProjectId),
-    };
-    try {
-      report.ecosystem = await new EcosystemOrchestrator().analyze(ecoContext);
-    } catch {
-      // non-fatal
+    if (ecosystem) {
+      const ecoContext = {
+        ...context,
+        existingReport: report,
+        zerodbAvailable: !!(config.zerodbApiKey && config.zerodbProjectId),
+      };
+      try {
+        report.ecosystem = await new EcosystemOrchestrator().analyze(ecoContext);
+      } catch {
+        // non-fatal
+      }
     }
+  } finally {
+    cleanup();
   }
 
   if (format === 'summary') {

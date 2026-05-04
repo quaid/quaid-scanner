@@ -11,7 +11,7 @@
  *   7. default         → peer_collaborator (confidence 0.1)
  */
 
-import type { GraphNode, GraphEdge, CollaborationSpectrum, RelationshipScore } from './types.js';
+import type { GraphNode, GraphEdge, RelationshipScore } from './types.js';
 
 /**
  * Score the relationship between two graph nodes given the edges between them.

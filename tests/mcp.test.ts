@@ -14,14 +14,17 @@ import type { MockInstance } from 'vitest';
 
 vi.mock('../src/context-builder.js', () => ({
   buildContext: vi.fn(() => ({
-    repoPath: '/tmp/test-repo',
-    repoIdentifier: null,
-    maturity: 'sandbox',
-    depth: 'standard',
-    config: {},
-    git: { commitSha: 'abc123', branch: 'main', remoteUrl: 'https://github.com/owner/repo' },
-    signal: new AbortController().signal,
-    emit: vi.fn(),
+    context: {
+      repoPath: '/tmp/test-repo',
+      repoIdentifier: null,
+      maturity: 'sandbox',
+      depth: 'standard',
+      config: {},
+      git: { commitSha: 'abc123', branch: 'main', remoteUrl: 'https://github.com/owner/repo' },
+      signal: new AbortController().signal,
+      emit: vi.fn(),
+    },
+    cleanup: vi.fn(),
   })),
 }));
 
