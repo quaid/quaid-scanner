@@ -65,7 +65,10 @@ export function buildContext(
 
   if (target.type === 'github') {
     const tempDir = mkdtempSync(join(tmpdir(), 'quaid-'));
-    const cloneUrl = `https://github.com/${target.value}.git`;
+    const token = config.githubToken;
+    const cloneUrl = token
+      ? `https://${token}@github.com/${target.value}.git`
+      : `https://github.com/${target.value}.git`;
     try {
       execSync(`git clone --depth 1 ${cloneUrl} ${tempDir}`, {
         stdio: ['ignore', 'ignore', 'ignore'],
