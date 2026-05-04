@@ -357,4 +357,165 @@ describe('traverseGraph', () => {
       expect(repoNames).toContain('org/dep-a');
     });
   });
+
+  // ------------------------------------------------------------------
+  // 9. Branch coverage — null/missing edge row fields
+  // ------------------------------------------------------------------
+  describe('null/missing edge row fields (branch coverage)', () => {
+    it('falls back to 0 weight when weight is missing from row', async () => {
+      const client = {
+        tableQuery: vi.fn().mockImplementation((table: string) => {
+          if (table === 'graph_edges') {
+            return Promise.resolve([
+              {
+                row_data: {
+                  from_repo: 'org/root',
+                  to_repo: 'org/dep-b',
+                  edge_type: 'co_signal',
+                  // weight intentionally omitted → falls back to 0
+                  detected_at: NOW,
+                },
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        }),
+      } as unknown as ZeroDBClient;
+
+      const result = await traverseGraph('org/root', {}, client);
+      expect(result.edges[0].weight).toBe(0);
+    });
+
+    it('falls back to empty string detectedAt when detected_at is missing', async () => {
+      const client = {
+        tableQuery: vi.fn().mockImplementation((table: string) => {
+          if (table === 'graph_edges') {
+            return Promise.resolve([
+              {
+                row_data: {
+                  from_repo: 'org/root',
+                  to_repo: 'org/dep-c',
+                  edge_type: 'co_signal',
+                  weight: 0.5,
+                  // detected_at intentionally omitted → falls back to ''
+                },
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        }),
+      } as unknown as ZeroDBClient;
+
+      const result = await traverseGraph('org/root', {}, client);
+      expect(result.edges[0].detectedAt).toBe('');
+    });
+
+    it('handles null primary_language in graph_nodes data', async () => {
+      const client = {
+        tableQuery: vi.fn().mockImplementation((table: string) => {
+          if (table === 'graph_edges') {
+            return Promise.resolve([
+              {
+                row_data: {
+                  from_repo: 'org/root',
+                  to_repo: 'org/null-lang',
+                  edge_type: 'depends_on',
+                  weight: 1.0,
+                  detected_at: NOW,
+                },
+              },
+            ]);
+          }
+          if (table === 'graph_nodes') {
+            return Promise.resolve([
+              {
+                row_data: {
+                  repo: 'org/null-lang',
+                  primary_language: null, // null branch
+                  pillar_scores: null,    // ?? {} branch
+                  overall_score: null,    // ?? 0 branch
+                  topics: null,           // ?? [] branch
+                  ecosystems: null,       // ?? [] branch
+                  last_scanned_at: null,  // ?? '' branch
+                },
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        }),
+      } as unknown as ZeroDBClient;
+
+      const result = await traverseGraph('org/root', { hops: 1 }, client);
+      const node = result.nodes.find((n) => n.repo === 'org/null-lang');
+      expect(node).toBeDefined();
+      expect(node!.primaryLanguage).toBeNull();
+      expect(node!.pillarScores).toEqual({});
+      expect(node!.overallScore).toBe(0);
+      expect(node!.topics).toEqual([]);
+      expect(node!.ecosystems).toEqual([]);
+      expect(node!.lastScannedAt).toBe(''); // null ?? '' gives ''
+    });
+
+    it('uses root node from graph_nodes when it is present there (no stub inserted)', async () => {
+      const client = {
+        tableQuery: vi.fn().mockImplementation((table: string) => {
+          if (table === 'graph_edges') {
+            return Promise.resolve([
+              {
+                row_data: {
+                  from_repo: 'org/known-root',
+                  to_repo: 'org/dep-z',
+                  edge_type: 'depends_on',
+                  weight: 1.0,
+                  detected_at: NOW,
+                },
+              },
+            ]);
+          }
+          if (table === 'graph_nodes') {
+            return Promise.resolve([
+              {
+                row_data: {
+                  repo: 'org/dep-z',
+                  primary_language: 'Go',
+                  pillar_scores: {},
+                  overall_score: 7.5,
+                  topics: ['cloud'],
+                  ecosystems: ['cncf'],
+                  last_scanned_at: NOW,
+                },
+              },
+            ]);
+          }
+          return Promise.resolve([]);
+        }),
+      } as unknown as ZeroDBClient;
+
+      // org/known-root is NOT in graph_nodes → stub must be inserted
+      const result = await traverseGraph('org/known-root', { hops: 1 }, client);
+      const rootNode = result.nodes.find((n) => n.repo === 'org/known-root');
+      expect(rootNode).toBeDefined();
+      // Stub has null primaryLanguage
+      expect(rootNode!.primaryLanguage).toBeNull();
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // 10. Non-Error thrown inside traversal
+  // ------------------------------------------------------------------
+  describe('non-Error thrown value in catch block', () => {
+    it('returns empty result when a non-Error string value is thrown', async () => {
+      const client = {
+        tableQuery: vi.fn().mockImplementation(() => {
+          // Throw a raw string, not an Error instance
+          throw 'raw string error'; // eslint-disable-line @typescript-eslint/no-throw-literal
+        }),
+      } as unknown as ZeroDBClient;
+
+      const result = await traverseGraph('org/root', { hops: 1 }, client);
+      expect(result.nodes).toEqual([]);
+      expect(result.edges).toEqual([]);
+      expect(result.rootRepo).toBe('org/root');
+    });
+  });
 });
