@@ -188,4 +188,12 @@ describe('upsertGraphNode', () => {
 
     await expect(upsertGraphNode(makeReport(), client)).resolves.not.toThrow();
   });
+
+  it('resolves without throwing when a non-Error value is thrown', async () => {
+    const client = makeMockClient({
+      tableCreate: vi.fn().mockRejectedValue('raw string error'),
+    });
+
+    await expect(upsertGraphNode(makeReport(), client)).resolves.not.toThrow();
+  });
 });
