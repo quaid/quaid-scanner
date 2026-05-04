@@ -138,63 +138,72 @@ async function main(): Promise<void> {
   }
 
   const version = getVersion();
-  const context = buildContext(validatedTarget, config, version);
+  const { context, cleanup } = buildContext(validatedTarget, config, version);
 
-  if (config.verbose) {
-    context.emit = (event) => {
-      if (event.type === 'scanner:complete') {
-        console.error(`  ✓ ${event.scanner} (${event.findingCount} findings, ${event.durationMs}ms)`);
-      }
-    };
-  }
-
-  const registry = createDefaultRegistry();
-  const orchestrator = new Orchestrator(registry);
-  const result = await orchestrator.run(context);
-
-  const report = buildScanReport(validatedTarget, result, config, context.maturity, version);
-
-  // Populate git metadata from context
-  report.metadata.commitSha = context.git.commitSha;
-  report.metadata.branch = context.git.branch;
-  report.metadata.remoteUrl = context.git.remoteUrl;
-
-  // Ecosystem intelligence (opt-in, non-scoring)
-  if (config.ecosystem) {
-    if (!config.quiet) context.emit({ type: 'ecosystem:start' });
-    try {
-      const ecoContext = {
-        ...context,
-        existingReport: report,
-        zerodbAvailable: !!(config.zerodbApiKey && config.zerodbProjectId),
+  try {
+    if (config.verbose) {
+      context.emit = (event) => {
+        if (event.type === 'scanner:complete') {
+          console.error(`  ✓ ${event.scanner} (${event.findingCount} findings, ${event.durationMs}ms)`);
+        }
       };
-      const ecoOrchestrator = new EcosystemOrchestrator();
-      report.ecosystem = await ecoOrchestrator.analyze(ecoContext);
-      if (!config.quiet) context.emit({ type: 'ecosystem:complete', dataSource: report.ecosystem.dataSource });
-    } catch (err) {
-      if (!config.quiet) console.error(`Ecosystem analysis failed: ${err instanceof Error ? err.message : String(err)}`);
     }
+
+    const registry = createDefaultRegistry();
+    const orchestrator = new Orchestrator(registry);
+    const result = await orchestrator.run(context);
+
+    const report = buildScanReport(validatedTarget, result, config, context.maturity, version);
+
+    // Populate git metadata from context
+    report.metadata.commitSha = context.git.commitSha;
+    report.metadata.branch = context.git.branch;
+    report.metadata.remoteUrl = context.git.remoteUrl;
+
+    // Ecosystem intelligence (opt-in, non-scoring)
+    if (config.ecosystem) {
+      if (!config.quiet) context.emit({ type: 'ecosystem:start' });
+      try {
+        const ecoContext = {
+          ...context,
+          existingReport: report,
+          zerodbAvailable: !!(config.zerodbApiKey && config.zerodbProjectId),
+        };
+        const ecoOrchestrator = new EcosystemOrchestrator();
+        report.ecosystem = await ecoOrchestrator.analyze(ecoContext);
+        if (!config.quiet) context.emit({ type: 'ecosystem:complete', dataSource: report.ecosystem.dataSource });
+      } catch (err) {
+        if (!config.quiet) console.error(`Ecosystem analysis failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    const output =
+      config.format === OutputFormat.MARKDOWN
+        ? renderMarkdown(report)
+        : serializeJson(report);
+
+    if (config.output) {
+      writeFileSync(config.output, output, 'utf-8');
+      if (!config.quiet) console.error(`Output written to ${config.output}`);
+    } else {
+      process.stdout.write(output + '\n');
+    }
+
+    if (!config.quiet) {
+      console.error(`\nScore: ${result.overallScore.toFixed(1)}/10 (${result.riskLevel})`);
+    }
+
+    // Exit codes: 0 = low risk (≥8), 1 = medium (5–7.9), 2 = high/critical (<5) or threshold missed
+    if (!result.thresholdPassed) {
+      cleanup();
+      process.exit(2);
+    }
+    cleanup();
+    process.exit(result.overallScore >= 8.0 ? 0 : result.overallScore >= 5.0 ? 1 : 2);
+  } catch (err) {
+    cleanup();
+    throw err;
   }
-
-  const output =
-    config.format === OutputFormat.MARKDOWN
-      ? renderMarkdown(report)
-      : serializeJson(report);
-
-  if (config.output) {
-    writeFileSync(config.output, output, 'utf-8');
-    if (!config.quiet) console.error(`Output written to ${config.output}`);
-  } else {
-    process.stdout.write(output + '\n');
-  }
-
-  if (!config.quiet) {
-    console.error(`\nScore: ${result.overallScore.toFixed(1)}/10 (${result.riskLevel})`);
-  }
-
-  // Exit codes: 0 = low risk (≥8), 1 = medium (5–7.9), 2 = high/critical (<5) or threshold missed
-  if (!result.thresholdPassed) process.exit(2);
-  process.exit(result.overallScore >= 8.0 ? 0 : result.overallScore >= 5.0 ? 1 : 2);
 }
 
 // Only run main() when executed directly, not when imported for testing

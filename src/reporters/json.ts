@@ -2,6 +2,13 @@ import { Severity, MaturityLevel } from '../types/index.js';
 import type { ScanReport, Recommendation, Finding, ScannerConfig } from '../types/index.js';
 import type { OrchestratorResult } from '../scanner/orchestrator.js';
 
+const SEVERITY_LABELS: Record<number, string> = {
+  [Severity.PASS]: 'PASS',
+  [Severity.INFO]: 'INFO',
+  [Severity.WARNING]: 'WARNING',
+  [Severity.CRITICAL]: 'CRITICAL',
+};
+
 type ValidatedTarget = { type: 'local' | 'github'; value: string };
 
 function buildRecommendations(findings: Finding[]): Recommendation[] {
@@ -77,5 +84,14 @@ export function buildScanReport(
 }
 
 export function serializeJson(report: ScanReport): string {
-  return JSON.stringify(report, null, 2);
+  return JSON.stringify(
+    report,
+    (key, value: unknown) => {
+      if (key === 'severity' && typeof value === 'number') {
+        return SEVERITY_LABELS[value] ?? String(value);
+      }
+      return value;
+    },
+    2,
+  );
 }
