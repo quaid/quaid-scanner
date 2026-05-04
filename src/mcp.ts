@@ -17,6 +17,9 @@ import { Orchestrator } from './scanner/orchestrator.js';
 import { buildScanReport, serializeJson } from './reporters/json.js';
 import { EcosystemOrchestrator } from './ecosystem/orchestrator.js';
 import { OutputFormat, ScanDepth, Severity, type ScannerConfig } from './types/index.js';
+import { traverseGraph } from './graph/traversal.js';
+import { ZeroDBClient } from './integrations/zerodb-client.js';
+import type { GraphEdgeType, TraversalOptions } from './graph/types.js';
 
 // --- MCP protocol helpers ---
 
@@ -81,6 +84,27 @@ const TOOL_DEF = {
       },
     },
     required: ['path'],
+  },
+};
+
+// --- graph_query tool definition ---
+
+const GRAPH_QUERY_TOOL_DEF = {
+  name: 'graph_query',
+  description: 'Query the OSS social graph for a repository. Returns nodes and edges reachable within N hops.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      repo: { type: 'string', description: 'Repository slug, e.g. "owner/repo"' },
+      hops: { type: 'number', description: 'Traversal depth 1-3. Default: 1' },
+      edgeTypes: {
+        type: 'array',
+        items: { type: 'string', enum: ['depends_on', 'co_signal'] },
+        description: 'Edge type filter. Default: all types',
+      },
+      minWeight: { type: 'number', description: 'Minimum edge weight 0-1. Default: 0' },
+    },
+    required: ['repo'],
   },
 };
 
@@ -207,7 +231,7 @@ export async function handleRequest(req: MCPRequest): Promise<void> {
   }
 
   if (req.method === 'tools/list') {
-    ok(req.id, { tools: [TOOL_DEF] });
+    ok(req.id, { tools: [TOOL_DEF, GRAPH_QUERY_TOOL_DEF] });
     return;
   }
 
@@ -215,18 +239,47 @@ export async function handleRequest(req: MCPRequest): Promise<void> {
     const toolName = (req.params?.['name'] as string) ?? '';
     const toolParams = (req.params?.['arguments'] as Record<string, unknown>) ?? {};
 
-    if (toolName !== 'scan_repository') {
-      err(req.id, -32601, `Unknown tool: ${toolName}`);
+    if (toolName === 'scan_repository') {
+      try {
+        const result = await executeScanTool(toolParams);
+        ok(req.id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] });
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        err(req.id, -32603, msg);
+      }
       return;
     }
 
-    try {
-      const result = await executeScanTool(toolParams);
+    if (toolName === 'graph_query') {
+      const apiUrl = process.env['ZERODB_API_URL'];
+      const apiKey = process.env['ZERODB_API_KEY'];
+      const projectId = process.env['ZERODB_PROJECT_ID'];
+
+      if (!apiUrl || !apiKey || !projectId) {
+        err(req.id, -32603, 'ZeroDB not configured');
+        return;
+      }
+
+      const repo = String(toolParams['repo'] ?? '');
+      const hopsRaw = toolParams['hops'];
+      const hops = typeof hopsRaw === 'number' ? hopsRaw : undefined;
+      const edgeTypesRaw = toolParams['edgeTypes'];
+      const edgeTypes = Array.isArray(edgeTypesRaw) ? (edgeTypesRaw as GraphEdgeType[]) : undefined;
+      const minWeightRaw = toolParams['minWeight'];
+      const minWeight = typeof minWeightRaw === 'number' ? minWeightRaw : undefined;
+
+      const traversalOptions: TraversalOptions = {};
+      if (hops !== undefined) traversalOptions.hops = hops;
+      if (edgeTypes !== undefined) traversalOptions.edgeTypes = edgeTypes;
+      if (minWeight !== undefined) traversalOptions.minWeight = minWeight;
+
+      const client = new ZeroDBClient(apiUrl, apiKey, projectId);
+      const result = await traverseGraph(repo, traversalOptions, client);
       ok(req.id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      err(req.id, -32603, msg);
+      return;
     }
+
+    err(req.id, -32601, `Unknown tool: ${toolName}`);
     return;
   }
 
