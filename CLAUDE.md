@@ -1,6 +1,6 @@
 # quaid-scanner - Project Memory
 
-> Last Updated: 2026-04-24
+> Last Updated: 2026-05-04
 > Project Root: /Users/karstenwade/Projects/quaid-scanner
 
 ## Critical Rules
@@ -24,6 +24,23 @@
 - TypeScript strict mode, type hints on all functions
 - Docstrings for public methods
 - Clean, readable code
+
+## Agent-First Toolchain Intent
+
+quaid-scanner is designed to be **operated by an agent, not just a human**. The full value of the tool only emerges when an agent drives the workflow end-to-end:
+
+1. **Scanning** — run `quaid-scanner` against one or many repos, capture JSON output
+2. **Analysis** — parse findings, group by category, identify cross-portfolio patterns
+3. **Reporting** — fill `docs/scans/portfolio-report-template.md` from scan JSON; the template contains inline agent instructions for every section
+4. **Backlog generation** — derive user stories from findings using the story template bank at the bottom of the report template
+5. **Issue creation** — open GitHub issues from the backlog stories, one issue per story
+
+When working on this toolchain, keep this intent in mind:
+- JSON is the primary output format — markdown is secondary
+- `--quiet --format json` is the canonical agent invocation
+- The report template is written for an agent reader; comments are instructions, not decoration
+- Scanner findings should always include a `suggestion` field — that's what feeds the story `want` clause
+- Scans of large portfolios should run in parallel (background bash jobs or parallel agents)
 
 ## Project Overview
 
