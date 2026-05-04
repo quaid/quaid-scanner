@@ -68,6 +68,34 @@ Repo names verified against `gh api orgs/AINative-Studio/repos --paginate` on 20
 > - [#61](https://github.com/quaid/quaid-scanner/issues/61) ~~GITHUB_TOKEN not falling back to GITHUB_PERSONAL_ACCESS_TOKEN~~ — **fixed in #65**
 > - [#63](https://github.com/quaid/quaid-scanner/issues/63) ~~Inclusive scanner running against local dir~~ — **fixed in #64**
 
-| Repo | Score | Risk | Maturity | Security | Governance | Community | AI Ready | Inclusive | Technical | Notes |
-|------|-------|------|----------|----------|------------|-----------|----------|-----------|-----------|-------|
-| `ainative-zerodb-mcp-server` | 1.6 | CRITICAL | sandbox | 0 | 0 | 0 | 7.5 | 0† | 5 | †Inclusive=0 due to 31 INFO findings (undefined acronyms, assumed-knowledge) — zero CRITICAL/WARNING inclusive issues, welcoming score 100/100. Security=0: no OpenSSF scorecard. Governance=0: CRITICAL vendor neutrality (single-vendor signals), no license headers. Community=0: thin contributor data, no support channels. Good AI readiness. Dep pinning warnings (13). |
+All 27 repos scanned 2026-05-04 with `--depth quick`. Common patterns: community=0 across the board (all single-vendor, thin contributor history), ai_readiness uniformly strong (7–8), security=0 on most (no OpenSSF scorecard, unpinned deps).
+
+| Repo | Score | Risk | sec | gov | com | ai | inc | tec | Notes |
+|------|-------|------|-----|-----|-----|----|-----|-----|-------|
+| `ainative-zerodb-mcp-server` | 1.6 | CRITICAL | 0 | 0 | 0 | 7.5 | 0 | 5 | Vendor neutrality CRITICAL. Inclusive=0 from 31 INFO (acronyms, assumed-knowledge); welcoming 100/100. |
+| `ainative-zerodb-memory-mcp` | 1.8 | CRITICAL | 0 | 1 | 0 | 7.5 | 0.5 | 4 | 0% issue closure rate. 19 warnings. |
+| `ainative-strapi-mcp-server` | 3.5 | CRITICAL | 3.5 | 1 | 0 | 7.5 | 6 | 4 | Best of MCP group. No tests. |
+| `agentic-rules` | 3.0 | CRITICAL | 6 | 1 | 0 | 6.5 | 0 | 3 | Good security. No tests (shell rules repo — expected). |
+| `shadcn-ui-mcp-server` | 1.6 | CRITICAL | 0 | 1 | 0 | 7.5 | 0 | 3 | GitHub Actions token permission CRITICALs. |
+| `mcp-l-core` | 2.2 | CRITICAL | 0 | 1 | 0 | 7.5 | 1.5 | 6.5 | Best technical score in MCP group. |
+| `zerodb-typescript-sdk` | 2.0 | CRITICAL | 0 | 1 | 0 | 7.5 | 0.5 | 6 | |
+| `zerodb-python-sdk` | 2.3 | CRITICAL | 2 | 1 | 0 | 7.5 | 0 | 5 | |
+| `zerodb-supabase-adapter` | 3.0 | CRITICAL | 0 | 0 | 0 | 7.5 | **8** | 6.5 | Best inclusive score in SDK group. |
+| `zerodb-vercel-integration` | 2.4 | CRITICAL | 0 | 0 | 0 | 7.5 | 5 | 5.5 | |
+| `crewai-zerodb` | **4.0** | HIGH | 6 | 1 | 0 | 7.5 | 6 | 3 | **Highest score overall.** Only HIGH (not CRITICAL) risk. |
+| `zerodb-local` | 1.4 | CRITICAL | 0 | 1 | 0 | 4.5 | 0 | 5 | Lowest AI readiness — may lack AI signals in repo. |
+| `zerodb-cli` | 2.2 | CRITICAL | 0 | 1 | 0 | 7.5 | 3 | 4 | |
+| `zerodb-nextjs-template` | 2.3 | CRITICAL | 0 | 0 | 0 | 7.5 | 5.5 | 3 | |
+| `zerodb-claude-plugin` | 1.9 | CRITICAL | 0 | 0 | 0 | 7.5 | 2.5 | 4 | |
+| `ai-kit` | 1.9 | CRITICAL | 0 | 0 | 0 | 7.5 | 0 | **8** | **Best technical score overall.** |
+| `ai-kit-a2ui` | 2.0 | CRITICAL | 0 | 1 | 0 | **8** | 0 | 6 | Highest AI readiness. |
+| `ai-kit-showcase` | 2.4 | CRITICAL | 0 | 0 | 0 | 7.5 | 6.5 | 3 | |
+| `ainative-sdks` | 3.7 | CRITICAL | 3 | 0 | 0 | 7.5 | **10** | 3 | **Perfect inclusive score.** Second overall. |
+| `Agent-402` | 2.4 | CRITICAL | 6 | 0 | 0 | 3.5 | 0 | 4 | Good security. Low AI readiness (agent repo, unusual). |
+| `ragbot-starter` | 1.7 | CRITICAL | 0 | 0 | 0 | **8** | 0 | 5 | |
+| `cody-sdk-typescript` | 2.0 | CRITICAL | 0 | 1 | 0 | 7.5 | 0 | 6.5 | |
+| `builder-ainative-studio` | 1.6 | CRITICAL | 0 | 0 | 0 | 7.5 | 0 | 5 | |
+| `AINativeStudio-IDE` | 1.5 | CRITICAL | 0 | 1 | 0 | 6.5 | 0 | 3 | Lowest score overall. |
+| `ainative-code` | 1.6 | CRITICAL | 0 | 0.5 | 0 | 5 | 0 | 7 | Go — good technical, low AI signals. |
+| `ainative-jetbrains` | 3.6 | CRITICAL | 3 | 0 | 0 | 7.5 | 9.5 | 3 | Strong inclusive. Likely stub/placeholder repo. |
+| `ainative-neovim` | 3.6 | CRITICAL | 3 | 0 | 0 | 7.5 | 9.5 | 3 | Strong inclusive. Likely stub/placeholder repo. |
