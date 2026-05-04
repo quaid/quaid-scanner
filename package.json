@@ -27,13 +27,26 @@
     "chaoss",
     "metrics",
     "documentation",
-    "contributor-experience"
+    "contributor-experience",
+    "agent",
+    "mcp",
+    "zerodb",
+    "ecosystem",
+    "social-graph",
+    "governance",
+    "supply-chain",
+    "security",
+    "ai-native"
   ],
-  "author": "",
+  "author": "Karsten Wade <quaid@iquaid.org>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AINative-Studio/oss-repo-check"
+    "url": "https://github.com/quaid/quaid-scanner"
+  },
+  "homepage": "https://github.com/quaid/quaid-scanner#readme",
+  "bugs": {
+    "url": "https://github.com/quaid/quaid-scanner/issues"
   },
   "engines": {
     "node": ">=18.0.0"
