@@ -187,8 +187,28 @@ describe('MCP server handleRequest', () => {
       const result = response.result as Record<string, unknown>;
       const tools = result['tools'] as Array<Record<string, unknown>>;
       expect(Array.isArray(tools)).toBe(true);
-      expect(tools).toHaveLength(1);
-      expect(tools[0]['name']).toBe('scan_repository');
+      expect(tools.some((t) => t['name'] === 'scan_repository')).toBe(true);
+    });
+
+    it('returns a tools array that also contains graph_query', async () => {
+      const req: MCPRequest = { jsonrpc: '2.0', id: 2, method: 'tools/list' };
+      await handleRequest(req);
+
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      const result = response.result as Record<string, unknown>;
+      const tools = result['tools'] as Array<Record<string, unknown>>;
+      expect(Array.isArray(tools)).toBe(true);
+      expect(tools.some((t) => t['name'] === 'graph_query')).toBe(true);
+    });
+
+    it('tools array contains exactly two tools', async () => {
+      const req: MCPRequest = { jsonrpc: '2.0', id: 2, method: 'tools/list' };
+      await handleRequest(req);
+
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      const result = response.result as Record<string, unknown>;
+      const tools = result['tools'] as Array<Record<string, unknown>>;
+      expect(tools).toHaveLength(2);
     });
 
     it('tool definition includes required path property in inputSchema', async () => {
@@ -198,8 +218,23 @@ describe('MCP server handleRequest', () => {
       const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
       const result = response.result as Record<string, unknown>;
       const tools = result['tools'] as Array<Record<string, unknown>>;
-      const schema = tools[0]['inputSchema'] as Record<string, unknown>;
+      const scanTool = tools.find((t) => t['name'] === 'scan_repository');
+      expect(scanTool).toBeDefined();
+      const schema = scanTool!['inputSchema'] as Record<string, unknown>;
       expect((schema['required'] as string[])).toContain('path');
+    });
+
+    it('graph_query tool definition includes required repo property in inputSchema', async () => {
+      const req: MCPRequest = { jsonrpc: '2.0', id: 3, method: 'tools/list' };
+      await handleRequest(req);
+
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      const result = response.result as Record<string, unknown>;
+      const tools = result['tools'] as Array<Record<string, unknown>>;
+      const graphTool = tools.find((t) => t['name'] === 'graph_query');
+      expect(graphTool).toBeDefined();
+      const schema = graphTool!['inputSchema'] as Record<string, unknown>;
+      expect((schema['required'] as string[])).toContain('repo');
     });
   });
 
@@ -518,6 +553,41 @@ describe('MCP server handleRequest', () => {
       const parsed = JSON.parse(content[0]['text'] as string) as Record<string, unknown>;
       expect(Array.isArray(parsed['topRecommendations'])).toBe(true);
       expect((parsed['topRecommendations'] as unknown[]).length).toBeLessThanOrEqual(3);
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // tools/call — graph_query
+  // ------------------------------------------------------------------
+  describe('tools/call — graph_query', () => {
+    it('returns error -32603 when ZeroDB env vars are missing', async () => {
+      // Ensure env vars are absent for this test
+      const savedUrl = process.env['ZERODB_API_URL'];
+      const savedKey = process.env['ZERODB_API_KEY'];
+      const savedProject = process.env['ZERODB_PROJECT_ID'];
+      delete process.env['ZERODB_API_URL'];
+      delete process.env['ZERODB_API_KEY'];
+      delete process.env['ZERODB_PROJECT_ID'];
+
+      const req: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 20,
+        method: 'tools/call',
+        params: {
+          name: 'graph_query',
+          arguments: { repo: 'org/my-repo' },
+        },
+      };
+      await handleRequest(req);
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+
+      expect(response.error).toBeDefined();
+      expect(response.error!.code).toBe(-32603);
+
+      // Restore
+      if (savedUrl !== undefined) process.env['ZERODB_API_URL'] = savedUrl;
+      if (savedKey !== undefined) process.env['ZERODB_API_KEY'] = savedKey;
+      if (savedProject !== undefined) process.env['ZERODB_PROJECT_ID'] = savedProject;
     });
   });
 });
