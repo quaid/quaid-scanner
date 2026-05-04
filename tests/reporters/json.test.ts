@@ -106,4 +106,88 @@ describe('serializeJson', () => {
     expect(parsed.overallScore).toBe(8.0);
     expect(parsed.version).toBe('1.0.0');
   });
+
+  it('serializes CRITICAL severity as string "CRITICAL" not integer 2', () => {
+    const target = { type: 'local' as const, value: '/tmp' };
+    const result = makeResult({
+      findings: [
+        {
+          id: 'f-crit',
+          severity: Severity.CRITICAL,
+          pillar: Pillar.SECURITY,
+          category: 'test',
+          message: 'Critical finding',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Fix it',
+        },
+      ],
+    });
+    const parsed = JSON.parse(serializeJson(buildScanReport(target, result, DEFAULT_CONFIG, MaturityLevel.SANDBOX, '1.0.0')));
+    expect(parsed.findings[0].severity).toBe('CRITICAL');
+  });
+
+  it('serializes WARNING severity as string "WARNING" not integer 1', () => {
+    const target = { type: 'local' as const, value: '/tmp' };
+    const result = makeResult({
+      findings: [
+        {
+          id: 'f-warn',
+          severity: Severity.WARNING,
+          pillar: Pillar.SECURITY,
+          category: 'test',
+          message: 'Warning finding',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Fix it',
+        },
+      ],
+    });
+    const parsed = JSON.parse(serializeJson(buildScanReport(target, result, DEFAULT_CONFIG, MaturityLevel.SANDBOX, '1.0.0')));
+    expect(parsed.findings[0].severity).toBe('WARNING');
+  });
+
+  it('serializes INFO severity as string "INFO" not integer 0', () => {
+    const target = { type: 'local' as const, value: '/tmp' };
+    const result = makeResult({
+      findings: [
+        {
+          id: 'f-info',
+          severity: Severity.INFO,
+          pillar: Pillar.SECURITY,
+          category: 'test',
+          message: 'Info finding',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Note it',
+        },
+      ],
+    });
+    const parsed = JSON.parse(serializeJson(buildScanReport(target, result, DEFAULT_CONFIG, MaturityLevel.SANDBOX, '1.0.0')));
+    expect(parsed.findings[0].severity).toBe('INFO');
+  });
+
+  it('serializes PASS severity as string "PASS" not integer -1', () => {
+    const target = { type: 'local' as const, value: '/tmp' };
+    const result = makeResult({
+      findings: [
+        {
+          id: 'f-pass',
+          severity: Severity.PASS,
+          pillar: Pillar.SECURITY,
+          category: 'test',
+          message: 'Pass finding',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Keep it up',
+        },
+      ],
+    });
+    const parsed = JSON.parse(serializeJson(buildScanReport(target, result, DEFAULT_CONFIG, MaturityLevel.SANDBOX, '1.0.0')));
+    expect(parsed.findings[0].severity).toBe('PASS');
+  });
 });
