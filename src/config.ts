@@ -124,6 +124,14 @@ export function buildConfig(
     }
   }
 
+  // Read GitHub token from environment when not set by caller
+  if (!config.githubToken) {
+    config.githubToken =
+      process.env['GITHUB_TOKEN'] ||
+      process.env['GITHUB_PERSONAL_ACCESS_TOKEN'] ||
+      null;
+  }
+
   return config;
 }
 
