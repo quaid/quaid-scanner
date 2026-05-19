@@ -4,9 +4,19 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
 
-**Agent-first OSS repository health scanner.** Evaluates any open source project across six strategic pillars and returns structured findings for agents, CI pipelines, or humans.
+**Agent-first OSS repository health scanner** for measuring sociotechnical health — not just code quality. Evaluates any open source project across six strategic pillars: security posture, governance soundness, community sustainability, AI-native readiness, inclusive language, and technical rigor. Returns structured findings designed for agents, CI pipelines, and humans alike.
 
-Built on [CHAOSS metrics](https://chaoss.community/), [The Open Source Way 2.0](https://www.theopensourceway.org/), and the [Inclusive Naming Initiative](https://inclusivenaming.org/).
+Built on [OpenSSF Scorecard](https://securityscorecards.dev/), [CHAOSS metrics](https://chaoss.community/), [The Open Source Way 2.0](https://www.theopensourceway.org/), and the [Inclusive Naming Initiative](https://inclusivenaming.org/).
+
+---
+
+## Who This Is For
+
+**OSPO and foundation teams** evaluating the health of a dependency portfolio, an incubation candidate, or a grant recipient — and need a consistent, framework-grounded signal rather than a gut-check on GitHub stars and commit frequency.
+
+**Foundation and governance managers** assessing whether a project meets incubation criteria, has sound governance, and is sustainable without a single-vendor dependency.
+
+**Developers building agent workflows over OSS repos** — scan-to-backlog pipelines, pre-adoption dependency audits, CI health gates — who need machine-parseable structured output, not a PDF report.
 
 ---
 
@@ -105,6 +115,31 @@ Options:
 | `0` | Score ≥ 8.0 — Low Risk |
 | `1` | Score 5.0–7.9 — Medium Risk |
 | `2` | Score < 5.0 — High/Critical Risk, or `--threshold` not met |
+
+---
+
+## Maturity Scoring
+
+A sandbox project that hasn't written down its governance yet is not failing — it is behaving normally for its stage. quaid-scanner adjusts severity thresholds by maturity level so findings reflect where a project _should_ be, not where a graduated Apache project is.
+
+| Maturity Level | What it means | Auto-detected when |
+|---|---|---|
+| `sandbox` | Early-stage, experimental | < 10 contributors, < 6 months old, or no releases |
+| `incubating` | Growing, not yet stable | 10–50 contributors, < 2 years, pre-1.0 releases |
+| `graduated` | Stable, production-grade | Semantic versioning, sustained contributor base, governance docs present |
+| `archived` | Frozen, read-only | No commits in 12+ months |
+
+Auto-detection reads git history, package.json metadata, and contributor data. To override:
+
+```bash
+# Treat a young project as incubating (relaxes governance expectations)
+quaid-scanner . --maturity incubating
+
+# Full strictness regardless of age
+quaid-scanner . --maturity graduated
+```
+
+At `sandbox` maturity, missing governance documents produce `WARNING` findings rather than `CRITICAL`. At `graduated`, the same gaps are `CRITICAL`. The maturity level used is included in every JSON report as `"maturity": "incubating"`.
 
 ---
 
@@ -306,6 +341,58 @@ Save the completed report to docs/scans/my-org-report-YYYY-MM-DD.md.
 
 ---
 
+## Persistence & History
+
+Requires ZeroDB (`ZERODB_API_URL`, `ZERODB_API_KEY`, `ZERODB_PROJECT_ID`).
+
+Each scan result can be stored for trend analysis and regression detection. Over time, you can answer: _Is this project's security posture improving or declining?_
+
+```bash
+# Store results automatically — set env vars before scanning
+export ZERODB_API_URL=https://your-zerodb-instance
+export ZERODB_API_KEY=your-key
+export ZERODB_PROJECT_ID=your-project-id
+
+quaid-scanner https://github.com/owner/repo --quiet --format json
+# scan result is stored automatically when ZeroDB vars are present
+```
+
+**Library usage:**
+
+```typescript
+import { storeScanHistory, queryTrend, renderTrendAscii, alertOnDrop } from 'quaid-scanner';
+import { ZeroDBClient } from 'zerodb-client';
+
+const client = new ZeroDBClient({ /* ... */ });
+
+// Store after a scan
+await storeScanHistory(report, client);
+
+// Retrieve 90-day trend
+const trend = await queryTrend('owner/repo', 90, client);
+
+// Render as ASCII sparkline
+console.log(renderTrendAscii(trend));
+// owner/repo (90d): ▃▄▅▆▇▇█  5.2 → 8.1 (+2.9)
+
+// Alert if score drops > 1.0 point from previous scan
+const alert = alertOnDrop(trend);
+if (alert) console.error(alert);
+```
+
+Use `alertOnDrop` in CI to catch score regressions before they merge:
+
+```yaml
+- name: Check for score regression
+  run: |
+    node -e "
+      const { alertOnDrop } = require('quaid-scanner');
+      // ... query trend and alert
+    "
+```
+
+---
+
 ## Ecosystem Intelligence
 
 The `--ecosystem` flag runs a parallel analysis that does **not** affect `overallScore`:
@@ -328,20 +415,38 @@ Returns:
 
 Requires ZeroDB (`ZERODB_API_URL`, `ZERODB_API_KEY`, `ZERODB_PROJECT_ID`).
 
-Each scan registers the repo as a node. After multiple scans across related projects, the graph enables:
+Each scan registers the scanned repo as a graph node in ZeroDB. After scanning related projects, the graph captures the sociotechnical relationships between them — who contributes to what, which projects depend on each other, which orgs concentrate influence.
+
+**Node types:** `contributor`, `project`, `organization`
+
+**Edge types:** `commits_to`, `maintains`, `depends_on`, `related_to`, `forks`
+
+**CollaborationSpectrum score:** a per-repo composite that measures cross-org contributor diversity and depth of collaboration network. Higher scores indicate a healthier contributor ecosystem with less single-vendor lock-in.
+
+After scanning a portfolio, the graph enables:
 
 ```bash
 # Who depends on this repo?
 quaid-scanner . --format json | jq '.graph.reverseDependents'
 
-# What should we know about?
+# Discovery feed — what adjacent repos should you know about?
 quaid-scanner . --format json | jq '.graph.discoveryFeed'
+
+# CollaborationSpectrum score for this repo
+quaid-scanner . --format json | jq '.graph.collaborationScore'
 ```
 
-Or via MCP:
+Via the MCP `graph_query` tool:
+
 ```
+# Traverse 2 hops of dependency relationships from a repo
 graph_query(repo: "owner/my-project", hops: 2, edgeTypes: ["depends_on"])
+
+# Find all contributors shared across two repos
+graph_query(repo: "owner/my-project", hops: 1, edgeTypes: ["commits_to"], intersect: "owner/other-project")
 ```
+
+The graph builds incrementally — each scan adds or updates nodes and edges. No data is required upfront; the graph becomes useful after scanning 5–10 related repos.
 
 ---
 
@@ -361,6 +466,53 @@ graph_query(repo: "owner/my-project", hops: 2, edgeTypes: ["depends_on"])
     name: quaid-scan-report
     path: scan-report.json
 ```
+
+---
+
+## Using as a Library
+
+```bash
+npm install quaid-scanner
+```
+
+```typescript
+import {
+  Orchestrator,
+  createDefaultRegistry,
+  buildContext,
+  buildScanReport,
+  serializeJson,
+  Severity,
+  Pillar,
+} from 'quaid-scanner';
+
+const registry = createDefaultRegistry();
+const orchestrator = new Orchestrator(registry);
+
+const { context, cleanup } = await buildContext({
+  target: 'https://github.com/owner/repo',
+  githubToken: process.env.GITHUB_TOKEN,
+  depth: 'standard',
+});
+
+try {
+  const results = await orchestrator.runAll(context);
+  const report = buildScanReport(context, results);
+
+  // Agent-friendly JSON with string severity labels ("CRITICAL", not 2)
+  const json = serializeJson(report);
+  console.log(json);
+
+  // Filter CRITICAL findings from the security pillar
+  const criticalSecurity = report.findings.filter(
+    f => f.severity === Severity.CRITICAL && f.pillar === Pillar.SECURITY
+  );
+} finally {
+  await cleanup();
+}
+```
+
+All exported types: `ScanReport`, `ScanFinding`, `ScanContext`, `Severity`, `Pillar`, `MaturityLevel`, `RiskLevel`, `ScanDepth`, `OutputFormat`, and more — see [`src/index.ts`](src/index.ts).
 
 ---
 

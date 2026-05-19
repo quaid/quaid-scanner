@@ -88,17 +88,20 @@ v0.1.1 fixes five bugs from the first real-world scans:
 ---
 
 **8/9**
-What's next on the roadmap:
+Already in v0.1.1 (not coming soon):
 
-→ Cross-validation against OpenSSF Scorecard API + `licensee` CLI (accuracy verification)
+→ Scan history + trend tracking — `alertOnDrop` catches score regressions in CI
+→ Ecosystem intelligence — `--ecosystem` returns rivals, partners, strategic positioning
+
+On the roadmap:
+
+→ Cross-validation vs OpenSSF Scorecard API + `licensee` CLI (accuracy verification)
 → Ground-truth corpus: 8 synthetic repos, mutation tests, regression suite
-→ Historical trend tracking (is this project's health improving or declining?)
-→ Ecosystem intelligence: rivals, partners, strategic positioning
 
 ---
 
 **9/9**
-Apache-2.0. 41 scanners. Built on CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initiative.
+Apache-2.0. 41 scanners. Built on OpenSSF Scorecard, CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initiative.
 
 `npm install -g quaid-scanner`
 

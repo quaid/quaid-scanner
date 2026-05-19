@@ -73,16 +73,21 @@ The `/quaid-scan` Claude Code skill is in the repo.
 ---
 
 **7/8**
+Already in v0.1.1:
+
+→ Scan history + trend tracking via ZeroDB — `alertOnDrop` catches regressions in CI
+→ Ecosystem intelligence — `--ecosystem` returns rivals, partners, strategic positioning (non-scored)
+
 Roadmap:
 
 → Cross-validation against OpenSSF Scorecard API + `licensee` CLI — so you can trust the findings
 → Synthetic ground-truth corpus with mutation tests
-→ Historical trend tracking via ZeroDB
-→ Ecosystem intelligence: rivals, partners, strategic positioning as a parallel (non-scored) layer
 
 ---
 
 **8/8**
+Apache-2.0. 41 scanners. Built on OpenSSF Scorecard, CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initiative.
+
 `npm install -g quaid-scanner`
 
 github.com/quaid/quaid-scanner

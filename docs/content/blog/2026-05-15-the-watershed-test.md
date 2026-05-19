@@ -38,7 +38,7 @@ quaid-scanner is my attempt to make that debt visible, systematically, at machin
 
 ## Forty-One Lenses Across Six Pillars
 
-The scanner evaluates any OSS repository across six weighted pillars, drawing on three frameworks I trust: [CHAOSS metrics](https://chaoss.community/), [The Open Source Way 2.0](https://www.theopensourceway.org/), and the [Inclusive Naming Initiative](https://inclusivenaming.org/).
+The scanner evaluates any OSS repository across six weighted pillars, drawing on four frameworks I trust: [OpenSSF Scorecard](https://securityscorecards.dev/), [CHAOSS metrics](https://chaoss.community/), [The Open Source Way 2.0](https://www.theopensourceway.org/), and the [Inclusive Naming Initiative](https://inclusivenaming.org/).
 
 | Pillar | Weight |
 |--------|--------|
@@ -128,18 +128,21 @@ The watershed fills in.
 
 ---
 
-## What Is Coming
+## What Is Already There and What Is Coming
 
 quaid-scanner is at v0.1.x.
-The roadmap is public in the [PRD](https://github.com/quaid/quaid-scanner/blob/main/docs/PRD-v2.md), but here is where the water is flowing next.
+The roadmap is public in the [PRD](https://github.com/quaid/quaid-scanner/blob/main/docs/PRD-v2.md).
 
-**Accuracy validation** (Epics 11 and 12) addresses the question I hear most often: _"How do I know the findings are correct?"_
+**Already in v0.1.1:** Scan history persistence and trend analysis via ZeroDB — `storeScanHistory`, `queryTrend`, `renderTrendAscii`, and `alertOnDrop` are live.
+If you have ZeroDB credentials, every scan is stored automatically.
+The `alertOnDrop` function lets CI catch score regressions before they merge.
+
+**Also already in v0.1.1:** Ecosystem intelligence — `quaid-scanner . --ecosystem` runs a parallel analysis layer that does not affect the scored pillars.
+It returns rivals, partners, user communities, and strategic positioning recommendations alongside the health data.
+OSPOs and maintainers who want positioning context alongside health scores can use it today.
+
+**On the roadmap:** Accuracy validation (Epics 11 and 12) addresses the question I hear most often: _"How do I know the findings are correct?"_
 The answer will be two complementary systems: a cross-validation harness that diffs quaid findings against authoritative external tools (OpenSSF Scorecard API, the `licensee` CLI), and a ground-truth corpus — synthetic fixture repositories with precisely controlled properties — whose expected findings are asserted on every test run.
-
-**Persistence and history** will track scan results over time in ZeroDB, enabling trend analysis: is this project's security posture improving, declining, or stable?
-The `alertOnDrop` function will catch regressions before they compound.
-
-**Ecosystem intelligence** will add a parallel analysis layer — rivals, partners, user communities, strategic recommendations — that does not affect the scored pillars but gives OSPO teams and maintainers the positioning context they need alongside the health data.
 
 ---
 
