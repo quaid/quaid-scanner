@@ -130,6 +130,111 @@ describe('TermListManager', () => {
     });
   });
 
+  describe('loadTerms() — termListUrl branch', () => {
+    it('falls back to bundled terms when termListUrl is provided (remote fetch not yet implemented)', async () => {
+      // Covers lines 187-188: the if(config.termListUrl) branch that
+      // still returns bundled terms while remote fetch is pending.
+      const config = createConfig({ termListUrl: 'https://example.com/terms.json' });
+      const result = await manager.loadTerms(config);
+
+      expect(result.source).toBe('bundled');
+      expect(result.terms.length).toBeGreaterThan(0);
+      // Should still include all bundled terms
+      const names = result.terms.map((t) => t.term);
+      expect(names).toContain('whitelist');
+      expect(names).toContain('blacklist');
+    });
+  });
+
+  describe('loadTerms() — parseTierFromKey branches', () => {
+    it('parses tier1 key correctly for custom terms without an explicit tier field', async () => {
+      // Covers line 226: parseTierFromKey returns 1 when key === 'tier1'
+      // Note: def.tier must be omitted so the ?? operator falls through to parseTierFromKey.
+      const config = createConfig({
+        customTerms: {
+          tier1: [
+            {
+              term: 'custom-tier1-word',
+              replacements: ['better-tier1-word'],
+              // No explicit tier — forces parseTierFromKey('tier1') to run
+            },
+          ],
+        },
+      });
+
+      const result = await manager.loadTerms(config);
+      const customTerm = result.terms.find((t) => t.term === 'custom-tier1-word');
+
+      expect(customTerm).toBeDefined();
+      expect(customTerm!.tier).toBe(1);
+    });
+
+    it('parses tier2 key correctly for custom terms without an explicit tier field', async () => {
+      // Covers line 227: parseTierFromKey returns 2 when key === 'tier2'
+      const config = createConfig({
+        customTerms: {
+          tier2: [
+            {
+              term: 'custom-tier2-word',
+              replacements: ['better-tier2-word'],
+              reason: 'tier2 test',
+              // No explicit tier — forces parseTierFromKey('tier2') to run
+            },
+          ],
+        },
+      });
+
+      const result = await manager.loadTerms(config);
+      const customTerm = result.terms.find((t) => t.term === 'custom-tier2-word');
+
+      expect(customTerm).toBeDefined();
+      expect(customTerm!.tier).toBe(2);
+    });
+
+    it('defaults to tier 3 for unknown custom term tier keys without an explicit tier field', async () => {
+      // Covers line 228: parseTierFromKey returns 3 as default
+      const config = createConfig({
+        customTerms: {
+          tier3: [
+            {
+              term: 'custom-tier3-word',
+              replacements: ['better-tier3-word'],
+              // No explicit tier — forces parseTierFromKey('tier3') to run (falls to default)
+            },
+          ],
+        },
+      });
+
+      const result = await manager.loadTerms(config);
+      const customTerm = result.terms.find((t) => t.term === 'custom-tier3-word');
+
+      expect(customTerm).toBeDefined();
+      expect(customTerm!.tier).toBe(3);
+    });
+
+    it('uses def.tier override when explicitly set on a custom term', async () => {
+      // When def.tier is provided it takes precedence over parseTierFromKey,
+      // confirming the ?? operator on line 203 works correctly.
+      const config = createConfig({
+        customTerms: {
+          tier3: [
+            {
+              term: 'explicit-tier1-word',
+              tier: 1,
+              replacements: ['replacement'],
+            },
+          ],
+        },
+      });
+
+      const result = await manager.loadTerms(config);
+      const customTerm = result.terms.find((t) => t.term === 'explicit-tier1-word');
+
+      expect(customTerm).toBeDefined();
+      expect(customTerm!.tier).toBe(1);
+    });
+  });
+
   describe('term pattern matching', () => {
     it('tier 1 patterns match correctly', () => {
       const masterSlave = BUNDLED_TERMS.find((t) => t.term === 'master-slave');
