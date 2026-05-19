@@ -45,6 +45,7 @@ import { AssumedKnowledgeScanner } from './inclusive/assumed-knowledge-scanner.j
 import { DiminishingLanguageScanner } from './inclusive/diminishing-scanner.js';
 import { InclusiveCodeScanner } from './inclusive/code-scanner.js';
 import { InclusiveDocScanner } from './inclusive/doc-scanner.js';
+import { NamingScanner } from './inclusive/naming-scanner.js';
 
 // Technical
 import { InteractionTemplateScanner } from './technical/interaction-templates.js';
@@ -101,6 +102,7 @@ export function createDefaultRegistry(): ScannerRegistry {
   registry.register(new DiminishingLanguageScanner());
   registry.register(new InclusiveCodeScanner());
   registry.register(new InclusiveDocScanner());
+  registry.register(new NamingScanner());
 
   // Technical
   registry.register(new InteractionTemplateScanner());

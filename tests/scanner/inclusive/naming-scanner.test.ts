@@ -18,6 +18,8 @@ import {
 
 // ---------------------------------------------------------------------------
 // Module mocks — must be declared before any imports that use them.
+// vi.mock calls are hoisted to the top by Vitest, so the order relative to
+// imports in the source text does not matter in practice.
 // ---------------------------------------------------------------------------
 
 vi.mock('node:fs');
@@ -111,26 +113,29 @@ function createContext(repoPath: string = '/repo'): ScanContext {
 }
 
 // ---------------------------------------------------------------------------
+// Shared mock reference — set per-test via setupTerms().
+// ---------------------------------------------------------------------------
+
+/** Configure TermListManager mock and return a fresh NamingScanner. */
+function setupScanner(
+  terms: typeof WHITELIST_TERM[] = [WHITELIST_TERM]
+): NamingScanner {
+  const mockLoadTerms = vi.fn().mockResolvedValue({ terms, source: 'bundled' });
+  (TermListManager as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    loadTerms: mockLoadTerms,
+  }));
+  return new NamingScanner();
+}
+
+// ---------------------------------------------------------------------------
 // Test suite
 // ---------------------------------------------------------------------------
 
 describe('NamingScanner', () => {
-  let scanner: NamingScanner;
-  let mockLoadTerms: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
     vi.clearAllMocks();
 
-    scanner = new NamingScanner();
-
-    // Default: TermListManager returns the whitelist term so most tests can
-    // exercise a flagged path without re-configuring the mock.
-    mockLoadTerms = vi.fn().mockResolvedValue({ terms: [WHITELIST_TERM], source: 'bundled' });
-    (TermListManager as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
-      loadTerms: mockLoadTerms,
-    }));
-
-    // Default fs stubs — can be overridden per test.
+    // Default fs stubs — return "file not found" by default.
     (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
     (fs.readFileSync as ReturnType<typeof vi.fn>).mockReturnValue('');
 
@@ -152,14 +157,17 @@ describe('NamingScanner', () => {
 
   describe('scanner metadata', () => {
     it('has the correct name', () => {
+      const scanner = setupScanner();
       expect(scanner.name).toBe('inclusive-naming-scanner');
     });
 
     it('has the correct displayName', () => {
+      const scanner = setupScanner();
       expect(scanner.displayName).toBe('Project Naming Scanner');
     });
 
     it('belongs to the INCLUSIVE pillar', () => {
+      const scanner = setupScanner();
       expect(scanner.pillar).toBe(Pillar.INCLUSIVE);
     });
   });
@@ -170,6 +178,7 @@ describe('NamingScanner', () => {
 
   describe('package.json name field', () => {
     it('returns a finding when package name contains a flagged term', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -191,6 +200,7 @@ describe('NamingScanner', () => {
     });
 
     it('returns no findings when package name is clean', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -208,6 +218,7 @@ describe('NamingScanner', () => {
     });
 
     it('returns no findings and does not throw when package.json is missing', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
       const findings = await scanner.run(createContext());
@@ -217,6 +228,7 @@ describe('NamingScanner', () => {
     });
 
     it('returns no findings and does not throw when package.json is invalid JSON', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -234,7 +246,7 @@ describe('NamingScanner', () => {
     });
 
     it('maps tier 1 term to CRITICAL severity', async () => {
-      mockLoadTerms.mockResolvedValue({ terms: [WHITELIST_TERM], source: 'bundled' });
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -252,7 +264,7 @@ describe('NamingScanner', () => {
     });
 
     it('maps tier 2 term to WARNING severity', async () => {
-      mockLoadTerms.mockResolvedValue({ terms: [BLACKLIST_TERM], source: 'bundled' });
+      const scanner = setupScanner([BLACKLIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -270,7 +282,7 @@ describe('NamingScanner', () => {
     });
 
     it('maps tier 3 term to INFO severity', async () => {
-      mockLoadTerms.mockResolvedValue({ terms: [MASTER_TERM], source: 'bundled' });
+      const scanner = setupScanner([MASTER_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -294,6 +306,7 @@ describe('NamingScanner', () => {
 
   describe('README.md H1 title', () => {
     it('returns a finding when README H1 contains a flagged term', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('README.md')
       );
@@ -313,6 +326,7 @@ describe('NamingScanner', () => {
     });
 
     it('returns no findings when README H1 is clean', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('README.md')
       );
@@ -330,16 +344,17 @@ describe('NamingScanner', () => {
     });
 
     it('skips README check when README.md does not exist', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
-      await expect(scanner.run(createContext())).resolves.toBeDefined();
-
       const findings = await scanner.run(createContext());
+
       const readmeFindings = findings.filter((f) => f.file === 'README.md');
       expect(readmeFindings).toHaveLength(0);
     });
 
     it('skips README check when README has no H1 line', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('README.md')
       );
@@ -364,6 +379,7 @@ describe('NamingScanner', () => {
 
   describe('git remote slug', () => {
     it('returns a finding when the git remote repo slug contains a flagged term', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
         status: 0,
         stdout: Buffer.from('https://github.com/myorg/whitelist-service.git\n'),
@@ -380,6 +396,7 @@ describe('NamingScanner', () => {
     });
 
     it('returns no findings when git remote slug is clean', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
         status: 0,
         stdout: Buffer.from('https://github.com/myorg/clean-project.git\n'),
@@ -393,20 +410,21 @@ describe('NamingScanner', () => {
     });
 
     it('skips git remote check when spawnSync returns non-zero exit', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
         status: 128,
         stdout: Buffer.from(''),
         stderr: Buffer.from('fatal: not a git repository'),
       });
 
-      await expect(scanner.run(createContext())).resolves.toBeDefined();
-
       const findings = await scanner.run(createContext());
+
       const remoteFindings = findings.filter((f) => f.file === null);
       expect(remoteFindings).toHaveLength(0);
     });
 
     it('skips git remote check when spawnSync throws', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
         throw new Error('spawnSync failed');
       });
@@ -415,6 +433,7 @@ describe('NamingScanner', () => {
     });
 
     it('skips git remote check when remote URL is empty', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
         status: 0,
         stdout: Buffer.from('\n'),
@@ -434,7 +453,7 @@ describe('NamingScanner', () => {
 
   describe('combined sources', () => {
     it('returns empty findings array when no terms match any source', async () => {
-      mockLoadTerms.mockResolvedValue({ terms: [WHITELIST_TERM], source: 'bundled' });
+      const scanner = setupScanner([WHITELIST_TERM]);
 
       // All sources are clean / missing
       (fs.existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
@@ -450,6 +469,8 @@ describe('NamingScanner', () => {
     });
 
     it('returns findings from multiple sources in one run', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+
       // package.json flagged
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation(
         (p: unknown) =>
@@ -487,6 +508,7 @@ describe('NamingScanner', () => {
 
   describe('finding shape', () => {
     it('finding id is prefixed with the scanner name', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -504,6 +526,7 @@ describe('NamingScanner', () => {
     });
 
     it('suggestion contains the alternative term from the INI list', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
@@ -527,19 +550,18 @@ describe('NamingScanner', () => {
   // -------------------------------------------------------------------------
 
   describe('negative lookbehind on property access patterns', () => {
-    it('does not flag "whitelist" when preceded by a dot', async () => {
-      mockLoadTerms.mockResolvedValue({ terms: [WHITELIST_TERM], source: 'bundled' });
+    it('does not produce findings when all sources are clean', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+      // package.json name is clean; no README; no git remote
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
       );
       (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
         if ((p as string).endsWith('package.json')) {
-          // Name would not normally have a dot, but this tests the regex path
           return JSON.stringify({ name: 'clean-name' });
         }
         return '';
       });
-      // Use git remote with a dot-prefixed slug segment
       (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
         status: 0,
         stdout: Buffer.from('https://github.com/org/clean-tool.git\n'),
@@ -549,6 +571,123 @@ describe('NamingScanner', () => {
       const findings = await scanner.run(createContext());
 
       expect(findings).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Branch coverage: edge cases not covered by the main scenarios
+  // -------------------------------------------------------------------------
+
+  describe('edge cases', () => {
+    it('returns empty findings when term list is empty', async () => {
+      // Terms array is empty → scanner returns immediately
+      const scanner = setupScanner([]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
+        (p as string).endsWith('package.json')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          return JSON.stringify({ name: 'whitelist-app' });
+        }
+        return '';
+      });
+
+      const findings = await scanner.run(createContext());
+
+      expect(findings).toEqual([]);
+    });
+
+    it('returns no findings when package.json has no name field', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
+        (p as string).endsWith('package.json')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          // Valid JSON but no name field
+          return JSON.stringify({ version: '1.0.0', description: 'no name here' });
+        }
+        return '';
+      });
+
+      const findings = await scanner.run(createContext());
+
+      const pkgFindings = findings.filter((f) => f.file === 'package.json');
+      expect(pkgFindings).toHaveLength(0);
+    });
+
+    it('handles README.md read error gracefully', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
+        (p as string).endsWith('README.md')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('README.md')) {
+          throw new Error('permission denied');
+        }
+        return '';
+      });
+
+      await expect(scanner.run(createContext())).resolves.toBeDefined();
+
+      const findings = await scanner.run(createContext());
+      const readmeFindings = findings.filter((f) => f.file === 'README.md');
+      expect(readmeFindings).toHaveLength(0);
+    });
+
+    it('handles SSH-style git remote URL correctly', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+      // SSH form: git@github.com:org/whitelist-repo.git
+      (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 0,
+        stdout: Buffer.from('git@github.com:org/whitelist-repo.git\n'),
+        stderr: Buffer.from(''),
+      });
+
+      const findings = await scanner.run(createContext());
+
+      const remoteFindings = findings.filter((f) => f.file === null);
+      expect(remoteFindings.length).toBeGreaterThan(0);
+    });
+
+    it('handles git remote URL without .git suffix', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+      // URL without trailing .git
+      (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 0,
+        stdout: Buffer.from('https://github.com/org/whitelist-tool\n'),
+        stderr: Buffer.from(''),
+      });
+
+      const findings = await scanner.run(createContext());
+
+      const remoteFindings = findings.filter((f) => f.file === null);
+      expect(remoteFindings.length).toBeGreaterThan(0);
+    });
+
+    it('uses g-flagged pattern directly when term already has g flag', async () => {
+      // Term whose pattern already includes 'g' exercises the other branch in
+      // buildLookbehindPattern. We verify the scanner still returns a finding.
+      const termWithGFlag = {
+        term: 'whitelist',
+        tier: 1 as const,
+        pattern: /\bwhite[-]?list\b/gi,  // already has 'g'
+        replacements: ['allowlist'],
+      };
+      const scanner = setupScanner([termWithGFlag]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
+        (p as string).endsWith('package.json')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          return JSON.stringify({ name: 'whitelist-app' });
+        }
+        return '';
+      });
+
+      const findings = await scanner.run(createContext());
+
+      expect(findings.length).toBeGreaterThan(0);
     });
   });
 });
