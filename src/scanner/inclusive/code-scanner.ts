@@ -291,8 +291,12 @@ export class InclusiveCodeScanner implements Scanner {
         // Match terms against extracted regions
         for (const region of regionsForLine) {
           for (const term of terms) {
-            // Reset the regex lastIndex for global patterns
-            const pattern = new RegExp(term.pattern.source, term.pattern.flags);
+            // Prepend a negative lookbehind for '.' to avoid flagging
+            // property access and method call patterns such as signal.aborted
+            // or ctx.signal.abort().  The lookbehind is not part of the
+            // bundled term definition so it is applied uniformly here.
+            const source = `(?<!\\.)${term.pattern.source}`;
+            const pattern = new RegExp(source, term.pattern.flags);
             if (pattern.test(region.text)) {
               findingCounter++;
               findings.push({

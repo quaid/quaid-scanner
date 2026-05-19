@@ -382,4 +382,121 @@ describe('InclusiveCodeScanner', () => {
       expect(masterFinding!.file).toContain('app.rb');
     });
   });
+
+  describe('word-boundary matching — no false positives on technical terms', () => {
+    it('does NOT flag AbortController as an "abort" finding in a string literal', async () => {
+      writeFixture(tmpDir, 'fetch.ts', [
+        'const controller = new AbortController();',
+        '// use AbortController for cancellation',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      const abortFindings = findings.filter((f) =>
+        f.metadata !== undefined &&
+        (f.metadata as Record<string, unknown>)['term'] === 'abort',
+      );
+      expect(abortFindings).toHaveLength(0);
+    });
+
+    it('does NOT flag AbortSignal as an "abort" finding in a string literal', async () => {
+      writeFixture(tmpDir, 'signal.ts', [
+        'function handle(signal: AbortSignal): void {}',
+        '// AbortSignal is a standard Web API',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      const abortFindings = findings.filter((f) =>
+        f.metadata !== undefined &&
+        (f.metadata as Record<string, unknown>)['term'] === 'abort',
+      );
+      expect(abortFindings).toHaveLength(0);
+    });
+
+    it('does NOT flag signal.aborted in a string literal as an "abort" finding', async () => {
+      // signal.aborted is a standard Web API property access; ".aborted" should
+      // not be treated as a standalone use of the deprecated term "abort".
+      writeFixture(tmpDir, 'handler.ts', [
+        'const code1 = "if (signal.aborted) { return; }";',
+        '// Example: signal.aborted returns a boolean',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      const abortFindings = findings.filter((f) =>
+        f.metadata !== undefined &&
+        (f.metadata as Record<string, unknown>)['term'] === 'abort',
+      );
+      expect(abortFindings).toHaveLength(0);
+    });
+
+    it('does NOT flag ctx.signal.abort() method call in a string literal as an "abort" finding', async () => {
+      writeFixture(tmpDir, 'api-docs.ts', [
+        'const example = "Call ctx.signal.abort() to cancel the request";',
+        '// Usage: ctx.signal.abort() — AbortController Web API method',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      const abortFindings = findings.filter((f) =>
+        f.metadata !== undefined &&
+        (f.metadata as Record<string, unknown>)['term'] === 'abort',
+      );
+      expect(abortFindings).toHaveLength(0);
+    });
+
+    it('DOES flag standalone "abort" as a finding', async () => {
+      writeFixture(tmpDir, 'process.ts', [
+        '// abort the operation if the user cancels',
+        'function cleanup() {}',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      const abortFindings = findings.filter((f) =>
+        f.metadata !== undefined &&
+        (f.metadata as Record<string, unknown>)['term'] === 'abort',
+      );
+      expect(abortFindings.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does NOT flag git branch reference string "master" in variable name inside identifier context', async () => {
+      writeFixture(tmpDir, 'git.ts', [
+        'const repoMaster = "main";',
+        'function getMasterKey(): string { return "key"; }',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      // These are code identifiers (not in comments/strings), so no findings expected
+      const masterFindings = findings.filter((f) =>
+        f.metadata !== undefined &&
+        (f.metadata as Record<string, unknown>)['term'] === 'master',
+      );
+      expect(masterFindings).toHaveLength(0);
+    });
+
+    it('does NOT flag "new AbortController()" in a string literal as an abort finding', async () => {
+      writeFixture(tmpDir, 'example.ts', [
+        'const example = "new AbortController()";',
+        '// usage: new AbortController() — standard Web API pattern',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      const abortFindings = findings.filter((f) =>
+        f.metadata !== undefined &&
+        (f.metadata as Record<string, unknown>)['term'] === 'abort',
+      );
+      expect(abortFindings).toHaveLength(0);
+    });
+  });
 });
