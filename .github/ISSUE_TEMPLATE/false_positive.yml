@@ -1,0 +1,51 @@
+name: False Positive
+description: quaid-scanner flagged something that should not be a finding
+labels: ["false-positive", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        False positives help us improve scanner accuracy. Please provide as much detail as possible so we can reproduce and fix the issue.
+
+  - type: input
+    id: finding-id
+    attributes:
+      label: Finding ID
+      description: The `id` field from the JSON finding (e.g. `INC-001`, `SEC-003`)
+      placeholder: "INC-001"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What file, pattern, repo, or configuration triggered the finding?
+      placeholder: |
+        File: src/utils/abort-handler.ts
+        Pattern matched: "abort" in `signal.aborted`
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-fp
+    attributes:
+      label: Why is this a false positive?
+      description: Explain why this finding is incorrect for your case.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `quaid-scanner --version`
+      placeholder: "0.1.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix (optional)
+      description: If you have an idea for how to fix the false positive, share it here.

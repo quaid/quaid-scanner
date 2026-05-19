@@ -20,6 +20,21 @@ Built on [OpenSSF Scorecard](https://securityscorecards.dev/), [CHAOSS metrics](
 
 ---
 
+## Prerequisites
+
+| Requirement | Version | Notes |
+| --- | --- | --- |
+| [Node.js](https://nodejs.org) | ≥ 18.0.0 | Required |
+| [Git](https://git-scm.com) | any | Required for local repo scanning |
+| GitHub token | — | Optional — unlocks branch protection checks, OpenSSF Scorecard API, and issue/PR metrics |
+| [ZeroDB](https://github.com/ainative-studio/zerodb) | local instance | Optional — required for scan history, trend tracking, and OSS social graph |
+
+**GitHub token:** set either `GITHUB_TOKEN` or `GITHUB_PERSONAL_ACCESS_TOKEN` in your environment. A classic token with `public_repo` scope is sufficient for public repos. The token is never written to disk.
+
+**ZeroDB:** set `ZERODB_API_URL`, `ZERODB_API_KEY`, and `ZERODB_PROJECT_ID`. Without ZeroDB, scanning and reporting work normally — persistence and graph features are silently skipped.
+
+---
+
 ## Install
 
 ```bash
@@ -31,8 +46,6 @@ Or run without installing:
 ```bash
 npx quaid-scanner . --depth quick
 ```
-
-**Requirements:** Node.js ≥ 18, Git
 
 ---
 

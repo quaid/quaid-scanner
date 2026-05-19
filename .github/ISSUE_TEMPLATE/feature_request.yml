@@ -1,0 +1,53 @@
+name: Feature Request
+description: Propose a new scanner, metric, or capability
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. The more context you provide, the easier it is to evaluate the request.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or gap
+      description: What health signal is missing or incorrectly measured?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What should quaid-scanner do differently or additionally?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you considered, if any.
+
+  - type: dropdown
+    id: pillar
+    attributes:
+      label: Affected pillar
+      description: Which scoring pillar would this touch?
+      options:
+        - Security
+        - Governance
+        - Community
+        - AI Readiness
+        - Inclusive Language
+        - Technical Rigor
+        - Cross-pillar / new pillar
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior art or reference
+      description: Links to CHAOSS metrics, OpenSSF criteria, or other frameworks that define this signal, if any.
