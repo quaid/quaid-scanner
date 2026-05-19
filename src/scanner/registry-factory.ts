@@ -12,6 +12,7 @@ import { TokenPermissionsScanner } from './security/token-permissions.js';
 // Governance
 import { AssetProtectionScanner } from './governance/asset-protection.js';
 import { BusFactorScanner } from './governance/bus-factor.js';
+import { ClearlyDefinedScanner } from './governance/clearly-defined.js';
 import { DepLicenseScanningScanner } from './governance/dep-license-scanning.js';
 import { GovernanceClassificationScanner } from './governance/governance-classification.js';
 import { GovernanceDetectionScanner } from './governance/governance-detection.js';
@@ -68,6 +69,7 @@ export function createDefaultRegistry(): ScannerRegistry {
   // Governance
   registry.register(new AssetProtectionScanner());
   registry.register(new BusFactorScanner());
+  registry.register(new ClearlyDefinedScanner());
   registry.register(new DepLicenseScanningScanner());
   registry.register(new GovernanceClassificationScanner());
   registry.register(new GovernanceDetectionScanner());
