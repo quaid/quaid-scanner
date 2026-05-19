@@ -159,10 +159,14 @@ export class InclusiveDocScanner implements Scanner {
       for (const term of terms) {
         // Use a fresh regex per line to reset lastIndex state.
         // Ensure 'g' flag is present exactly once for exec() iteration.
+        // Prepend a negative lookbehind for '.' so that property access
+        // and method call patterns such as signal.aborted or
+        // ctx.signal.abort() are not flagged as non-inclusive terms.
         const flags = term.pattern.flags.includes('g')
           ? term.pattern.flags
           : term.pattern.flags + 'g';
-        const pattern = new RegExp(term.pattern.source, flags);
+        const source = `(?<!\\.)${term.pattern.source}`;
+        const pattern = new RegExp(source, flags);
         let match: RegExpExecArray | null;
 
         while ((match = pattern.exec(line)) !== null) {
