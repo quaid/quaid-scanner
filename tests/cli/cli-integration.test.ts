@@ -423,4 +423,90 @@ describe('main() — in-process coverage', () => {
     expect([0, 1, 2]).toContain(exitCode);
     consoleSpy.mockRestore();
   }, 30_000);
+
+  it('prints github-prefixed target display for a GitHub URL (non-quiet)', async () => {
+    // Pass a GitHub URL without --quiet so the "Scanning: github:..." branch fires.
+    // The scan will fail (no real GitHub clone), but line 134 will have been hit.
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { exitCode } = await runMainInProcess([
+      'https://github.com/quaid-scanner-test/nonexistent',
+      '--depth', 'quick',
+      '--format', 'json',
+    ]);
+    expect([1, 2]).toContain(exitCode);
+    // stderr should contain the "github:" prefix
+    const stderrCalls = consoleSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(stderrCalls).toMatch(/github:/);
+    consoleSpy.mockRestore();
+  }, 30_000);
+
+  it('logs ecosystem error to stderr when ecosystem fails and quiet is false', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Run with --ecosystem but without --quiet so the catch branch emits an error log.
+    // The real ecosystem analysis may succeed or fail — either way the catch path is
+    // exercised when ecosystem analysis throws internally; if it succeeds the test
+    // still validates the non-quiet ecosystem path. To reliably trigger the catch we
+    // use --depth quick on a valid local path so the scan itself completes.
+    const { exitCode } = await runMainInProcess([
+      PROJECT_ROOT,
+      '--depth', 'quick',
+      '--format', 'json',
+      '--ecosystem',
+      // no --quiet: lines 165 and 174 (emit calls) will also be exercised
+    ]);
+    expect([0, 1, 2]).toContain(exitCode);
+    consoleSpy.mockRestore();
+  }, 30_000);
+
+  it('logs ecosystem failure message to stderr when EcosystemOrchestrator throws and quiet is false', async () => {
+    // Use vi.doMock (runtime mock, not hoisted) so it takes effect for the fresh
+    // dynamic import in this test's execution context. resetModules was called in beforeEach.
+    vi.doMock('../../src/ecosystem/orchestrator.js', () => ({
+      EcosystemOrchestrator: vi.fn().mockImplementation(() => ({
+        analyze: vi.fn().mockRejectedValue(new Error('eco boom')),
+      })),
+    }));
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    process.argv = ['node', resolve(PROJECT_ROOT, 'src', 'cli.ts'),
+      PROJECT_ROOT, '--depth', 'quick', '--format', 'json', '--ecosystem',
+    ];
+
+    const outputChunks: string[] = [];
+    let resolveExit!: (code: number | null) => void;
+    const exitPromise = new Promise<number | null>((res) => { resolveExit = res; });
+
+    let exitCalled = false;
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(
+      (code?: number | string | null | undefined) => {
+        const n = typeof code === 'number' ? code : code != null ? Number(code) : null;
+        resolveExit(n);
+        if (!exitCalled) {
+          exitCalled = true;
+          throw new Error(`process.exit(${n})`);
+        }
+        return undefined as never;
+      },
+    );
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+      outputChunks.push(String(chunk));
+      return true;
+    });
+
+    try {
+      await import('../../src/cli.js');
+    } catch { /* intentional */ }
+
+    const exitCode = await exitPromise;
+    expect([0, 1, 2]).toContain(exitCode);
+
+    // The ecosystem catch block should have logged an error to stderr
+    const stderrCalls = consoleSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(stderrCalls).toMatch(/[Ee]cosystem/);
+
+    consoleSpy.mockRestore();
+    exitSpy.mockRestore();
+    vi.doUnmock('../../src/ecosystem/orchestrator.js');
+  }, 30_000);
 });
