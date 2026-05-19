@@ -337,6 +337,43 @@ describe('ResponseTimeScanner', () => {
       expect(infoFinding).toBeDefined();
       expect(infoFinding!.severity).toBe(Severity.INFO);
     });
+
+    it('returns WARNING finding when GraphQL response contains errors and data is null', async () => {
+      const gqlErrorResponse = {
+        errors: [{ message: 'Could not resolve to a Repository with the name \'owner/repo\'.' }],
+        data: null,
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(gqlErrorResponse),
+      } as Response);
+
+      const ctx = makeContext();
+      const findings = await scanner.run(ctx);
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe(Severity.WARNING);
+      expect(findings[0].message).toContain('GitHub API error');
+    });
+
+    it('returns WARNING finding when GraphQL response has null repository', async () => {
+      const nullRepoResponse = {
+        data: { repository: null },
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(nullRepoResponse),
+      } as Response);
+
+      const ctx = makeContext();
+      const findings = await scanner.run(ctx);
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe(Severity.WARNING);
+      expect(findings[0].message).toContain('GitHub API error');
+    });
   });
 
   describe('repo parsing', () => {

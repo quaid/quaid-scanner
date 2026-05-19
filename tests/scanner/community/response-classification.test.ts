@@ -276,5 +276,40 @@ describe('ResponseClassificationScanner', () => {
       expect(findings).toHaveLength(1);
       expect(findings[0].severity).toBe(Severity.WARNING);
     });
+
+    it('returns WARNING finding when GraphQL response contains errors and data is null', async () => {
+      const gqlErrorResponse = {
+        errors: [{ message: 'Could not resolve to a Repository with the name \'owner/repo\'.' }],
+        data: null,
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(gqlErrorResponse),
+      } as Response);
+
+      const findings = await scanner.run(makeContext());
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe(Severity.WARNING);
+      expect(findings[0].message).toContain('GitHub API error');
+    });
+
+    it('returns WARNING finding when GraphQL response has null repository', async () => {
+      const nullRepoResponse = {
+        data: { repository: null },
+      };
+
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(nullRepoResponse),
+      } as Response);
+
+      const findings = await scanner.run(makeContext());
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe(Severity.WARNING);
+      expect(findings[0].message).toContain('GitHub API error');
+    });
   });
 });
