@@ -106,6 +106,14 @@ vi.mock('../src/ecosystem/orchestrator.js', () => ({
   })),
 }));
 
+vi.mock('../src/graph/traversal.js', () => ({
+  traverseGraph: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
+}));
+
+vi.mock('../src/integrations/zerodb-client.js', () => ({
+  ZeroDBClient: vi.fn().mockImplementation(() => ({})),
+}));
+
 // Import AFTER mocks are set up
 const { handleRequest } = await import('../src/mcp.js');
 
@@ -591,6 +599,236 @@ describe('MCP server handleRequest', () => {
       if (savedUrl !== undefined) process.env['ZERODB_API_URL'] = savedUrl;
       if (savedKey !== undefined) process.env['ZERODB_API_KEY'] = savedKey;
       if (savedProject !== undefined) process.env['ZERODB_PROJECT_ID'] = savedProject;
+    });
+
+    it('succeeds when ZeroDB env vars are present and no optional params given', async () => {
+      const savedUrl = process.env['ZERODB_API_URL'];
+      const savedKey = process.env['ZERODB_API_KEY'];
+      const savedProject = process.env['ZERODB_PROJECT_ID'];
+      process.env['ZERODB_API_URL'] = 'http://localhost:8100';
+      process.env['ZERODB_API_KEY'] = 'test-key';
+      process.env['ZERODB_PROJECT_ID'] = 'test-project';
+
+      const req: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 21,
+        method: 'tools/call',
+        params: {
+          name: 'graph_query',
+          arguments: { repo: 'org/my-repo' },
+        },
+      };
+      await handleRequest(req);
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+
+      expect(response.error).toBeUndefined();
+      expect(response.result).toBeDefined();
+
+      // Restore
+      if (savedUrl !== undefined) process.env['ZERODB_API_URL'] = savedUrl;
+      else delete process.env['ZERODB_API_URL'];
+      if (savedKey !== undefined) process.env['ZERODB_API_KEY'] = savedKey;
+      else delete process.env['ZERODB_API_KEY'];
+      if (savedProject !== undefined) process.env['ZERODB_PROJECT_ID'] = savedProject;
+      else delete process.env['ZERODB_PROJECT_ID'];
+    });
+
+    it('passes hops to traverseGraph when provided as a number', async () => {
+      const { traverseGraph } = await import('../src/graph/traversal.js');
+      const mockTraverse = vi.mocked(traverseGraph);
+      mockTraverse.mockClear();
+
+      const savedUrl = process.env['ZERODB_API_URL'];
+      const savedKey = process.env['ZERODB_API_KEY'];
+      const savedProject = process.env['ZERODB_PROJECT_ID'];
+      process.env['ZERODB_API_URL'] = 'http://localhost:8100';
+      process.env['ZERODB_API_KEY'] = 'test-key';
+      process.env['ZERODB_PROJECT_ID'] = 'test-project';
+
+      const req: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 22,
+        method: 'tools/call',
+        params: {
+          name: 'graph_query',
+          arguments: { repo: 'org/my-repo', hops: 2 },
+        },
+      };
+      await handleRequest(req);
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      expect(response.error).toBeUndefined();
+
+      expect(mockTraverse).toHaveBeenCalledOnce();
+      const callArgs = mockTraverse.mock.calls[0];
+      expect((callArgs[1] as Record<string, unknown>)['hops']).toBe(2);
+
+      // Restore
+      if (savedUrl !== undefined) process.env['ZERODB_API_URL'] = savedUrl;
+      else delete process.env['ZERODB_API_URL'];
+      if (savedKey !== undefined) process.env['ZERODB_API_KEY'] = savedKey;
+      else delete process.env['ZERODB_API_KEY'];
+      if (savedProject !== undefined) process.env['ZERODB_PROJECT_ID'] = savedProject;
+      else delete process.env['ZERODB_PROJECT_ID'];
+    });
+
+    it('passes edgeTypes to traverseGraph when provided as an array', async () => {
+      const { traverseGraph } = await import('../src/graph/traversal.js');
+      const mockTraverse = vi.mocked(traverseGraph);
+      mockTraverse.mockClear();
+
+      const savedUrl = process.env['ZERODB_API_URL'];
+      const savedKey = process.env['ZERODB_API_KEY'];
+      const savedProject = process.env['ZERODB_PROJECT_ID'];
+      process.env['ZERODB_API_URL'] = 'http://localhost:8100';
+      process.env['ZERODB_API_KEY'] = 'test-key';
+      process.env['ZERODB_PROJECT_ID'] = 'test-project';
+
+      const req: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 23,
+        method: 'tools/call',
+        params: {
+          name: 'graph_query',
+          arguments: { repo: 'org/my-repo', edgeTypes: ['depends_on'] },
+        },
+      };
+      await handleRequest(req);
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      expect(response.error).toBeUndefined();
+
+      expect(mockTraverse).toHaveBeenCalledOnce();
+      const callArgs = mockTraverse.mock.calls[0];
+      expect((callArgs[1] as Record<string, unknown>)['edgeTypes']).toEqual(['depends_on']);
+
+      // Restore
+      if (savedUrl !== undefined) process.env['ZERODB_API_URL'] = savedUrl;
+      else delete process.env['ZERODB_API_URL'];
+      if (savedKey !== undefined) process.env['ZERODB_API_KEY'] = savedKey;
+      else delete process.env['ZERODB_API_KEY'];
+      if (savedProject !== undefined) process.env['ZERODB_PROJECT_ID'] = savedProject;
+      else delete process.env['ZERODB_PROJECT_ID'];
+    });
+
+    it('passes minWeight to traverseGraph when provided as a number', async () => {
+      const { traverseGraph } = await import('../src/graph/traversal.js');
+      const mockTraverse = vi.mocked(traverseGraph);
+      mockTraverse.mockClear();
+
+      const savedUrl = process.env['ZERODB_API_URL'];
+      const savedKey = process.env['ZERODB_API_KEY'];
+      const savedProject = process.env['ZERODB_PROJECT_ID'];
+      process.env['ZERODB_API_URL'] = 'http://localhost:8100';
+      process.env['ZERODB_API_KEY'] = 'test-key';
+      process.env['ZERODB_PROJECT_ID'] = 'test-project';
+
+      const req: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 24,
+        method: 'tools/call',
+        params: {
+          name: 'graph_query',
+          arguments: { repo: 'org/my-repo', minWeight: 0.5 },
+        },
+      };
+      await handleRequest(req);
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      expect(response.error).toBeUndefined();
+
+      expect(mockTraverse).toHaveBeenCalledOnce();
+      const callArgs = mockTraverse.mock.calls[0];
+      expect((callArgs[1] as Record<string, unknown>)['minWeight']).toBe(0.5);
+
+      // Restore
+      if (savedUrl !== undefined) process.env['ZERODB_API_URL'] = savedUrl;
+      else delete process.env['ZERODB_API_URL'];
+      if (savedKey !== undefined) process.env['ZERODB_API_KEY'] = savedKey;
+      else delete process.env['ZERODB_API_KEY'];
+      if (savedProject !== undefined) process.env['ZERODB_PROJECT_ID'] = savedProject;
+      else delete process.env['ZERODB_PROJECT_ID'];
+    });
+
+    it('ignores non-number hops param', async () => {
+      const { traverseGraph } = await import('../src/graph/traversal.js');
+      const mockTraverse = vi.mocked(traverseGraph);
+      mockTraverse.mockClear();
+
+      const savedUrl = process.env['ZERODB_API_URL'];
+      const savedKey = process.env['ZERODB_API_KEY'];
+      const savedProject = process.env['ZERODB_PROJECT_ID'];
+      process.env['ZERODB_API_URL'] = 'http://localhost:8100';
+      process.env['ZERODB_API_KEY'] = 'test-key';
+      process.env['ZERODB_PROJECT_ID'] = 'test-project';
+
+      const req: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 25,
+        method: 'tools/call',
+        params: {
+          name: 'graph_query',
+          arguments: { repo: 'org/my-repo', hops: 'two', edgeTypes: 'depends_on', minWeight: 'high' },
+        },
+      };
+      await handleRequest(req);
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      expect(response.error).toBeUndefined();
+
+      expect(mockTraverse).toHaveBeenCalledOnce();
+      const callArgs = mockTraverse.mock.calls[0];
+      const opts = callArgs[1] as Record<string, unknown>;
+      expect(opts['hops']).toBeUndefined();
+      expect(opts['edgeTypes']).toBeUndefined();
+      expect(opts['minWeight']).toBeUndefined();
+
+      // Restore
+      if (savedUrl !== undefined) process.env['ZERODB_API_URL'] = savedUrl;
+      else delete process.env['ZERODB_API_URL'];
+      if (savedKey !== undefined) process.env['ZERODB_API_KEY'] = savedKey;
+      else delete process.env['ZERODB_API_KEY'];
+      if (savedProject !== undefined) process.env['ZERODB_PROJECT_ID'] = savedProject;
+      else delete process.env['ZERODB_PROJECT_ID'];
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // stdin data handler — branch coverage
+  // ------------------------------------------------------------------
+  describe('stdin data handler branches', () => {
+    it('ignores empty and whitespace-only lines in stdin data', async () => {
+      // Emit lines that are blank — the trimmed check causes a continue
+      process.stdin.emit('data', '\n   \n\n');
+      // No stdout write should happen for blank lines
+      expect(stdoutSpy).not.toHaveBeenCalled();
+    });
+
+    it('ignores malformed JSON lines in stdin data', async () => {
+      // Emit invalid JSON followed by a newline so the line is processed
+      process.stdin.emit('data', 'not-valid-json\n');
+      // No stdout write should happen — the catch block silently continues
+      expect(stdoutSpy).not.toHaveBeenCalled();
+    });
+
+    it('processes a valid JSON request arriving via stdin data', async () => {
+      const line = JSON.stringify({ jsonrpc: '2.0', id: 99, method: 'initialize' }) + '\n';
+      process.stdin.emit('data', line);
+      // Allow the microtask queue to flush so handleRequest can run
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(stdoutSpy).toHaveBeenCalled();
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      expect(response.id).toBe(99);
+    });
+
+    it('handles handleRequest rejection through .catch in the stdin loop', async () => {
+      // Emit a request whose id causes handleRequest to throw synchronously via
+      // injecting a method that rejects — use a method that gets past the initial
+      // guards but ends up in an error path.
+      const line =
+        JSON.stringify({ jsonrpc: '2.0', id: 100, method: 'tools/call', params: { name: 'does_not_exist', arguments: {} } }) + '\n';
+      process.stdin.emit('data', line);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      // The .catch handler calls err() which writes to stdout
+      expect(stdoutSpy).toHaveBeenCalled();
+      const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
+      expect(response.error).toBeDefined();
     });
   });
 });
