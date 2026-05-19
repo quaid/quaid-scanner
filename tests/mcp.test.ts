@@ -830,5 +830,25 @@ describe('MCP server handleRequest', () => {
       const response = parseOutput(stdoutSpy.mock.calls[0][0] as string);
       expect(response.error).toBeDefined();
     });
+
+    it('catches a rejected handleRequest promise and writes -32603 error', async () => {
+      // The initialize handler calls ok()→send()→process.stdout.write() with no
+      // surrounding try-catch. Making write() throw on the first call causes
+      // handleRequest to reject, firing the .catch on line 222 of mcp.ts.
+      stdoutSpy.mockImplementationOnce((_chunk: unknown): true => {
+        throw new Error('simulated write failure');
+      });
+
+      const line = JSON.stringify({ jsonrpc: '2.0', id: 201, method: 'initialize' }) + '\n';
+      process.stdin.emit('data', line);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // First call threw; second call (from err() in .catch) wrote the error response
+      expect(stdoutSpy).toHaveBeenCalledTimes(2);
+      const response = parseOutput(stdoutSpy.mock.calls[1][0] as string);
+      expect(response.id).toBe(201);
+      expect(response.error?.code).toBe(-32603);
+      expect(response.error?.message).toContain('simulated write failure');
+    });
   });
 });

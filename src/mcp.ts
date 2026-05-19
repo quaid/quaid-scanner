@@ -121,6 +121,7 @@ function getVersion(): string {
     } catch { }
     dir = resolve(dir, '..');
   }
+  /* c8 ignore next 2 */
   return '0.0.0';
 }
 

@@ -47,6 +47,7 @@ function getVersion(): string {
     }
     dir = resolve(dir, '..');
   }
+  /* c8 ignore next 2 */
   return '0.0.0';
 }
 
