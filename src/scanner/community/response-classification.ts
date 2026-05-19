@@ -186,6 +186,12 @@ export class ResponseClassificationScanner implements Scanner {
       ];
     }
 
+    if (!data.data?.repository) {
+      const gqlErrors = (data as { errors?: Array<{ message: string }> }).errors;
+      const errorMsg = gqlErrors?.[0]?.message ?? 'GraphQL response missing repository data';
+      return [makeFinding(Severity.WARNING, `GitHub API error: ${errorMsg}`, 'Check GitHub token permissions and repository access')];
+    }
+
     const findings: Finding[] = [];
     let issueMedian: number | null = null;
     let prMedian: number | null = null;
