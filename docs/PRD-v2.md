@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.1
+# Quaid's OSS Repo Scanner - PRD v2.4
 
 ## Executive Summary
 
@@ -9,6 +9,8 @@
 **Platform:** Node.js package with Claude Code skills integration, leveraging AINative services for semantic analysis, persistent storage, and intelligent reporting.
 
 **Paradigm:** The most significant risks to modern projects are not syntactical errors in code, but sociotechnical failures—burnout, toxic exclusionary cultures, legal ambiguity, and supply chain fragility. Therefore, this tool prioritizes "Health as Code," treating community documentation and governance structures with the same rigor as the software itself.
+
+**Current release:** v0.1.2 (2026-05-27) — 43 scanners, 77 test files, 97.5% coverage. Status legend used throughout this document: ✅ Done · 🚧 Partial · 📋 Planned
 
 ---
 
@@ -696,7 +698,7 @@ Each story heading is marked with its current status as of v0.1.1:
 
 ---
 
-### Story 3.1b: Dependency License Scanning (GOV-01b) 📋
+### Story 3.1b: Dependency License Scanning (GOV-01b) 🚧
 **As a** OSPO Agent
 **I want** dependency license scanning via ClearlyDefined API
 **So that** I can identify transitive license requirements
@@ -1474,6 +1476,28 @@ model-index:
 
 ---
 
+### Story 6.1e: Project Naming Audit (INC-01e) ✅
+**As a** OSPO Agent
+**I want** the project's own name and branding checked against the INI term list
+**So that** a project with a non-inclusive name is surfaced even if its documentation is clean
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 6.1e.1 | Check `package.json` `name` field against all loaded INI terms | Tests pass |
+| 6.1e.2 | Check README.md first H1 line against all loaded INI terms | Tests pass |
+| 6.1e.3 | Check git remote slug (last URL path segment) against all loaded INI terms | Tests pass |
+| 6.1e.4 | Severity: CRITICAL (tier 1), WARNING (tier 2), INFO (tier 3) | Severity mapping correct |
+| 6.1e.5 | `suggestion` field includes recommended rename path and INI replacements | Suggestion present |
+| 6.1e.6 | Graceful degradation when `package.json` missing or malformed | INFO finding, no throw |
+
+**Implementation:** `src/scanner/inclusive/naming-scanner.ts` (v0.1.2, #93)
+
+**Story Points:** 2
+
+---
+
 ### Story 6.2: Diminishing Language Detection (INC-02) ✅
 **As a** Developer Agent
 **I want** dismissive language detection
@@ -2192,6 +2216,101 @@ New file: `tests/fixtures/corpus-factory.ts` — factory functions for each synt
 
 ---
 
+## Epic 13: Trust & Evidence (Cross-Pillar)
+
+Ensure every finding is self-documenting: users can verify the source of each claim, understand whether data came from an authoritative API or a local heuristic, and follow a link to the standard or settings page that grounds the finding.
+
+**Goal:** After this epic, a user who receives a quaid-scanner report can independently verify any finding without having to reverse-engineer which files or APIs were consulted.
+
+| # | Story | Issue | Status |
+|---|-------|-------|--------|
+| 13.1 | dataSource field in Finding type | #103 | 📋 Planned |
+| 13.2 | Markdown metadata and dataSource rendering | #104 | 📋 Planned |
+| 13.3 | referenceUrl in all 43 scanners | #105 | 📋 Planned |
+| 13.4 | Score Rationale section in markdown report | #106 | 📋 Planned |
+
+### Story 13.1: dataSource Field in Finding Metadata (TRUST-01) 📋
+**As a** Developer Agent or OSPO Manager
+**I want** each finding to indicate whether its data came from an authoritative API, a local file check, or a heuristic estimate
+**So that** I can calibrate my trust in the finding's reliability
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 13.1.1 | `Finding` type adds `dataSource?: 'api' \| 'local' \| 'heuristic'` field | Type check |
+| 13.1.2 | All scanners set `dataSource` on every finding they create | Tests check metadata |
+| 13.1.3 | API-backed scanners (OpenSSF, GitHub, ClearlyDefined) use `'api'` | Per-scanner tests |
+| 13.1.4 | File-presence and content scanners use `'local'` | Per-scanner tests |
+| 13.1.5 | Estimation-based scanners (bus factor, response time) use `'heuristic'` | Per-scanner tests |
+
+**Implementation:** `src/types/index.ts` + all 43 scanners. **Issue:** #103
+
+**Story Points:** 3
+
+---
+
+### Story 13.2: Markdown Evidence Rendering (TRUST-02) 📋
+**As a** OSPO Manager or Security Engineer reading a markdown report
+**I want** finding metadata and data source rendered inline
+**So that** I don't need to re-run the scan in JSON mode to understand the evidence
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 13.2.1 | `dataSource` rendered after each finding message: "(source: api)" or "(source: local)" | Markdown output check |
+| 13.2.2 | `context` field rendered as fenced code block when present | Markdown output check |
+| 13.2.3 | High-value `metadata` keys rendered per category: `checkName`/`checkScore` for OpenSSF, `branch` for branch-protection, `spdxId` for license findings | Per-category tests |
+| 13.2.4 | JSON output unchanged — this is markdown-only enrichment | JSON output unchanged |
+
+**Implementation:** `src/reporters/markdown.ts`. **Issue:** #104
+
+**Story Points:** 2
+
+---
+
+### Story 13.3: referenceUrl in All Scanners (TRUST-03) 📋
+**As a** Developer Agent or human reader
+**I want** every finding to include a `referenceUrl` linking to the authoritative source, standard, or settings page
+**So that** I can verify the finding independently without reconstructing URLs manually
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 13.3.1 | All 43 scanners set `referenceUrl` on every finding | Test: no finding has undefined referenceUrl |
+| 13.3.2 | Tier A (API-backed): URL reflects the specific repo/package (computed from finding metadata) | Integration test |
+| 13.3.3 | Tier B (spec-backed): URL points to the CHAOSS metric, OpenSSF check, SPDX page, or INI entry that defines what is measured | Per-scanner review |
+| 13.3.4 | Markdown output renders referenceUrl as a clickable link | Markdown output check |
+| 13.3.5 | Self-scan markdown output contains at least one clickable referenceUrl | End-to-end test |
+
+**Implementation:** All 43 scanner files. Tier A first (computed), then Tier B (static). **Issue:** #105
+
+**Story Points:** 5
+
+---
+
+### Story 13.4: Score Rationale Section (TRUST-04) 📋
+**As a** OSPO Manager receiving a score
+**I want** the markdown report to explain how the overall score was calculated
+**So that** I can verify the math, understand pillar weighting, and explain the score to stakeholders
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 13.4.1 | Markdown report includes a "Score Rationale" section showing pillar weights and weighted contributions | Section present |
+| 13.4.2 | Section shows: pillar name, raw score, weight %, weighted contribution, and row totals | Table structure |
+| 13.4.3 | The formula `overallScore = Σ(pillarScore × weight)` is stated | Formula present |
+| 13.4.4 | The maturity level used is noted with a brief description of how it affects thresholds | Maturity note present |
+
+**Implementation:** `src/reporters/markdown.ts` (additive, no changes to scoring logic). **Issue:** #106
+
+**Story Points:** 1
+
+---
+
 ## Architecture
 
 ### Package Structure
@@ -2246,25 +2365,37 @@ quaid-scanner/
 
 ## Story Point Summary
 
-| Epic | Stories | Total Points | Key Focus |
-|------|---------|--------------|-----------|
-| Epic 1: Core Infrastructure | 4 | 9 | CLI, Plugin Architecture, Orchestrator |
-| Epic 2: Security | 7 | 20 | OpenSSF Scorecard, Supply Chain |
-| Epic 3: Governance | 10 | 25 | License, Bus Factor, Vendor Neutrality |
-| Epic 4: Community | 10 | 22 | OSW 2.0 Framework, Burnout Detection |
-| Epic 5: AI-Native | 6 | 13 | Model Cards, Multi-Model Agentic Rules |
-| Epic 6: Inclusive | 5 | 12 | INI Terms, Diminishing Language |
-| Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality |
-| Epic 8: Reporting | 4 | 11 | JSON/Markdown, Historical Trends |
-| Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server |
-| Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy |
-| Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI |
-| Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests |
-| **Total** | **67** | **160** | |
+| Epic | Stories | Total Points | Key Focus | Status |
+|------|---------|--------------|-----------|--------|
+| Epic 1: Core Infrastructure | 4 | 9 | CLI, Plugin Architecture, Orchestrator | ✅ Done |
+| Epic 2: Security | 7 | 20 | OpenSSF Scorecard, Supply Chain | 🚧 Partial (2.1a Docker shell-out) |
+| Epic 3: Governance | 10+1 | 25 | License, Bus Factor, Vendor Neutrality | 🚧 Partial (3.1b ZeroDB caching) |
+| Epic 4: Community | 10 | 22 | OSW 2.0 Framework, Burnout Detection | ✅ Done |
+| Epic 5: AI-Native | 6 | 13 | Model Cards, Multi-Model Agentic Rules | 🚧 Partial (5.4 Metadata Quality) |
+| Epic 6: Inclusive | 5+1 | 14 | INI Terms, Naming, Diminishing Language | 🚧 Partial (6.1a INI API caching) |
+| Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality | ✅ Done |
+| Epic 8: Reporting | 4 | 11 | JSON/Markdown, Historical Trends | ✅ Done |
+| Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server | ✅ Done |
+| Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
+| Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
+| Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned |
+| Epic 13: Trust & Evidence | 4 | 11 | referenceUrl, dataSource, score rationale | 📋 Planned |
+| **Total** | **72** | **173** | | |
 
 ---
 
 ### Change Log
+
+#### v2.4 Changes (from v2.3)
+
+| Change | Impact |
+|--------|--------|
+| Add Epic 13: Trust & Evidence | 4 stories, 11 pts — dataSource field, markdown evidence rendering, referenceUrl in all 43 scanners, score rationale section |
+| Add Story 6.1e: Project Naming Audit | ✅ Done — implemented in v0.1.2 as `naming-scanner.ts` (#93) |
+| Update Story 3.1b status: 📋 → 🚧 | ClearlyDefined API implemented (`clearly-defined.ts`, #94); ZeroDB caching not yet done |
+| Add implementation status column to Story Point Summary | All epics now show ✅/🚧/📋 status |
+| Add "Current release: v0.1.2" to Executive Summary | v0.1.2 released 2026-05-27 |
+| PRD version: v2.1 → v2.4 | Story total: 67 → 72; Points: 160 → 173 |
 
 #### v2.3 Changes (from v2.2)
 
