@@ -1,7 +1,7 @@
 ---
 title: "The Watershed Test: Introducing quaid-scanner for Agent-First OSS Health Assessment"
 slug: quaid-scanner-v011-agent-first-oss-health-scanner
-description: Introducing quaid-scanner v0.1.1, a 41-scanner OSS health tool built to be operated by agents, not just read by humans—and what that design choice changes about how we understand open source project health.
+description: Introducing quaid-scanner v0.1.1, a 43-scanner OSS health tool built to be operated by agents, not just read by humans—and what that design choice changes about how we understand open source project health.
 author: Karsten Wade
 date: 2026-05-15
 status: draft

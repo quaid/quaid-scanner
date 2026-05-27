@@ -16,7 +16,7 @@ Shipped: quaid-scanner v0.1.1
 
 It scans any OSS repo — local path or GitHub URL — across 6 pillars and returns structured JSON designed to be parsed by an agent, not read by a human.
 
-41 scanners. Apache-2.0. Built on CHAOSS metrics and The Open Source Way 2.0.
+43 scanners. Apache-2.0. Built on OpenSSF Scorecard, CHAOSS metrics, and The Open Source Way 2.0.
 
 🧵
 
@@ -86,7 +86,7 @@ Roadmap:
 ---
 
 **8/8**
-Apache-2.0. 41 scanners. Built on OpenSSF Scorecard, CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initiative.
+Apache-2.0. 43 scanners. Built on OpenSSF Scorecard, CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initiative.
 
 `npm install -g quaid-scanner`
 

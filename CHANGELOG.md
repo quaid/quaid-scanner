@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-27
+
+### Added
+
+- **Naming Scanner** — new inclusive pillar scanner that checks the project's `package.json` name,
+  README H1 title, and git remote repo slug against the INI term list. Returns CRITICAL (tier 1),
+  WARNING (tier 2), or INFO (tier 3) findings with rename suggestions. (#93, #100)
+- **ClearlyDefined License Cross-Validation** — new governance pillar scanner that cross-validates
+  production npm dependency licenses against the ClearlyDefined.io public API. Flags copyleft
+  (WARNING), unrecognised SPDX (WARNING), and NOASSERTION/missing (INFO). Degrades gracefully on
+  network failure. Injectable `fetchFn` for test isolation. (#94, #101)
+- **Branch protection** on `main`: required PR reviews (1 approval), force push disabled, branch
+  deletion disabled. (#77)
+- **Community health files**: `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `.github/SECURITY.md`
+  (vulnerability disclosure policy), `.github/SUPPORT.md` (help channel guide). (#78, #79, #80, #97, #99)
+- **GitHub issue templates**: structured forms for bug reports, feature requests, and false positives;
+  blank issues disabled with links to Discussions and Security Advisories. (#81)
+
+### Changed
+
+- Scanner count: 41 → 43.
+- README scanner count updated throughout; Scanner Reference table updated.
+- All content drafts in `docs/content/` updated to reflect 43-scanner count and OpenSSF Scorecard
+  attribution in the Bluesky thread.
+
+### Fixed
+
+- MCP `.catch` handler (lines 222–224) now covered by a test that verifies the -32603 error
+  response when `handleRequest` rejects. (#55, #56)
+- Unreachable `return '0.0.0'` fallbacks in `mcp.ts` and `cli.ts` marked with `/* c8 ignore next 2 */`
+  to eliminate spurious coverage gaps. (#56, #57)
+- `package.json` dependency versions pinned to `^` ranges with locked minor versions to improve
+  supply-chain reproducibility. (#84, #85)
+
 ## [0.1.1] - 2026-05-04
 
 Bugfix release. All fixes relate to remote (GitHub URL) scanning correctness and output fidelity.

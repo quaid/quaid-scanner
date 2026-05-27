@@ -85,7 +85,7 @@ quaid-scanner https://github.com/owner/repo --depth quick
 
 ## What It Scans
 
-41 scanners across six weighted pillars:
+43 scanners across six weighted pillars:
 
 | Pillar | Weight | What it measures |
 |--------|--------|-----------------|
@@ -549,7 +549,7 @@ npm run test:coverage
 | Doc | Contents |
 |-----|---------|
 | [Getting Started](docs/usage/getting-started.md) | Installation, first scan, scan depth |
-| [Scanner Reference](docs/usage/scanners.md) | All 41 scanners with thresholds and remediation |
+| [Scanner Reference](docs/usage/scanners.md) | All 43 scanners with thresholds and remediation |
 | [Agentic Usage](docs/usage/agentic-usage.md) | Prompt patterns, agent workflows, MCP setup |
 | [Configuration](docs/usage/configuration.md) | `.quaid-scanner.yaml` full reference |
 | [Examples](docs/usage/examples.md) | CI/CD, portfolio scanning, security audits |

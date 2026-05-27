@@ -16,7 +16,7 @@ I just shipped quaid-scanner v0.1.1 to npm.
 
 It scans any OSS repo — local or GitHub URL — across 6 pillars: security, governance, community health, AI readiness, inclusive language, technical rigor.
 
-41 scanners. Structured JSON. Designed to be operated by an agent.
+43 scanners. Structured JSON. Designed to be operated by an agent.
 
 🧵
 
@@ -101,7 +101,7 @@ On the roadmap:
 ---
 
 **9/9**
-Apache-2.0. 41 scanners. Built on OpenSSF Scorecard, CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initiative.
+Apache-2.0. 43 scanners. Built on OpenSSF Scorecard, CHAOSS metrics, The Open Source Way 2.0, and the Inclusive Naming Initiative.
 
 `npm install -g quaid-scanner`
 
