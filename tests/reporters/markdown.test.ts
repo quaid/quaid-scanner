@@ -492,4 +492,266 @@ describe('renderMarkdown', () => {
       expect(md).toContain(emojis[i]);
     }
   });
+
+  // --- dataSource rendering (issue #104) ---
+
+  it('renders "(source: external API)" label when dataSource is "api"', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-ds-01',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'API-sourced finding',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        dataSource: 'api',
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('(source: external API)');
+  });
+
+  it('renders "(source: local file check)" label when dataSource is "local"', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-ds-02',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Local-sourced finding',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        dataSource: 'local',
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('(source: local file check)');
+  });
+
+  it('renders "(source: computed heuristic)" label when dataSource is "heuristic"', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-ds-03',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Heuristic-sourced finding',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        dataSource: 'heuristic',
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('(source: computed heuristic)');
+  });
+
+  it('omits dataSource label when dataSource is not set on a critical finding', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-ds-04',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding without dataSource',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).not.toContain('(source:');
+  });
+
+  // --- context rendering (issue #104) ---
+
+  it('renders fenced code block with context value when context is set on a critical finding', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-ctx-01',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding with context',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        context: 'write-all: true',
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('**Context:**');
+    expect(md).toContain('```');
+    expect(md).toContain('write-all: true');
+  });
+
+  it('omits context block when context is not set on a critical finding', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-ctx-02',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding without context',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).not.toContain('**Context:**');
+  });
+
+  // --- metadata rendering (issue #104) ---
+
+  it('renders "Check: {name} — {score}/10" when checkName and checkScore are in metadata', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-meta-01',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding with check metadata',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        metadata: { checkName: 'Token-Permissions', checkScore: 3 },
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('Check: Token-Permissions — 3/10');
+  });
+
+  it('renders "Branch: {branch}" when branch is in metadata', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-meta-02',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding with branch metadata',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        metadata: { branch: 'main' },
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('Branch: main');
+  });
+
+  it('renders "Overall score: {score}" when overallScore is in metadata', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-meta-03',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding with overallScore metadata',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        metadata: { overallScore: 6.2 },
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('Overall score: 6.2');
+  });
+
+  it('renders Details block when at least one known metadata key is present', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-meta-04',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding with metadata',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        metadata: { branch: 'develop' },
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('**Details:**');
+  });
+
+  it('omits Details block when metadata is undefined', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-meta-05',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding without metadata',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).not.toContain('**Details:**');
+  });
+
+  it('omits Details block when metadata has no known keys', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-meta-06',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding with unknown metadata only',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        metadata: { unknownKey: 'value', anotherUnknown: 42 },
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).not.toContain('**Details:**');
+  });
+
+  it('renders all known metadata fields together when all are present', () => {
+    const findings: Finding[] = [
+      {
+        id: 'sec-meta-07',
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'permissions',
+        message: 'Finding with full metadata',
+        file: null,
+        line: null,
+        column: null,
+        suggestion: 'Fix it',
+        dataSource: 'api',
+        context: 'permissions: write-all',
+        metadata: { checkName: 'Branch-Protection', checkScore: 5, branch: 'main', overallScore: 7.8 },
+      },
+    ];
+    const md = renderMarkdown(makeReport(findings));
+    expect(md).toContain('(source: external API)');
+    expect(md).toContain('**Context:**');
+    expect(md).toContain('permissions: write-all');
+    expect(md).toContain('**Details:**');
+    expect(md).toContain('Check: Branch-Protection — 5/10');
+    expect(md).toContain('Branch: main');
+    expect(md).toContain('Overall score: 7.8');
+    // suggestion must still be present
+    expect(md).toContain('**Suggestion:** Fix it');
+  });
 });
