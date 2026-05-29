@@ -112,6 +112,7 @@ export class ModelCardDetectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'No action needed for non-AI repositories.',
+        dataSource: 'local',
       }];
     }
 
@@ -174,6 +175,7 @@ export class ModelCardDetectionScanner implements Scanner {
           ? `Consider adding recommended sections: ${missingRecommended.join(', ')}`
           : 'Model card is comprehensive.'
         : `Add missing sections to ${source || 'README.md'}: ${missingRequired.join(', ')}`,
+      dataSource: 'local',
       metadata: {
         source,
         presentRequired,
@@ -240,6 +242,7 @@ export class ModelCardDetectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: 'Model index metadata is properly configured.',
+      dataSource: 'local',
       metadata: {
         hasModelIndex: true,
       },

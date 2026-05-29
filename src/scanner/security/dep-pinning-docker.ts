@@ -42,6 +42,7 @@ export class DepPinningDockerScanner implements Scanner {
         line,
         column: null,
         suggestion,
+        dataSource: 'local',
       };
     };
 

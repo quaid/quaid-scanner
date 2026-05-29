@@ -310,6 +310,7 @@ export class InclusiveCodeScanner implements Scanner {
                 column: region.startCol + 1,
                 context: line.trim(),
                 suggestion: `Consider using: ${term.replacements.join(', ')}`,
+                dataSource: 'local',
                 metadata: {
                   term: term.term,
                   tier: term.tier,

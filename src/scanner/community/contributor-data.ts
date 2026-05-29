@@ -47,6 +47,7 @@ export class ContributorDataScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'heuristic',
         metadata,
       };
     };

@@ -60,6 +60,7 @@ export class DepLicenseScanningScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'local',
         metadata,
       };
     };

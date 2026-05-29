@@ -51,6 +51,7 @@ export class GovernanceDetectionScanner implements Scanner {
           line: null,
           column: null,
           suggestion: 'Add governance documentation describing the decision-making process',
+          dataSource: 'local',
           metadata: { filePath: relativePath, content },
         }];
       }
@@ -66,6 +67,7 @@ export class GovernanceDetectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Governance documentation is present',
+        dataSource: 'local',
         metadata: { filePath: relativePath, content },
       }];
     }
@@ -81,6 +83,7 @@ export class GovernanceDetectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: 'Add a GOVERNANCE.md file describing the project decision-making process',
+      dataSource: 'local',
     }];
   }
 }

@@ -73,6 +73,7 @@ export class OpenSSFScorecardScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'api',
         metadata,
       };
     };

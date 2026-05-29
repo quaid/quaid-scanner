@@ -92,6 +92,7 @@ export class AgenticRulesScanner implements Scanner {
       suggestion: agentCount > 0
         ? 'Agent configurations are in place for AI-assisted development.'
         : 'Consider adding CLAUDE.md, .cursorrules, or copilot-instructions.md to guide AI coding agents.',
+      dataSource: 'local',
       metadata: {
         agentCount,
         agentNames,
@@ -274,6 +275,7 @@ export class AgenticRulesScanner implements Scanner {
       suggestion: hasGoodStructure
         ? 'CLAUDE.md is well-structured for agent consumption.'
         : 'Add sections like "Critical Rules", "Project Structure", "Common Tasks" to improve agent guidance.',
+      dataSource: 'local',
       metadata: {
         source,
         sections: foundSections,

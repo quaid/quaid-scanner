@@ -79,6 +79,7 @@ export class InteractionTemplateScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'local',
         metadata,
       };
     };

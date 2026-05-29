@@ -121,6 +121,7 @@ export class BinaryArtifactScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Remove binary files from the source tree. Use a package manager or artifact repository instead.',
+        dataSource: 'local',
         metadata: {
           sha256,
           sizeBytes: stats.size,

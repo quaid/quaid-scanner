@@ -111,6 +111,7 @@ export class ModelCardScoringScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'No action needed for non-AI repositories.',
+        dataSource: 'local',
       }];
     }
 
@@ -161,6 +162,7 @@ export class ModelCardScoringScanner implements Scanner {
       suggestion: severity === Severity.PASS
         ? 'Model card is well-documented.'
         : `Improve model card in ${source || 'README.md'} by adding missing sections.`,
+      dataSource: 'local',
       metadata: {
         source,
         completenessPercent,

@@ -149,6 +149,7 @@ export class NamingScanner implements Scanner {
         column: null,
         suggestion: `Rename the project using an alternative term per the Inclusive Naming Initiative: ${term.replacements.join(', ')}`,
         referenceUrl: 'https://inclusivenaming.org/word-lists/',
+        dataSource: 'local',
         metadata: {
           term: term.term,
           tier: term.tier,
@@ -204,6 +205,7 @@ export class NamingScanner implements Scanner {
         column: null,
         suggestion: `Rename the project using an alternative term per the Inclusive Naming Initiative: ${term.replacements.join(', ')}`,
         referenceUrl: 'https://inclusivenaming.org/word-lists/',
+        dataSource: 'local',
         metadata: {
           term: term.term,
           tier: term.tier,
@@ -262,6 +264,7 @@ export class NamingScanner implements Scanner {
         column: null,
         suggestion: `Rename the project using an alternative term per the Inclusive Naming Initiative: ${term.replacements.join(', ')}`,
         referenceUrl: 'https://inclusivenaming.org/word-lists/',
+        dataSource: 'local',
         metadata: {
           term: term.term,
           tier: term.tier,

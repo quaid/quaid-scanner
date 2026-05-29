@@ -117,6 +117,7 @@ export class ResponseClassificationScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'api',
         metadata,
       };
     };

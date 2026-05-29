@@ -46,6 +46,7 @@ export class OpenSSFLocalChecksScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'local',
         metadata: {
           scorecard_source: 'local',
           checkName,

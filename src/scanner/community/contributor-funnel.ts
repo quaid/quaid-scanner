@@ -50,6 +50,7 @@ export class ContributorFunnelScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'heuristic',
         metadata,
       };
     };

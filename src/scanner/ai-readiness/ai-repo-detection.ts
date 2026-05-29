@@ -224,6 +224,7 @@ export class AIRepoDetectionScanner implements Scanner {
       suggestion: detected
         ? 'Ensure model cards, dataset documentation, and agentic rules are in place.'
         : 'No action needed. AI-Readiness checks are informational for non-AI repositories.',
+      dataSource: 'local',
       metadata: {
         aiRepoDetected: detected,
         signals,

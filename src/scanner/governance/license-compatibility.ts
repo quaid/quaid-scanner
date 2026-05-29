@@ -81,6 +81,7 @@ export class LicenseCompatibilityScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        dataSource: 'local',
         metadata,
       };
     };

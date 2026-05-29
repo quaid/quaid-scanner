@@ -38,6 +38,7 @@ export class DepPinningPackagesScanner implements Scanner {
         line,
         column: null,
         suggestion,
+        dataSource: 'local',
       };
     };
 

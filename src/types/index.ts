@@ -81,6 +81,8 @@ export interface Scanner {
   run(context: ScanContext): Promise<Finding[]>;
 }
 
+export type FindingDataSource = 'api' | 'local' | 'heuristic';
+
 export interface Finding {
   id: string;
   severity: Severity;
@@ -93,6 +95,8 @@ export interface Finding {
   context?: string;
   suggestion: string;
   referenceUrl?: string;
+  /** Origin of the data used to produce this finding. */
+  dataSource?: FindingDataSource;
   metadata?: Record<string, unknown>;
 }
 

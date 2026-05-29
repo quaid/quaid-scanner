@@ -510,20 +510,20 @@ describe('Inclusive scanner dataSource values', () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it('CodeScanner emits dataSource: local', async () => {
-        const { CodeScanner } = await import('../../src/scanner/inclusive/code-scanner.js');
-        const scanner = new CodeScanner();
+    it('InclusiveCodeScanner emits dataSource: local', async () => {
+        const { InclusiveCodeScanner } = await import('../../src/scanner/inclusive/code-scanner.js');
+        const scanner = new InclusiveCodeScanner();
         const ctx = makeContext(tmpDir);
-        // CodeScanner on empty dir may return []
+        // InclusiveCodeScanner on empty dir may return []
         const findings = await scanner.run(ctx);
         for (const f of findings) {
             expect(f.dataSource).toBe('local');
         }
     });
 
-    it('DocScanner emits dataSource: local', async () => {
-        const { DocScanner } = await import('../../src/scanner/inclusive/doc-scanner.js');
-        const scanner = new DocScanner();
+    it('InclusiveDocScanner emits dataSource: local', async () => {
+        const { InclusiveDocScanner } = await import('../../src/scanner/inclusive/doc-scanner.js');
+        const scanner = new InclusiveDocScanner();
         const ctx = makeContext(tmpDir);
         const findings = await scanner.run(ctx);
         for (const f of findings) {

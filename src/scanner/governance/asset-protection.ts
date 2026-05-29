@@ -189,6 +189,7 @@ export class AssetProtectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Trademark policy is documented',
+        dataSource: 'local',
         metadata: { filePath: found },
       };
     }
@@ -203,6 +204,7 @@ export class AssetProtectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: 'Consider adding a TRADEMARK.md if the project has registered marks',
+      dataSource: 'local',
     };
   }
 
@@ -223,6 +225,7 @@ export class AssetProtectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Export control documentation is present',
+        dataSource: 'local',
         metadata: { filePath: found },
       };
     }
@@ -237,6 +240,7 @@ export class AssetProtectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: 'Consider adding an EXPORT-CONTROL.md if the project includes controlled technology',
+      dataSource: 'local',
     };
   }
 
@@ -267,6 +271,7 @@ export class AssetProtectionScanner implements Scanner {
             line: null,
             column: null,
             suggestion: 'CLA process is automated for contributors',
+            dataSource: 'local',
             metadata: {
               type: 'CLA',
               automated: true,
@@ -290,6 +295,7 @@ export class AssetProtectionScanner implements Scanner {
           line: null,
           column: null,
           suggestion: 'Add CLA automation (e.g., CLA Assistant bot) to reduce contributor friction',
+          dataSource: 'local',
           metadata: {
             type: 'CLA',
             automated: false,
@@ -318,6 +324,7 @@ export class AssetProtectionScanner implements Scanner {
           line: null,
           column: null,
           suggestion: 'DCO is a lightweight contributor agreement',
+          dataSource: 'local',
           metadata: {
             type: 'DCO',
             dcoFile: dcoFile || null,
@@ -341,6 +348,7 @@ export class AssetProtectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'No contributor agreement required - low barrier to contribution',
+        dataSource: 'local',
       },
       frictionLevel: 'Low',
     };
@@ -367,6 +375,7 @@ export class AssetProtectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: descriptions[frictionLevel],
+      dataSource: 'local',
       metadata: {
         frictionLevel,
       },

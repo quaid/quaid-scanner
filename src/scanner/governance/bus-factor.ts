@@ -124,6 +124,7 @@ export class BusFactorScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Ensure this is a git repository with commit history',
+        dataSource: 'heuristic',
       }];
     }
 
@@ -139,6 +140,7 @@ export class BusFactorScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Check if the repository has recent activity',
+        dataSource: 'heuristic',
       }];
     }
 
@@ -170,6 +172,7 @@ export class BusFactorScanner implements Scanner {
       suggestion: severity === Severity.PASS
         ? 'Contributor distribution is healthy'
         : 'Encourage more contributors and distribute code ownership',
+      dataSource: 'heuristic',
       metadata: {
         busFactor: analysis.busFactor,
         elephantFactor: analysis.elephantFactor,

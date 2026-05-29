@@ -297,6 +297,7 @@ export class LicenseDetectionScanner implements Scanner {
       column: null,
       suggestion: 'License is properly declared.',
       referenceUrl: `https://spdx.org/licenses/${licenseId}.html`,
+      dataSource: 'local',
       metadata: {
         licenseId,
         confidence,
@@ -320,6 +321,7 @@ export class LicenseDetectionScanner implements Scanner {
       column: null,
       suggestion: 'Consider also adding a LICENSE file to the repository root for clarity.',
       referenceUrl: `https://spdx.org/licenses/${licenseId}.html`,
+      dataSource: 'local',
       metadata: {
         licenseId,
         confidence: 100,
@@ -343,6 +345,7 @@ export class LicenseDetectionScanner implements Scanner {
       column: null,
       suggestion: 'Add a LICENSE file to the repository root. Visit https://choosealicense.com/ for guidance.',
       referenceUrl: 'https://choosealicense.com/',
+      dataSource: 'local',
       metadata: {
         licenseId: 'NONE',
         confidence: 100,
@@ -366,6 +369,7 @@ export class LicenseDetectionScanner implements Scanner {
       column: null,
       suggestion: 'Use a well-known open source license. Visit https://choosealicense.com/ for guidance.',
       referenceUrl: 'https://choosealicense.com/',
+      dataSource: 'local',
       metadata: {
         licenseId: 'UNKNOWN',
         confidence: 0,

@@ -186,6 +186,7 @@ export class InclusiveDocScanner implements Scanner {
             context: contextSnippet,
             suggestion: `Replace "${matchedText}" with one of: ${term.replacements.join(', ')}`,
             referenceUrl: 'https://inclusivenaming.org/word-lists/',
+            dataSource: 'local',
             metadata: {
               matchedText,
               tier: term.tier,

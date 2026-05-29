@@ -104,6 +104,7 @@ export class LinterConfigScanner implements Scanner {
       line: null,
       column: null,
       suggestion,
+      dataSource: 'local',
     });
 
     // Check each linter's known config files
