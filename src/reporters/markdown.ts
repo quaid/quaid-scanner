@@ -1,5 +1,5 @@
 import { Severity, Pillar, RiskLevel } from '../types/index.js';
-import type { ScanReport, Finding } from '../types/index.js';
+import type { ScanReport, Finding, FindingDataSource } from '../types/index.js';
 
 const PILLAR_LABELS: Record<Pillar, string> = {
   [Pillar.SECURITY]: 'Security',
@@ -18,7 +18,61 @@ const RISK_EMOJI: Record<RiskLevel, string> = {
 };
 
 function findingsBySeverity(findings: Finding[], severity: Severity): Finding[] {
-  return findings.filter((f) => f.severity === severity);
+    return findings.filter((f) => f.severity === severity);
+}
+
+const DATA_SOURCE_LABELS: Record<FindingDataSource, string> = {
+    api: 'external API',
+    local: 'local file check',
+    heuristic: 'computed heuristic',
+};
+
+/**
+ * Render the optional dataSource, context, and metadata fields for a finding.
+ * Returns an array of markdown lines to splice in after the message line.
+ */
+function renderFindingExtras(f: Finding): string[] {
+    const lines: string[] = [];
+
+    // dataSource label
+    if (f.dataSource !== undefined) {
+        const label = DATA_SOURCE_LABELS[f.dataSource];
+        lines.push(`_(source: ${label})_`);
+    }
+
+    // context fenced block
+    if (f.context !== undefined) {
+        lines.push('');
+        lines.push('**Context:**');
+        lines.push('```');
+        lines.push(f.context);
+        lines.push('```');
+    }
+
+    // known metadata fields
+    if (f.metadata !== undefined) {
+        const detailLines: string[] = [];
+
+        if (f.metadata.checkName !== undefined && f.metadata.checkScore !== undefined) {
+            detailLines.push(`Check: ${String(f.metadata.checkName)} — ${String(f.metadata.checkScore)}/10`);
+        }
+        if (f.metadata.branch !== undefined) {
+            detailLines.push(`Branch: ${String(f.metadata.branch)}`);
+        }
+        if (f.metadata.overallScore !== undefined) {
+            detailLines.push(`Overall score: ${String(f.metadata.overallScore)}`);
+        }
+
+        if (detailLines.length > 0) {
+            lines.push('');
+            lines.push('**Details:**');
+            for (const dl of detailLines) {
+                lines.push(dl);
+            }
+        }
+    }
+
+    return lines;
 }
 
 export interface MarkdownReportOptions {
@@ -77,6 +131,13 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
       lines.push(`**Pillar:** ${PILLAR_LABELS[f.pillar as Pillar]} | **Category:** ${f.category}`);
       lines.push('');
       lines.push(f.message);
+      const extras = renderFindingExtras(f);
+      if (extras.length > 0) {
+        lines.push('');
+        for (const extra of extras) {
+          lines.push(extra);
+        }
+      }
       if (f.file) lines.push(`\n> File: \`${f.file}\`${f.line ? `:${f.line}` : ''}`);
       lines.push('');
       lines.push(`**Suggestion:** ${f.suggestion}`);

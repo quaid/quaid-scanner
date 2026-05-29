@@ -81,6 +81,7 @@ export interface Scanner {
   run(context: ScanContext): Promise<Finding[]>;
 }
 
+/** Where a finding's data originated. */
 export type FindingDataSource = 'api' | 'local' | 'heuristic';
 
 export interface Finding {
@@ -92,6 +93,7 @@ export interface Finding {
   file: string | null;
   line: number | null;
   column: number | null;
+  /** Raw snippet or value that triggered this finding. */
   context?: string;
   suggestion: string;
   referenceUrl?: string;
