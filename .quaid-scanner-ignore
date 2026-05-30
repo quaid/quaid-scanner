@@ -10,3 +10,9 @@ coverage/
 
 # Scanner source files that define the term list itself
 src/scanner/inclusive/term-list.ts
+
+# Generated scan report outputs — contain findings from other projects verbatim
+docs/scans/
+
+# Reference/specification documents that document historical terminology in context
+docs/Open_Source_Way_et_al_expansions.md

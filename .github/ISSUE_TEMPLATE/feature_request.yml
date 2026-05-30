@@ -51,3 +51,11 @@ body:
     attributes:
       label: Prior art or reference
       description: Links to CHAOSS metrics, OpenSSF criteria, or other frameworks that define this signal, if any.
+
+  - type: checkboxes
+    id: readme-impact
+    attributes:
+      label: README impact
+      options:
+        - label: "This feature is user-facing and README.md needs updating (add to PR checklist)"
+        - label: "No README update needed — internal/non-visible change"

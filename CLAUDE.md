@@ -116,3 +116,4 @@ npm run build            # tsc
 1. No "Claude"/"Anthropic" in commits
 2. No AI attribution — ever
 3. Tests before committing
+4. README impact check — every story that adds or changes a user-facing feature must update README.md or explicitly note "no README update needed" in the PR description

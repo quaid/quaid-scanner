@@ -201,5 +201,5 @@ inclusive:
     - "*.generated.*"
   ignoredTerms:
     - whitespace
-    - blacklist  # Used in firewall config naming
+    - whitespace  # appears in variable names but is not a slur
 ```

@@ -178,7 +178,9 @@ At `sandbox` maturity, missing governance documents produce `WARNING` findings r
       "pillar": "security",
       "category": "dep-pinning-packages",
       "message": "package-lock.json absent — dependencies not pinned",
-      "suggestion": "Run npm install to generate a lock file and commit it"
+      "suggestion": "Run npm install to generate a lock file and commit it",
+      "dataSource": "local",
+      "referenceUrl": "https://github.com/ossf/scorecard/blob/main/docs/checks.md#pinned-dependencies"
     }
   ],
   "recommendations": [
@@ -189,23 +191,37 @@ At `sandbox` maturity, missing governance documents produce `WARNING` findings r
 
 Severity values are always human-readable strings: `"PASS"`, `"INFO"`, `"WARNING"`, `"CRITICAL"`.
 
+Every finding carries `dataSource` (`"api"` / `"local"` / `"heuristic"`) and `referenceUrl` linking to the authoritative source or spec. In markdown output, critical findings show the triggering context as a code snippet, and the report ends with a Score Rationale table explaining the weighted pillar calculation.
+
 ---
+
+## Suppressing False Positives
+
+Place a `.quaid-scanner-ignore` file at the root of any scanned repository to exclude paths from inclusive language scanning. Uses `.gitignore` conventions — one glob pattern per line, `#` for comments:
+
+```
+# Exclude generated files
+coverage/
+dist/
+
+# Test fixtures that deliberately contain flagged terms
+tests/fixtures/term-corpus/**
+
+# Third-party reference documents
+docs/vendor-spec.md
+```
+
+This file is read at scan time from the target repo root. Absence is graceful — the scanner skips it silently and applies its built-in defaults (`node_modules/`, `vendor/`, `.git/`, `dist/`, `build/`).
 
 ## Configuration
 
-Create `.quaid-scanner.yaml` in your repo root:
+CLI flags cover the most common options directly:
 
-```yaml
-depth: standard
-threshold: 6.0
-pillars:
-  disabledScanners:
-    - vendor-neutrality
-inclusive:
-  excludePatterns:
-    - "vendor/**"
-    - "node_modules/**"
+```bash
+quaid-scanner . --depth thorough --threshold 7.0 --maturity incubating
 ```
+
+A `.quaid-scanner.yaml` config file is on the roadmap. Until then, all options are set via CLI flags — see [CLI Reference](#cli-reference) above.
 
 Full options: [docs/usage/configuration.md](docs/usage/configuration.md)
 
