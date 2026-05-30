@@ -60,6 +60,7 @@ export class SemVerValidationScanner implements Scanner {
       line: null,
       column: null,
       suggestion,
+      referenceUrl: 'https://semver.org/',
       dataSource: 'local',
       metadata,
     });

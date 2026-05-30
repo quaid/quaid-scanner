@@ -54,6 +54,7 @@ export class PsychSafetyScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://chaoss.community/metric-psychological-safety/',
         dataSource: 'local',
         metadata,
       };

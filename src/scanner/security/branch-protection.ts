@@ -26,6 +26,7 @@ interface BranchProtectionResponse {
 }
 
 const GITHUB_API_BASE = 'https://api.github.com';
+const BRANCH_PROTECTION_FALLBACK_URL = 'https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches';
 
 export class BranchProtectionScanner implements Scanner {
   readonly name = 'branch-protection';
@@ -36,6 +37,12 @@ export class BranchProtectionScanner implements Scanner {
     const { config, git } = context;
     const token = config.githubToken;
     let counter = 0;
+
+    // Determine referenceUrl — computed from owner/repo when available, else fallback
+    const parsed = git.remoteUrl ? parseGitHubUrl(git.remoteUrl) : null;
+    const referenceUrl = parsed
+      ? `https://github.com/${parsed.owner}/${parsed.repo}/settings/branches`
+      : BRANCH_PROTECTION_FALLBACK_URL;
 
     const makeFinding = (
       severity: Severity,
@@ -54,6 +61,7 @@ export class BranchProtectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl,
         dataSource: 'api',
         metadata,
       };
@@ -81,8 +89,7 @@ export class BranchProtectionScanner implements Scanner {
       ];
     }
 
-    // Parse GitHub owner/repo from remote URL
-    const parsed = parseGitHubUrl(git.remoteUrl);
+    // Verify that the parsed URL is a GitHub repository
     if (!parsed) {
       return [
         makeFinding(

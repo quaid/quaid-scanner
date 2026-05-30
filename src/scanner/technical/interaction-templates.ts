@@ -79,6 +79,7 @@ export class InteractionTemplateScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests',
         dataSource: 'local',
         metadata,
       };

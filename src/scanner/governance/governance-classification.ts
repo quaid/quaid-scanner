@@ -127,6 +127,7 @@ export class GovernanceClassificationScanner implements Scanner {
         category: 'governance',
         message,
         file,
+        referenceUrl: 'https://chaoss.community/metric-project-licenses/',
         line: null,
         column: null,
         suggestion,

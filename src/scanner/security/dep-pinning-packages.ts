@@ -20,6 +20,9 @@ export class DepPinningPackagesScanner implements Scanner {
     const findings: Finding[] = [];
     let counter = 0;
 
+    const DEP_PINNING_URL =
+      'https://github.com/ossf/scorecard/blob/main/docs/checks.md#pinned-dependencies';
+
     const makeFinding = (
       severity: Severity,
       message: string,
@@ -38,6 +41,7 @@ export class DepPinningPackagesScanner implements Scanner {
         line,
         column: null,
         suggestion,
+        referenceUrl: DEP_PINNING_URL,
         dataSource: 'local',
       };
     };

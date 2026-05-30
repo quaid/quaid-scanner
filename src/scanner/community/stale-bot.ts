@@ -91,6 +91,7 @@ export class StaleBotScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://chaoss.community/metric-issue-age/',
         dataSource: 'local',
         metadata,
       };

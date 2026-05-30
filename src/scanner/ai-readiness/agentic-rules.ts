@@ -92,6 +92,7 @@ export class AgenticRulesScanner implements Scanner {
       suggestion: agentCount > 0
         ? 'Agent configurations are in place for AI-assisted development.'
         : 'Consider adding CLAUDE.md, .cursorrules, or copilot-instructions.md to guide AI coding agents.',
+      referenceUrl: 'https://chaoss.community/metric-ai-readiness/',
       dataSource: 'local',
       metadata: {
         agentCount,
@@ -275,6 +276,7 @@ export class AgenticRulesScanner implements Scanner {
       suggestion: hasGoodStructure
         ? 'CLAUDE.md is well-structured for agent consumption.'
         : 'Add sections like "Critical Rules", "Project Structure", "Common Tasks" to improve agent guidance.',
+      referenceUrl: 'https://chaoss.community/metric-ai-readiness/',
       dataSource: 'local',
       metadata: {
         source,

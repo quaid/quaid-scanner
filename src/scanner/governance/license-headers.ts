@@ -308,6 +308,7 @@ export class LicenseHeaderScanner implements Scanner {
       line: 0,
       column: null,
       suggestion: 'This check applies to repositories containing source code files.',
+      referenceUrl: 'https://reuse.software/spec/',
       dataSource: 'local',
       metadata: {
         filesScanned: 0,
@@ -333,6 +334,7 @@ export class LicenseHeaderScanner implements Scanner {
       column: null,
       suggestion:
         'Consider adding SPDX-License-Identifier headers to source files for clear per-file licensing. See https://spdx.dev/learn/handling-license-info/',
+      referenceUrl: 'https://reuse.software/spec/',
       dataSource: 'local',
       metadata: {
         filesScanned,
@@ -434,6 +436,7 @@ export class LicenseHeaderScanner implements Scanner {
         filesWithHeaders < filesScanned
           ? 'Consider adding SPDX-License-Identifier headers to all source files.'
           : 'All scanned source files have SPDX license headers.',
+      referenceUrl: 'https://reuse.software/spec/',
       dataSource: 'local',
       metadata: {
         filesScanned,

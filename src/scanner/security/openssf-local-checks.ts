@@ -29,6 +29,8 @@ export class OpenSSFLocalChecksScanner implements Scanner {
     const { repoPath } = context;
     let counter = 0;
 
+    const OPENSSF_LOCAL_URL = 'https://github.com/ossf/scorecard/blob/main/docs/checks.md';
+
     const makeFinding = (
       severity: Severity,
       message: string,
@@ -46,6 +48,7 @@ export class OpenSSFLocalChecksScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: OPENSSF_LOCAL_URL,
         dataSource: 'local',
         metadata: {
           scorecard_source: 'local',

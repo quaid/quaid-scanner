@@ -189,7 +189,8 @@ export class AssetProtectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Trademark policy is documented',
-        dataSource: 'local',
+        referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
+      dataSource: 'local',
         metadata: { filePath: found },
       };
     }
@@ -204,6 +205,7 @@ export class AssetProtectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: 'Consider adding a TRADEMARK.md if the project has registered marks',
+      referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
       dataSource: 'local',
     };
   }
@@ -225,7 +227,8 @@ export class AssetProtectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Export control documentation is present',
-        dataSource: 'local',
+        referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
+      dataSource: 'local',
         metadata: { filePath: found },
       };
     }
@@ -240,6 +243,7 @@ export class AssetProtectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: 'Consider adding an EXPORT-CONTROL.md if the project includes controlled technology',
+      referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
       dataSource: 'local',
     };
   }
@@ -271,7 +275,8 @@ export class AssetProtectionScanner implements Scanner {
             line: null,
             column: null,
             suggestion: 'CLA process is automated for contributors',
-            dataSource: 'local',
+            referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
+      dataSource: 'local',
             metadata: {
               type: 'CLA',
               automated: true,
@@ -295,7 +300,8 @@ export class AssetProtectionScanner implements Scanner {
           line: null,
           column: null,
           suggestion: 'Add CLA automation (e.g., CLA Assistant bot) to reduce contributor friction',
-          dataSource: 'local',
+          referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
+      dataSource: 'local',
           metadata: {
             type: 'CLA',
             automated: false,
@@ -324,7 +330,8 @@ export class AssetProtectionScanner implements Scanner {
           line: null,
           column: null,
           suggestion: 'DCO is a lightweight contributor agreement',
-          dataSource: 'local',
+          referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
+      dataSource: 'local',
           metadata: {
             type: 'DCO',
             dcoFile: dcoFile || null,
@@ -348,7 +355,8 @@ export class AssetProtectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'No contributor agreement required - low barrier to contribution',
-        dataSource: 'local',
+        referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
+      dataSource: 'local',
       },
       frictionLevel: 'Low',
     };
@@ -375,6 +383,7 @@ export class AssetProtectionScanner implements Scanner {
       line: null,
       column: null,
       suggestion: descriptions[frictionLevel],
+      referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md',
       dataSource: 'local',
       metadata: {
         frictionLevel,

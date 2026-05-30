@@ -158,12 +158,15 @@ export class LicenseContentValidationScanner implements Scanner {
     const { repoPath } = context;
     let counter = 0;
 
+    const SPDX_FALLBACK = 'https://spdx.org/licenses/';
+
     const makeFinding = (
       severity: Severity,
       message: string,
       file: string | null,
       suggestion: string,
       metadata?: Record<string, unknown>,
+      referenceUrl: string = SPDX_FALLBACK,
     ): Finding => {
       counter++;
       return {
@@ -176,6 +179,7 @@ export class LicenseContentValidationScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl,
         dataSource: 'local',
         metadata,
       };
@@ -249,6 +253,7 @@ export class LicenseContentValidationScanner implements Scanner {
             licenseName: match.name,
             matchRatio: Math.round(matchRatio * 100),
           },
+          `https://spdx.org/licenses/${match.id}.html`,
         ),
       ];
     }
@@ -264,6 +269,7 @@ export class LicenseContentValidationScanner implements Scanner {
           licenseName: match.name,
           matchRatio: Math.round(matchRatio * 100),
         },
+        `https://spdx.org/licenses/${match.id}.html`,
       ),
     ];
   }

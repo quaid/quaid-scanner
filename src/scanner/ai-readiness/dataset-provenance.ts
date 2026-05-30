@@ -68,6 +68,7 @@ export class DatasetProvenanceScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'No action needed for non-AI repositories.',
+        referenceUrl: 'https://huggingface.co/docs/hub/en/datasets-cards',
       }];
     }
 
@@ -93,6 +94,7 @@ export class DatasetProvenanceScanner implements Scanner {
       suggestion: datasetsDetected
         ? 'Ensure dataset documentation is provided.'
         : 'No action needed.',
+      referenceUrl: 'https://huggingface.co/docs/hub/en/datasets-cards',
       metadata: {
         datasetsDetected,
         datasetSignals,
@@ -162,6 +164,7 @@ export class DatasetProvenanceScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Create a DATASHEET.md documenting dataset motivation, composition, collection process, and intended uses.',
+        referenceUrl: 'https://huggingface.co/docs/hub/en/datasets-cards',
         dataSource: 'local',
         metadata: { source: null, presentSections: [], missingSections: DATASHEET_SECTIONS.map((s) => s.name) },
       };
@@ -196,6 +199,7 @@ export class DatasetProvenanceScanner implements Scanner {
           ? `Consider adding sections: ${missingSections.join(', ')}`
           : 'Datasheet is comprehensive.'
         : `Add missing sections to ${source}: ${missingSections.join(', ')}`,
+      referenceUrl: 'https://huggingface.co/docs/hub/en/datasets-cards',
       dataSource: 'local',
       metadata: { source, presentSections, missingSections },
     };
@@ -244,6 +248,7 @@ export class DatasetProvenanceScanner implements Scanner {
       suggestion: hasDVC
         ? 'DVC is properly configured for dataset versioning.'
         : 'Consider using DVC (Data Version Control) for dataset versioning and reproducibility.',
+      referenceUrl: 'https://huggingface.co/docs/hub/en/datasets-cards',
       metadata: { hasDVC, dvcSignals },
     };
   }

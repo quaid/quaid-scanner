@@ -165,6 +165,7 @@ export class TestCoverageScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://chaoss.community/metric-test-coverage/',
         dataSource: 'local',
         metadata,
       };

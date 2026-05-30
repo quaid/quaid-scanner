@@ -62,6 +62,7 @@ export class ReleaseCadenceScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://chaoss.community/metric-release-frequency/',
         dataSource: 'local',
         metadata,
       };

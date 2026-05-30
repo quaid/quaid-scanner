@@ -118,6 +118,7 @@ export class ResponseTimeScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://chaoss.community/metric-issue-response-time/',
         dataSource: 'api',
         metadata,
       };

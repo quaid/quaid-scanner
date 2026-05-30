@@ -9,6 +9,8 @@ import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 
 const SCORECARD_API = 'https://api.securityscorecards.dev/projects';
+const SCORECARD_VIEWER_BASE = 'https://securityscorecards.dev/viewer/?uri=github.com';
+const SCORECARD_FALLBACK_URL = 'https://securityscorecards.dev/';
 
 interface ScorecardCheck {
   name: string;
@@ -60,6 +62,7 @@ export class OpenSSFScorecardScanner implements Scanner {
       severity: Severity,
       message: string,
       suggestion: string,
+      referenceUrl: string,
       metadata?: Record<string, unknown>,
     ): Finding => {
       counter++;
@@ -73,6 +76,7 @@ export class OpenSSFScorecardScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl,
         dataSource: 'api',
         metadata,
       };
@@ -86,6 +90,7 @@ export class OpenSSFScorecardScanner implements Scanner {
           Severity.INFO,
           'OpenSSF Scorecard requires a remote URL — no remote URL available',
           'Push to a GitHub remote to enable Scorecard analysis',
+          SCORECARD_FALLBACK_URL,
         ),
       ];
     }
@@ -97,9 +102,13 @@ export class OpenSSFScorecardScanner implements Scanner {
           Severity.INFO,
           'OpenSSF Scorecard only supports GitHub repositories',
           'Push to GitHub to enable Scorecard analysis',
+          SCORECARD_FALLBACK_URL,
         ),
       ];
     }
+
+    // Build the computed Tier A referenceUrl for this owner/repo
+    const scorecardViewerUrl = `${SCORECARD_VIEWER_BASE}/${parsed.owner}/${parsed.repo}`;
 
     // Query the Scorecard API
     const apiUrl = `${SCORECARD_API}/github.com/${parsed.owner}/${parsed.repo}`;
@@ -113,6 +122,7 @@ export class OpenSSFScorecardScanner implements Scanner {
             Severity.WARNING,
             `OpenSSF Scorecard unavailable for ${parsed.owner}/${parsed.repo} (HTTP ${response.status})`,
             'Ensure the repository is public and indexed by the Scorecard project',
+            scorecardViewerUrl,
             { scorecard_source: 'api', error: response.statusText },
           ),
         ];
@@ -124,6 +134,7 @@ export class OpenSSFScorecardScanner implements Scanner {
           Severity.WARNING,
           `OpenSSF Scorecard unavailable — ${err instanceof Error ? err.message : 'unknown error'}`,
           'Check network connectivity or try again later',
+          scorecardViewerUrl,
           { scorecard_source: 'api' },
         ),
       ];
@@ -141,6 +152,7 @@ export class OpenSSFScorecardScanner implements Scanner {
           : data.score < 8
             ? 'Review scorecard checks with low scores for improvement opportunities'
             : 'Scorecard score is healthy',
+        scorecardViewerUrl,
         {
           scorecard_source: 'api',
           scorecardVersion: data.scorecard.version,
@@ -161,6 +173,7 @@ export class OpenSSFScorecardScanner implements Scanner {
             : check.score < 8
               ? `Consider improving "${check.name}" for better security posture`
               : `"${check.name}" check is healthy`,
+          scorecardViewerUrl,
           {
             scorecard_source: 'api',
             checkName: check.name,

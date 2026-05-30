@@ -71,11 +71,14 @@ export class ClearlyDefinedScanner implements Scanner {
     const { repoPath } = context;
     let counter = 0;
 
+    const CLEARLYDEFINED_FALLBACK = 'https://clearlydefined.io/';
+
     const makeFinding = (
       severity: Severity,
       message: string,
       file: string | null,
       suggestion: string,
+      referenceUrl: string = CLEARLYDEFINED_FALLBACK,
     ): Finding => {
       counter++;
       return {
@@ -88,6 +91,7 @@ export class ClearlyDefinedScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl,
         dataSource: 'api',
       };
     };
@@ -119,6 +123,10 @@ export class ClearlyDefinedScanner implements Scanner {
       // Resolve the concrete version.
       const version = this.resolveVersion(repoPath, name, versionSpec);
 
+      // Computed Tier A referenceUrl for this specific package+version
+      const depReferenceUrl =
+        `https://clearlydefined.io/definitions/npm/npmjs/-/${name}/${version}`;
+
       // Query ClearlyDefined.
       let declaredLicense: string | null | undefined;
       try {
@@ -133,6 +141,7 @@ export class ClearlyDefinedScanner implements Scanner {
               'ClearlyDefined API unavailable — cross-validation skipped',
               null,
               'Check network connectivity or try again later',
+              CLEARLYDEFINED_FALLBACK,
             ),
           ];
         }
@@ -146,12 +155,13 @@ export class ClearlyDefinedScanner implements Scanner {
             'ClearlyDefined API unavailable — cross-validation skipped',
             null,
             'Check network connectivity or try again later',
+            CLEARLYDEFINED_FALLBACK,
           ),
         ];
       }
 
       // Evaluate the declared license.
-      const finding = this.evaluateLicense(name, version, declaredLicense ?? null, makeFinding);
+      const finding = this.evaluateLicense(name, version, declaredLicense ?? null, makeFinding, depReferenceUrl);
       if (finding !== null) {
         findings.push(finding);
       }
@@ -205,7 +215,9 @@ export class ClearlyDefinedScanner implements Scanner {
       message: string,
       file: string | null,
       suggestion: string,
+      referenceUrl?: string,
     ) => Finding,
+    referenceUrl: string,
   ): Finding | null {
     // No license data.
     if (declared === null || declared === undefined || declared === 'NOASSERTION') {
@@ -214,6 +226,7 @@ export class ClearlyDefinedScanner implements Scanner {
         `ClearlyDefined has no license data for ${name}@${version}`,
         'package.json',
         'Check the package manually and consider opening a curation PR at clearlydefined.io',
+        referenceUrl,
       );
     }
 
@@ -224,6 +237,7 @@ export class ClearlyDefinedScanner implements Scanner {
         `ClearlyDefined confirms ${name}@${version} is licensed ${declared} (copyleft)`,
         'package.json',
         "Evaluate whether this copyleft license is compatible with your project's licensing obligations",
+        referenceUrl,
       );
     }
 
@@ -238,6 +252,7 @@ export class ClearlyDefinedScanner implements Scanner {
       `ClearlyDefined reports an uncommon license for ${name}@${version}: ${declared}`,
       'package.json',
       'Review the license terms manually',
+      referenceUrl,
     );
   }
 

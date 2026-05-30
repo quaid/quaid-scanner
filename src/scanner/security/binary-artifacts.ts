@@ -121,6 +121,7 @@ export class BinaryArtifactScanner implements Scanner {
         line: null,
         column: null,
         suggestion: 'Remove binary files from the source tree. Use a package manager or artifact repository instead.',
+        referenceUrl: 'https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts',
         dataSource: 'local',
         metadata: {
           sha256,

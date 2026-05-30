@@ -47,6 +47,7 @@ export class ContributorDataScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://chaoss.community/metric-contributors/',
         dataSource: 'heuristic',
         metadata,
       };

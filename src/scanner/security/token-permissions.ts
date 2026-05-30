@@ -41,6 +41,9 @@ export class TokenPermissionsScanner implements Scanner {
     const findings: Finding[] = [];
     let counter = 0;
 
+    const TOKEN_PERMISSIONS_URL =
+      'https://github.com/ossf/scorecard/blob/main/docs/checks.md#token-permissions';
+
     const makeFinding = (
       severity: Severity,
       message: string,
@@ -59,6 +62,7 @@ export class TokenPermissionsScanner implements Scanner {
         line,
         column: null,
         suggestion,
+        referenceUrl: TOKEN_PERMISSIONS_URL,
         dataSource: 'local',
       };
     };

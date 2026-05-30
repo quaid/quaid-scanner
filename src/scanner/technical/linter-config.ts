@@ -104,6 +104,7 @@ export class LinterConfigScanner implements Scanner {
       line: null,
       column: null,
       suggestion,
+      referenceUrl: 'https://chaoss.community/metric-code-quality-metrics/',
       dataSource: 'local',
     });
 

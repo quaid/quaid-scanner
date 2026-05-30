@@ -66,6 +66,7 @@ export class BurnoutDetectionScanner implements Scanner {
         line: null,
         column: null,
         suggestion,
+        referenceUrl: 'https://chaoss.community/metric-project-burnout/',
         dataSource: 'api',
         metadata,
       };
