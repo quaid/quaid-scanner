@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.2] - 2026-05-27
+## [0.1.2] - 2026-05-30
 
 ### Added
 
@@ -24,6 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (vulnerability disclosure policy), `.github/SUPPORT.md` (help channel guide). (#78, #79, #80, #97, #99)
 - **GitHub issue templates**: structured forms for bug reports, feature requests, and false positives;
   blank issues disabled with links to Discussions and Security Advisories. (#81)
+- **`dataSource` field on findings** — every finding now carries a `dataSource` tag (`'api'`,
+  `'local'`, or `'heuristic'`) indicating where the data came from. Rendered in markdown reports as
+  `_(source: external API)_` etc. (#103, #104)
+- **Finding metadata rendered in markdown** — the markdown reporter now surfaces `context` (the
+  triggering code/value), `dataSource`, and key metadata fields (`checkName`, `checkScore`,
+  `branch`, `overallScore`) for each critical finding. (#104)
+- **`referenceUrl` on all 43 scanners** — every scanner now populates `referenceUrl` with either a
+  dynamically computed link to the authoritative source (OpenSSF Scorecard viewer, ClearlyDefined
+  definition page, SPDX license page, GitHub branch settings) or a static link to the spec or
+  standard that motivates the check (CHAOSS metric, INI overview, semver.org, etc.). (#105)
+- **Score Rationale section** — every markdown report ends with a table showing each pillar's
+  weight, raw score, and weighted contribution to the overall score. (#106)
+- **`.quaid-scanner-ignore` file support** — place a `.quaid-scanner-ignore` file at the root of
+  any scanned repository to exclude paths from inclusive language scanning. Format follows
+  `.gitignore` conventions (one glob pattern per line, `#` comments, blank lines ignored). Also
+  activates the existing but previously unimplemented `--exclude-pattern` config option. (#113)
 
 ### Changed
 
@@ -40,6 +56,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to eliminate spurious coverage gaps. (#56, #57)
 - `package.json` dependency versions pinned to `^` ranges with locked minor versions to improve
   supply-chain reproducibility. (#84, #85)
+- `InclusiveConfig.excludePatterns` was declared in the type but never applied by any scanner;
+  both `code-scanner` and `doc-scanner` now merge config-supplied patterns into their glob ignore
+  arrays. (#113)
 
 ## [0.1.1] - 2026-05-04
 

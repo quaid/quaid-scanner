@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.4
+# Quaid's OSS Repo Scanner - PRD v2.5
 
 ## Executive Summary
 
@@ -2224,12 +2224,13 @@ Ensure every finding is self-documenting: users can verify the source of each cl
 
 | # | Story | Issue | Status |
 |---|-------|-------|--------|
-| 13.1 | dataSource field in Finding type | #103 | 📋 Planned |
-| 13.2 | Markdown metadata and dataSource rendering | #104 | 📋 Planned |
-| 13.3 | referenceUrl in all 43 scanners | #105 | 📋 Planned |
-| 13.4 | Score Rationale section in markdown report | #106 | 📋 Planned |
+| 13.1 | dataSource field in Finding type | #103 | ✅ Done |
+| 13.2 | Markdown metadata and dataSource rendering | #104 | ✅ Done |
+| 13.3 | referenceUrl in all 43 scanners | #105 | ✅ Done |
+| 13.4 | Score Rationale section in markdown report | #106 | ✅ Done |
+| 13.5 | `.quaid-scanner-ignore` file support | #113 | ✅ Done |
 
-### Story 13.1: dataSource Field in Finding Metadata (TRUST-01) 📋
+### Story 13.1: dataSource Field in Finding Metadata (TRUST-01) ✅
 **As a** Developer Agent or OSPO Manager
 **I want** each finding to indicate whether its data came from an authoritative API, a local file check, or a heuristic estimate
 **So that** I can calibrate my trust in the finding's reliability
@@ -2250,7 +2251,7 @@ Ensure every finding is self-documenting: users can verify the source of each cl
 
 ---
 
-### Story 13.2: Markdown Evidence Rendering (TRUST-02) 📋
+### Story 13.2: Markdown Evidence Rendering (TRUST-02) ✅
 **As a** OSPO Manager or Security Engineer reading a markdown report
 **I want** finding metadata and data source rendered inline
 **So that** I don't need to re-run the scan in JSON mode to understand the evidence
@@ -2270,7 +2271,7 @@ Ensure every finding is self-documenting: users can verify the source of each cl
 
 ---
 
-### Story 13.3: referenceUrl in All Scanners (TRUST-03) 📋
+### Story 13.3: referenceUrl in All Scanners (TRUST-03) ✅
 **As a** Developer Agent or human reader
 **I want** every finding to include a `referenceUrl` linking to the authoritative source, standard, or settings page
 **So that** I can verify the finding independently without reconstructing URLs manually
@@ -2291,7 +2292,7 @@ Ensure every finding is self-documenting: users can verify the source of each cl
 
 ---
 
-### Story 13.4: Score Rationale Section (TRUST-04) 📋
+### Story 13.4: Score Rationale Section (TRUST-04) ✅
 **As a** OSPO Manager receiving a score
 **I want** the markdown report to explain how the overall score was calculated
 **So that** I can verify the math, understand pillar weighting, and explain the score to stakeholders
@@ -2379,12 +2380,21 @@ quaid-scanner/
 | Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
 | Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
 | Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned |
-| Epic 13: Trust & Evidence | 4 | 11 | referenceUrl, dataSource, score rationale | 📋 Planned |
+| Epic 13: Trust & Evidence | 5 | 13 | referenceUrl, dataSource, score rationale, .quaid-scanner-ignore | ✅ Done |
 | **Total** | **72** | **173** | | |
 
 ---
 
 ### Change Log
+
+#### v2.5 Changes (from v2.4)
+
+| Change | Impact |
+|--------|--------|
+| Mark Epic 13 all 4 stories as ✅ Done | #103–#106 merged; dataSource, markdown metadata, referenceUrl, score rationale all shipped |
+| Add Story 13.5: `.quaid-scanner-ignore` | ✅ Done — #113 merged; project-level scan exclusion support, fixes excludePatterns dead code |
+| Epic 13 total: 4 → 5 stories, 11 → 13 pts | Story total: 72 → 73; Points: 173 → 175 |
+| PRD version: v2.4 → v2.5 | v0.1.2 release date updated to 2026-05-30 |
 
 #### v2.4 Changes (from v2.3)
 

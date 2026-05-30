@@ -4,3 +4,9 @@ tests/
 # Documentation that uses terms as examples of what to avoid
 docs/PRD.md
 docs/PRD-v2.md
+
+# Generated coverage reports — HTML snapshots contain flagged terms in code excerpts
+coverage/
+
+# Scanner source files that define the term list itself
+src/scanner/inclusive/term-list.ts
