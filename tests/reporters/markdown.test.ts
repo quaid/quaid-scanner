@@ -754,4 +754,100 @@ describe('renderMarkdown', () => {
     // suggestion must still be present
     expect(md).toContain('**Suggestion:** Fix it');
   });
+
+  // --- Score Rationale section (issue #106) ---
+
+  it('renders "## Score Rationale" heading', () => {
+    const md = renderMarkdown(makeReport());
+    expect(md).toContain('## Score Rationale');
+  });
+
+  it('renders the intro sentence about weighted sum', () => {
+    const md = renderMarkdown(makeReport());
+    expect(md).toContain('Overall score is a weighted sum of six pillar scores');
+  });
+
+  it('renders all six pillar display names in the rationale table', () => {
+    const md = renderMarkdown(makeReport());
+    expect(md).toContain('Security');
+    expect(md).toContain('Governance');
+    expect(md).toContain('Community');
+    expect(md).toContain('AI Readiness');
+    expect(md).toContain('Inclusive Language');
+    expect(md).toContain('Technical Rigor');
+  });
+
+  it('renders pillar weights as percentages in the rationale table', () => {
+    const md = renderMarkdown(makeReport());
+    expect(md).toContain('25%');
+    expect(md).toContain('20%');
+    // Community, AI Readiness, and Inclusive all share 15%
+    expect(md).toContain('15%');
+    expect(md).toContain('10%');
+  });
+
+  it('renders correct raw score for each pillar (1 decimal place)', () => {
+    // makeReport() sets score = 7.5 for all pillars
+    const md = renderMarkdown(makeReport());
+    // There should be multiple occurrences of 7.5 (one per pillar in rationale)
+    const matches = md.match(/\|\s*7\.5\s*\|/g);
+    expect(matches).not.toBeNull();
+    expect(matches!.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('renders correct contribution (weightedScore) for each pillar (2 decimal places)', () => {
+    // weightedScore for Security pillar: 7.5 * 0.25 = 1.875 → rounds to 1.88
+    const md = renderMarkdown(makeReport());
+    expect(md).toContain('1.88');
+    // Governance: 7.5 * 0.20 = 1.5 → 1.50
+    expect(md).toContain('1.50');
+    // Community: 7.5 * 0.15 = 1.125 → 1.13 (or 1.12 depending on rounding)
+    // AI Readiness: 7.5 * 0.15 = 1.125
+    // Inclusive: 7.5 * 0.15 = 1.125
+    // Technical: 7.5 * 0.10 = 0.75 → 0.75
+    expect(md).toContain('0.75');
+  });
+
+  it('renders a bold Overall row with the final score', () => {
+    const md = renderMarkdown(makeReport());
+    // The overall row should be bold and contain 100%
+    expect(md).toContain('**Overall**');
+    expect(md).toContain('**100%**');
+  });
+
+  it('renders the overall score in the Overall row to 2 decimal places', () => {
+    // makeReport() sets overallScore = 7.5 → "7.50"
+    const md = renderMarkdown(makeReport());
+    expect(md).toContain('**7.50**');
+  });
+
+  it('renders Score Rationale section after the recommendations section', () => {
+    const recs: Recommendation[] = [
+      {
+        priority: 1,
+        action: 'Add branch protection',
+        impact: 'high',
+        effort: 'low',
+        findingIds: [],
+        resources: [],
+      },
+    ];
+    const md = renderMarkdown(makeReport([], recs));
+    const rationale_pos = md.indexOf('## Score Rationale');
+    const recommendations_pos = md.indexOf('## Recommendations');
+    expect(rationale_pos).toBeGreaterThan(recommendations_pos);
+  });
+
+  it('renders Score Rationale section before the metadata footer', () => {
+    const md = renderMarkdown(makeReport());
+    const rationalePos = md.indexOf('## Score Rationale');
+    const footerPos = md.indexOf('---');
+    expect(rationalePos).toBeGreaterThan(0);
+    expect(rationalePos).toBeLessThan(footerPos);
+  });
+
+  it('renders the rationale table header row with correct columns', () => {
+    const md = renderMarkdown(makeReport());
+    expect(md).toContain('| Pillar | Weight | Raw Score | Contribution |');
+  });
 });
