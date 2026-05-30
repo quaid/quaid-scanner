@@ -400,4 +400,54 @@ describe('InclusiveDocScanner', () => {
       expect(masterFindings).toHaveLength(0);
     });
   });
+
+  describe('excludePatterns config integration', () => {
+    it('excludes files matching patterns in config.inclusive.excludePatterns', async () => {
+      writeFixture(tmpDir, 'docs/PRD.md', 'The whitelist and master-slave sections.\n');
+      writeFixture(tmpDir, 'guide.md', 'The whitelist entry here.\n');
+
+      const context = createScanContext(tmpDir, {
+        inclusive: {
+          termListUrl: null,
+          customTerms: {},
+          ignoredTerms: [],
+          excludePatterns: ['docs/**'],
+        },
+      });
+
+      const findings = await scanner.run(context);
+
+      // docs/PRD.md should not be scanned
+      const docFindings = findings.filter((f) => f.file?.startsWith('docs/'));
+      expect(docFindings).toHaveLength(0);
+
+      // guide.md should still be scanned
+      const guideFindings = findings.filter((f) => f.file === 'guide.md');
+      expect(guideFindings.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('excludes files matching patterns from .quaid-scanner-ignore file', async () => {
+      // Write a .quaid-scanner-ignore file
+      fs.writeFileSync(
+        path.join(tmpDir, '.quaid-scanner-ignore'),
+        '# Documentation\ndocs/\n',
+        'utf-8',
+      );
+
+      writeFixture(tmpDir, 'docs/PRD.md', 'The whitelist and master-slave sections.\n');
+      writeFixture(tmpDir, 'guide.md', 'The whitelist entry here.\n');
+
+      const context = createScanContext(tmpDir);
+
+      const findings = await scanner.run(context);
+
+      // docs/PRD.md should not be scanned (excluded by .quaid-scanner-ignore)
+      const docFindings = findings.filter((f) => f.file?.startsWith('docs/'));
+      expect(docFindings).toHaveLength(0);
+
+      // guide.md should still be scanned
+      const guideFindings = findings.filter((f) => f.file === 'guide.md');
+      expect(guideFindings.length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

@@ -10,6 +10,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
 import { TermListManager } from './term-list.js';
+import { loadIgnorePatterns } from './ignore-file.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 
@@ -184,8 +185,13 @@ export class InclusiveCodeScanner implements Scanner {
       return [];
     }
 
+    // Load ignore patterns from .quaid-scanner-ignore and config
+    const fileIgnorePatterns = await loadIgnorePatterns(repoPath);
+    const configPatterns = inclusiveConfig.excludePatterns;
+    const userExcludes = [...fileIgnorePatterns, ...configPatterns];
+
     // Find all matching code files
-    const files = await this.findCodeFiles(repoPath);
+    const files = await this.findCodeFiles(repoPath, userExcludes);
     const findings: Finding[] = [];
     let findingCounter = 0;
 
@@ -396,10 +402,17 @@ export class InclusiveCodeScanner implements Scanner {
 
   /**
    * Find all code files matching the supported extensions,
-   * excluding directories like node_modules, dist, etc.
+   * excluding hardcoded directories plus any user-supplied patterns.
+   *
+   * @param repoPath - Absolute path to the root of the repository
+   * @param userExcludes - Additional glob patterns to exclude (from
+   *   .quaid-scanner-ignore and config.inclusive.excludePatterns)
    */
-  private async findCodeFiles(repoPath: string): Promise<string[]> {
-    const ignore = EXCLUDED_DIRS.map((d) => `**/${d}**`);
+  private async findCodeFiles(repoPath: string, userExcludes: string[] = []): Promise<string[]> {
+    const ignore = [
+      ...EXCLUDED_DIRS.map((d) => `**/${d}**`),
+      ...userExcludes,
+    ];
 
     const files = await glob(CODE_EXTENSIONS, {
       cwd: repoPath,

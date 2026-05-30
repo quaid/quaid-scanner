@@ -499,4 +499,60 @@ describe('InclusiveCodeScanner', () => {
       expect(abortFindings).toHaveLength(0);
     });
   });
+
+  describe('excludePatterns config integration', () => {
+    it('excludes files matching patterns in config.inclusive.excludePatterns', async () => {
+      writeFixture(tmpDir, 'tests/app.test.ts', [
+        "// expect(terms).not.toContain('whitelist')",
+      ].join('\n'));
+      writeFixture(tmpDir, 'src/app.ts', [
+        '// whitelist is a non-inclusive term',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir, {
+        inclusive: {
+          termListUrl: null,
+          customTerms: {},
+          ignoredTerms: [],
+          excludePatterns: ['tests/**'],
+        },
+      });
+      const findings = await scanner.run(ctx);
+
+      // tests/app.test.ts should not be scanned
+      const testFindings = findings.filter((f) => f.file?.includes('tests/'));
+      expect(testFindings).toHaveLength(0);
+
+      // src/app.ts should still be scanned
+      const srcFindings = findings.filter((f) => f.file?.includes('src/'));
+      expect(srcFindings.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('excludes files matching patterns from .quaid-scanner-ignore file', async () => {
+      // Write a .quaid-scanner-ignore file
+      fs.writeFileSync(
+        path.join(tmpDir, '.quaid-scanner-ignore'),
+        '# Test files\ntests/\n',
+        'utf-8',
+      );
+
+      writeFixture(tmpDir, 'tests/app.test.ts', [
+        "// expect(terms).not.toContain('whitelist')",
+      ].join('\n'));
+      writeFixture(tmpDir, 'src/app.ts', [
+        '// whitelist is a non-inclusive term',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      // tests/app.test.ts should not be scanned (excluded by .quaid-scanner-ignore)
+      const testFindings = findings.filter((f) => f.file?.includes('tests/'));
+      expect(testFindings).toHaveLength(0);
+
+      // src/app.ts should still be scanned
+      const srcFindings = findings.filter((f) => f.file?.includes('src/'));
+      expect(srcFindings.length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

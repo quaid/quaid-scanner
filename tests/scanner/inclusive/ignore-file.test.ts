@@ -38,7 +38,7 @@ describe('loadIgnorePatterns', () => {
     });
 
     describe('when .quaid-scanner-ignore exists', () => {
-        it('returns parsed patterns from the file', async () => {
+        it('returns parsed patterns from the file, normalizing directory patterns', async () => {
             fs.writeFileSync(
                 path.join(tmpDir, '.quaid-scanner-ignore'),
                 'tests/\ndocs/PRD.md\n',
@@ -46,7 +46,8 @@ describe('loadIgnorePatterns', () => {
             );
 
             const result = await loadIgnorePatterns(tmpDir);
-            expect(result).toEqual(['tests/', 'docs/PRD.md']);
+            // Directory patterns (ending with /) are normalized to glob recursive form
+            expect(result).toEqual(['tests/**', 'docs/PRD.md']);
         });
 
         it('skips blank lines', async () => {
@@ -57,7 +58,7 @@ describe('loadIgnorePatterns', () => {
             );
 
             const result = await loadIgnorePatterns(tmpDir);
-            expect(result).toEqual(['tests/', 'docs/PRD.md']);
+            expect(result).toEqual(['tests/**', 'docs/PRD.md']);
         });
 
         it('skips lines starting with #', async () => {
@@ -68,7 +69,7 @@ describe('loadIgnorePatterns', () => {
             );
 
             const result = await loadIgnorePatterns(tmpDir);
-            expect(result).toEqual(['tests/', 'docs/PRD.md']);
+            expect(result).toEqual(['tests/**', 'docs/PRD.md']);
         });
 
         it('trims whitespace from pattern lines', async () => {
@@ -79,7 +80,7 @@ describe('loadIgnorePatterns', () => {
             );
 
             const result = await loadIgnorePatterns(tmpDir);
-            expect(result).toEqual(['tests/', 'docs/PRD.md']);
+            expect(result).toEqual(['tests/**', 'docs/PRD.md']);
         });
 
         it('returns multiple patterns when multiple non-comment lines present', async () => {
@@ -98,7 +99,8 @@ describe('loadIgnorePatterns', () => {
             );
 
             const result = await loadIgnorePatterns(tmpDir);
-            expect(result).toEqual(['tests/', 'docs/PRD.md', 'docs/PRD-v2.md', 'vendor/']);
+            // Directory patterns normalized; file patterns unchanged
+            expect(result).toEqual(['tests/**', 'docs/PRD.md', 'docs/PRD-v2.md', 'vendor/**']);
         });
 
         it('returns empty array when file contains only comments and blank lines', async () => {
