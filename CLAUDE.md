@@ -13,6 +13,9 @@
 ### 2. File Placement
 - Docs → `docs/{category}/`
 - No root `.md` files (except README.md and CLAUDE.md)
+- Content drafts (blog, social, release marketing) → `docs/content/v{version}/{type}/`
+  - Draft here first; feed into blog-sources pipeline only at publish time
+  - Applies to all content: blog posts, social threads, release notes marketing copy
 
 ### 3. Testing (MANDATORY)
 - 80%+ coverage required
