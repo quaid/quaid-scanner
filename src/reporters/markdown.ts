@@ -1,4 +1,4 @@
-import { Severity, Pillar, RiskLevel } from '../types/index.js';
+import { Severity, Pillar, RiskLevel, PILLAR_WEIGHTS } from '../types/index.js';
 import type { ScanReport, Finding, FindingDataSource } from '../types/index.js';
 
 const PILLAR_LABELS: Record<Pillar, string> = {
@@ -183,6 +183,28 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
     }
     lines.push('');
   }
+
+  // Score Rationale section
+  lines.push('## Score Rationale');
+  lines.push('');
+  lines.push('Overall score is a weighted sum of six pillar scores (each scored 0–10).');
+  lines.push('');
+  lines.push('| Pillar | Weight | Raw Score | Contribution |');
+  lines.push('|--------|--------|-----------|-------------|');
+
+  const pillarOrder = Object.keys(PILLAR_WEIGHTS) as Pillar[];
+  let totalWeight = 0;
+  for (const pillar of pillarOrder) {
+    const p = report.pillars[pillar];
+    const weight = PILLAR_WEIGHTS[pillar];
+    totalWeight += weight;
+    const weightPct = `${(weight * 100).toFixed(0)}%`;
+    const rawScore = p.score.toFixed(1);
+    const contribution = p.weightedScore.toFixed(2);
+    lines.push(`| ${PILLAR_LABELS[pillar]} | ${weightPct} | ${rawScore} | ${contribution} |`);
+  }
+  lines.push(`| **Overall** | **${(totalWeight * 100).toFixed(0)}%** | | **${report.overallScore.toFixed(2)}** |`);
+  lines.push('');
 
   // Metadata footer
   lines.push('---');

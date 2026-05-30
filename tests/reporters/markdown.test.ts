@@ -841,8 +841,10 @@ describe('renderMarkdown', () => {
   it('renders Score Rationale section before the metadata footer', () => {
     const md = renderMarkdown(makeReport());
     const rationalePos = md.indexOf('## Score Rationale');
-    const footerPos = md.indexOf('---');
+    // The footer separator is a standalone "---" line (not a table alignment row)
+    const footerPos = md.indexOf('\n---\n');
     expect(rationalePos).toBeGreaterThan(0);
+    expect(footerPos).toBeGreaterThan(0);
     expect(rationalePos).toBeLessThan(footerPos);
   });
 
