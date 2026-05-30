@@ -1,0 +1,6 @@
+# Test fixtures — contain flagged terms intentionally as string assertions
+tests/
+
+# Documentation that uses terms as examples of what to avoid
+docs/PRD.md
+docs/PRD-v2.md
