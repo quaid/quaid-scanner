@@ -695,6 +695,39 @@ describe('NamingScanner', () => {
   // Severity capping (#165): CRITICAL is never emitted by inclusive scanners
   // -------------------------------------------------------------------------
 
+  describe('finding de-duplication (#170)', () => {
+    it('all emitted finding ids are unique (id invariant)', async () => {
+      // Arrange: multiple sources all flagged with the same term so the
+      // counter-based id scheme is exercised across sources.
+      const scanner = setupScanner([WHITELIST_TERM]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation(
+        (p: unknown) =>
+          (p as string).endsWith('package.json') || (p as string).endsWith('README.md'),
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          return JSON.stringify({ name: 'whitelist-tool' });
+        }
+        if ((p as string).endsWith('README.md')) {
+          return '# Whitelist Tool\n';
+        }
+        return '';
+      });
+      (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 0,
+        stdout: Buffer.from('https://github.com/org/whitelist-service.git\n'),
+        stderr: Buffer.from(''),
+      });
+
+      // Act
+      const findings = await scanner.run(createContext());
+
+      // Assert: no two findings share the same id
+      const ids = findings.map((f) => f.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
   describe('severity capping (#165)', () => {
     it('maps Tier 1 term to WARNING (not CRITICAL)', async () => {
       const scanner = setupScanner([WHITELIST_TERM]);

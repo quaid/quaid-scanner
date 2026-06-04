@@ -597,4 +597,23 @@ describe('InclusiveCodeScanner', () => {
       expect(errorFindings).toHaveLength(0);
     });
   });
+
+  describe('finding de-duplication (#170)', () => {
+    it('all emitted finding ids are unique (id invariant)', async () => {
+      // Arrange: a file with several different flagged terms in comments
+      writeFixture(
+        tmpDir,
+        'src/app.ts',
+        '// The whitelist and blacklist config\n// The master-slave setup\n',
+      );
+      const ctx = createContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(ctx);
+
+      // Assert: no two findings share the same id
+      const ids = findings.map((f) => f.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
 });

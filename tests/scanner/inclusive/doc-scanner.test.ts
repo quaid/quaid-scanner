@@ -489,6 +489,60 @@ describe('InclusiveDocScanner', () => {
     });
   });
 
+  describe('finding de-duplication (#170)', () => {
+    it('emits exactly one finding for a single occurrence of an INI Tier 1 term', async () => {
+      // Arrange: one file, one line, one occurrence of a Tier 1 term
+      writeFixture(tmpDir, 'README.md', 'This uses a master branch.\n');
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: exactly one finding for "master" in this file
+      const masterFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.message.includes('"master"'),
+      );
+      expect(masterFindings).toHaveLength(1);
+    });
+
+    it('all emitted finding ids are unique (id invariant)', async () => {
+      // Arrange: a file with several different flagged terms
+      writeFixture(
+        tmpDir,
+        'guide.md',
+        'The whitelist and blacklist. The master-slave setup.\n',
+      );
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: no two findings share the same id
+      const ids = findings.map((f) => f.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('emits findings with unique ids when the same term appears twice on the same line', async () => {
+      // Arrange: "whitelist" appears twice on line 1 — the old ID scheme
+      // (file:line:term) would produce the same id for both occurrences,
+      // then the backstop Map must collapse them to one finding.
+      writeFixture(
+        tmpDir,
+        'dup-term.md',
+        'The whitelist here and the whitelist there.\n',
+      );
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: id invariant holds — no duplicate ids regardless of how
+      // many times the term appears on one line
+      const ids = findings.map((f) => f.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
   describe('self-report exclusion (#169)', () => {
     it('produces zero findings for a quaid-scan-*.md report file containing flagged terms', async () => {
       // Arrange: write a report file that contains a non-inclusive term

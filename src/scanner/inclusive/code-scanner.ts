@@ -328,7 +328,10 @@ export class InclusiveCodeScanner implements Scanner {
       }
     }
 
-    return findings;
+    // Backstop: de-duplicate findings by id so that an identical
+    // (scanner, file, line, term) tuple can only produce one finding even
+    // if a future code path reintroduces duplicate work.
+    return Array.from(new Map(findings.map((f) => [f.id, f])).values());
   }
 
   /**
@@ -419,6 +422,9 @@ export class InclusiveCodeScanner implements Scanner {
       ignore,
     });
 
-    return files.sort();
+    // De-duplicate: a file could theoretically match multiple patterns if the
+    // glob implementation does not merge results internally.  Using a Set keyed
+    // by absolute path mirrors the fileSet pattern in diminishing-scanner.ts.
+    return Array.from(new Set(files)).sort();
   }
 }

@@ -103,7 +103,7 @@ export class InclusiveDocScanner implements Scanner {
     const configPatterns = inclusiveConfig.excludePatterns;
     const userExcludes = [...fileIgnorePatterns, ...configPatterns];
 
-    // Find documentation files
+    // Find documentation files (de-duplicated by absolute path)
     const files = await this.findDocFiles(repoPath, userExcludes);
     const findings: Finding[] = [];
 
@@ -113,7 +113,11 @@ export class InclusiveDocScanner implements Scanner {
       findings.push(...fileFindings);
     }
 
-    return findings;
+    // Backstop: de-duplicate findings by id so that an identical
+    // (scanner, file, line, term) tuple can only produce one finding even
+    // if a future code path reintroduces duplicate work.  The Map preserves
+    // insertion order so the first occurrence of each id wins.
+    return Array.from(new Map(findings.map((f) => [f.id, f])).values());
   }
 
   /**
@@ -140,7 +144,10 @@ export class InclusiveDocScanner implements Scanner {
       ignore: ignorePatterns,
     });
 
-    return files;
+    // De-duplicate: a file could theoretically match multiple patterns if the
+    // glob implementation does not merge results internally.  Using a Set keyed
+    // by absolute path mirrors the fileSet pattern in diminishing-scanner.ts.
+    return Array.from(new Set(files));
   }
 
   /**
