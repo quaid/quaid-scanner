@@ -453,6 +453,80 @@ describe('DiminishingLanguageScanner', () => {
     });
   });
 
+  describe('per-term referenceUrl (#153)', () => {
+    it('finding for "just run" has referenceUrl containing /j/just', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('just run'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('/j/just');
+    });
+
+    it('finding for "simply add" has referenceUrl containing /s/simply', async () => {
+      writeFileSync(join(tmpDir, 'CONTRIBUTING.md'), 'You simply add the dependency.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('simply add'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('/s/simply');
+    });
+
+    it('finding for "easy" has referenceUrl containing /e/easy-easily', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'This is an easy setup process.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('easy'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('/e/easy-easily');
+    });
+
+    it('finding for "trivial" has referenceUrl containing plainlanguage.gov', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'The fix is trivial to implement.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('trivial'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('plainlanguage.gov');
+    });
+
+    it('finding for "everyone knows" has referenceUrl containing content-guide.18f.gov', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Everyone knows how to use git.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('everyone knows'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('content-guide.18f.gov');
+    });
+
+    it('summary welcoming-score referenceUrl is unchanged (generic Microsoft URL)', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const summary = findings.find((f) => f.category === 'welcoming-score');
+      expect(summary).toBeDefined();
+      expect(summary!.referenceUrl).toBe(
+        'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
+      );
+    });
+  });
+
   describe('ignore patterns (#122)', () => {
     it('skips files matching config excludePatterns', async () => {
       writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
