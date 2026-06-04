@@ -1581,6 +1581,109 @@ model-index:
 
 ---
 
+### Inclusive Pillar: 4-Category Framework (v0.1.4+)
+
+The inclusive pillar follows a four-category framework that maps each finding type to its
+authoritative source. This replaces the earlier single-source attribution (Inclusive Naming
+Initiative for all categories), which was correct only for Category A.
+
+**Source research:** [`Inclusive-Language-Guidelines-Research-Into-Actions.pdf`](research/Inclusive-Language-Guidelines-Research-Into-Actions.pdf)
+and [`Inclusive-Technical-Writing-Guidelines.pdf`](research/Inclusive-Technical-Writing-Guidelines.pdf)
+(both in `docs/research/`).
+
+| Category | What it covers | Authoritative sources | Implemented in |
+|---|---|---|---|
+| **A — Technical Nomenclature** | master/slave, whitelist/blacklist, sanity check, dummy, grandfathered (as inheritance) | [Inclusive Naming Initiative](https://inclusivenaming.org/), [ASWF Inclusive Language Guide](https://www.aswf.io/inclusive-language-guide/), [Google Developer Documentation Style Guide](https://developers.google.com/style), [AOUSD](https://aousd.org/) | Stories 6.1a–6.1e (v0.1.0+) |
+| **B — Socially Charged / Ableist / Ageist / Violent Metaphors** | wheelchair-bound, suffering from [X], normal/healthy (re people), kill two birds with one stone, grandfathered (as process), empower (paternalistic) | [Google Developer Style Guide](https://developers.google.com/style/inclusive-documentation), [MDN Writing Style Guide](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Writing_style_guide), [ASWF](https://www.aswf.io/inclusive-language-guide/) | Story 6.4 (planned, **deferred to 0.1.5**) |
+| **C — Diminishing Language & Adverbs of Assumption** | just, simply, obviously, clearly, basically, easy/easily, quite, very, quickly, effectively, of course, everyone knows | [Microsoft Writing Style Guide — words to use and avoid](https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid), [18F Content Guide](https://content-guide.18f.gov/), [plainlanguage.gov](https://www.plainlanguage.gov/), [WCAG 2.2 §3.1.5](https://www.w3.org/TR/WCAG22/#reading-level) | Stories 6.2, 6.3 (v0.1.0+; attribution corrected in v0.1.4 per #152) |
+| **D — Structural, Cognitive & Localization Obstacles** | and/or slash notation, modifier stacks >3 consecutive modifiers, paragraphs >5 sentences, translation fillers (actually, absolutely, could possibly, assemble together) | [WCAG 2.2](https://www.w3.org/TR/WCAG22/), [W3C COGA Task Force](https://www.w3.org/WAI/cognitive/), [Microsoft Writing Style Guide](https://learn.microsoft.com/en-us/style-guide), [Mailchimp Content Style Guide](https://styleguide.mailchimp.com/) | Story 6.5 (planned, **deferred to 0.1.5**) |
+
+**Framing principle (Category B):** shift deficit-based language to asset-based — "uses a
+wheelchair" over "wheelchair-bound", "experiencing [disability]" over "suffering from".
+
+**Cognitive-friction principle (Category C):** diminishing adverbs create an "illusion of ease"
+that shifts perceived failure onto the reader, raising task abandonment and support volume.
+
+#### Tooling direction: align with Vale + Alex.js (not integrate, for 0.1.4)
+
+The docs-as-code prose-linting ecosystem already has mature, maintained rule sets:
+
+- **[Vale](https://vale.sh/)** — Go, open-source, syntax-aware prose linter; supports
+  Google/Microsoft style packages + custom vocab; runs in CLI, editors, and CI.
+- **[Alex.js](https://alexjs.com/)** — Node, MIT; catches gender-favoring, ableist, racial,
+  and condescending language; flags "obviously", "clearly", "everyone knows".
+
+**Decision for 0.1.4:** *align* — quaid-scanner keeps its native regex rules but mirrors
+Vale/Alex.js category boundaries and cites them as upstream references. This keeps the scanner
+useful in repos that haven't adopted those tools while pointing maintainers to richer coverage
+when they want it.
+
+**Decision deferred to 0.1.5 (or later):** detection-and-delegation — if `vale` or `alex` is on
+the PATH, invoke as a subprocess and merge findings. Out of scope for the 0.1.4 bugfix release;
+captured as a future story.
+
+#### Attribution list (cited in `referenceUrl` data and the report footer)
+
+- Google Developer Documentation Style Guide (CC-BY 3.0) — https://developers.google.com/style
+- Microsoft Writing Style Guide — https://learn.microsoft.com/en-us/style-guide
+- MDN Writing Style Guide — https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Writing_style_guide
+- ASWF Inclusive Language Guide — https://www.aswf.io/inclusive-language-guide/
+- 18F Content Guide — https://content-guide.18f.gov/
+- plainlanguage.gov — https://www.plainlanguage.gov/
+- WCAG 2.2 — https://www.w3.org/TR/WCAG22/
+- W3C COGA Task Force — https://www.w3.org/WAI/cognitive/
+- Inclusive Naming Initiative (Category A only) — https://inclusivenaming.org/
+- Write the Docs Style Guides — https://www.writethedocs.org/guide/writing/style-guides/
+- Alex.js — https://alexjs.com/
+- Vale — https://vale.sh/
+
+---
+
+### Story 6.4: Category B — Ableist / Metaphor Detection (INC-04) 📋 (deferred to 0.1.5)
+
+**As a** Developer Agent
+**I want** detection of ableist language, violent metaphors, and paternalistic framing
+**So that** documentation reaches a wider audience using asset-based language
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 6.4.1 | Detect ableist phrasing: `wheelchair-bound`, `suffering from`, `crippled by`, `bound to a [device]` | Pattern matching |
+| 6.4.2 | Detect "normal"/"healthy" used as the implicit opposite of disability | Contextual matching |
+| 6.4.3 | Detect violent metaphors: `kill two birds`, `take a stab at`, `pull the trigger`, `bite the bullet` | Pattern matching |
+| 6.4.4 | Detect paternalistic framing: `empower [users]`, `give a voice to` | Pattern matching |
+| 6.4.5 | Detect `grandfathered` used as a process verb (distinct from `grandfathered` as inheritance, already in Cat A) | Context disambiguation |
+| 6.4.6 | Each finding cites Google Developer Style Guide, MDN, or ASWF as authoritative source | Per-finding `referenceUrl` |
+| 6.4.7 | Suggestion offers an asset-based alternative ("uses a wheelchair", "achieve two things", "include users") | Suggestion field |
+
+**Story Points:** 3
+**Milestone:** 0.1.5
+
+---
+
+### Story 6.5: Category D — Structural & Cognitive Obstacles (INC-05) 📋 (deferred to 0.1.5)
+
+**As a** Developer Agent
+**I want** detection of structural patterns that raise cognitive load or block screen-reader / translation use
+**So that** documentation meets WCAG 2.2 cognitive guidance and translates cleanly
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 6.5.1 | Detect `and/or` and other slash notation in prose (screen-reader / dyslexia hurdle) | Pattern matching |
+| 6.5.2 | Detect modifier stacks of >3 consecutive modifiers ("the new fast distributed reliable cache") | Token-window scan |
+| 6.5.3 | Flag paragraphs with >5 sentences (WCAG 2.2 SC 3.1.5 reading-level guidance) | Sentence count |
+| 6.5.4 | Detect translation-hostile fillers: `actually`, `absolutely`, `could possibly`, `assemble together`, `combine together` | Pattern matching |
+| 6.5.5 | Each finding cites WCAG 2.2, W3C COGA Task Force, or Microsoft Style Guide | Per-finding `referenceUrl` |
+| 6.5.6 | Suggestion shows a structural rewrite or terser alternative | Suggestion field |
+
+**Story Points:** 3
+**Milestone:** 0.1.5
+
+---
+
 ## Epic 7: Technical Rigor (Pillar F)
 
 ### Story 7.1: Linter Configuration Check (TECH-01) ✅
