@@ -690,4 +690,95 @@ describe('NamingScanner', () => {
       expect(findings.length).toBeGreaterThan(0);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Severity capping (#165): CRITICAL is never emitted by inclusive scanners
+  // -------------------------------------------------------------------------
+
+  describe('severity capping (#165)', () => {
+    it('maps Tier 1 term to WARNING (not CRITICAL)', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
+        (p as string).endsWith('package.json')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          return JSON.stringify({ name: 'whitelist-manager' });
+        }
+        return '';
+      });
+
+      const findings = await scanner.run(createContext());
+
+      const finding = findings.find((f) => f.file === 'package.json');
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe(Severity.WARNING);
+      expect(finding!.severity).not.toBe(Severity.CRITICAL);
+    });
+
+    it('maps Tier 2 term to WARNING', async () => {
+      const scanner = setupScanner([BLACKLIST_TERM]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
+        (p as string).endsWith('package.json')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          return JSON.stringify({ name: 'blacklist-checker' });
+        }
+        return '';
+      });
+
+      const findings = await scanner.run(createContext());
+
+      const finding = findings.find((f) => f.file === 'package.json');
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe(Severity.WARNING);
+    });
+
+    it('maps Tier 3 term to INFO', async () => {
+      const scanner = setupScanner([MASTER_TERM]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
+        (p as string).endsWith('package.json')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          return JSON.stringify({ name: 'master-config' });
+        }
+        return '';
+      });
+
+      const findings = await scanner.run(createContext());
+
+      const finding = findings.find((f) => f.file === 'package.json');
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe(Severity.INFO);
+    });
+
+    it('never emits CRITICAL from any source', async () => {
+      const scanner = setupScanner([WHITELIST_TERM]);
+      (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation(
+        (p: unknown) =>
+          (p as string).endsWith('package.json') || (p as string).endsWith('README.md')
+      );
+      (fs.readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) => {
+        if ((p as string).endsWith('package.json')) {
+          return JSON.stringify({ name: 'whitelist-tool' });
+        }
+        if ((p as string).endsWith('README.md')) {
+          return '# Whitelist Tool\n';
+        }
+        return '';
+      });
+      (childProcess.spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 0,
+        stdout: Buffer.from('https://github.com/org/whitelist-service.git\n'),
+        stderr: Buffer.from(''),
+      });
+
+      const findings = await scanner.run(createContext());
+
+      const criticalFindings = findings.filter((f) => f.severity === Severity.CRITICAL);
+      expect(criticalFindings).toHaveLength(0);
+    });
+  });
 });
