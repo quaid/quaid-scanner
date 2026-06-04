@@ -44,13 +44,10 @@ const HASH_COMMENT_EXTENSIONS = new Set(['.py', '.rb']);
 /** Per-line suppression marker. */
 const SUPPRESSION_MARKER = 'inclusive-naming-ignore';
 
-/**
- * Map term tiers to finding severities.
- */
 function tierToSeverity(tier: 1 | 2 | 3): Severity {
+  // Tier 1 caps at WARNING; CRITICAL is reserved for harm-class findings (#165).
   switch (tier) {
     case 1:
-      return Severity.CRITICAL;
     case 2:
       return Severity.WARNING;
     case 3:
