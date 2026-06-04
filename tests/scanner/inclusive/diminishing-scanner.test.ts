@@ -593,4 +593,81 @@ describe('DiminishingLanguageScanner', () => {
       expect(contributingFindings.length).toBeGreaterThan(0);
     });
   });
+
+  describe('self-report exclusion (#169)', () => {
+    it('produces zero diminishing-language findings for a quaid-scan-*.md report file', async () => {
+      // Arrange: report file containing diminishing language
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-04.md'),
+        '# Scan Report\nIt is easy to see that the scan found issues.\nJust run the scanner again.\n',
+      );
+
+      const context = createContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the report file must produce zero diminishing-language findings
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('produces zero diminishing-language findings for a quaid-scan-*.json report file', async () => {
+      // Arrange: JSON report containing diminishing language in its text
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-03.json'),
+        '{"message":"it is easy to fix this issue, just run the command"}\n',
+      );
+
+      const context = createContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the JSON report file must produce zero findings
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('still flags a legitimate CONTRIBUTING.md containing diminishing language', async () => {
+      // Arrange: report file (excluded) + legitimate doc (must be flagged)
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-04.md'),
+        '# Scan Report\nJust run the scanner to get easy results.\n',
+      );
+      writeFileSync(
+        join(tmpDir, 'CONTRIBUTING.md'),
+        'To contribute, just run npm install and it is easy.\n',
+      );
+
+      const context = createContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: CONTRIBUTING.md findings exist; report file findings do not
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+
+      const contributingFindings = findings.filter(
+        (f) => f.file === 'CONTRIBUTING.md' && f.category === 'diminishing-language',
+      );
+      expect(contributingFindings.length).toBeGreaterThan(0);
+    });
+  });
 });

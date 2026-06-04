@@ -488,4 +488,79 @@ describe('InclusiveDocScanner', () => {
       expect(errorFindings).toHaveLength(0);
     });
   });
+
+  describe('self-report exclusion (#169)', () => {
+    it('produces zero findings for a quaid-scan-*.md report file containing flagged terms', async () => {
+      // Arrange: write a report file that contains a non-inclusive term
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-04.md',
+        '# Scan Report\nnon-inclusive term "master" found in README.md\n',
+      );
+
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the report file must produce zero findings
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('produces zero findings for a quaid-scan-*.json report file containing flagged terms', async () => {
+      // Arrange: write a JSON report file that contains a non-inclusive term
+      // doc-scanner walks .md/.txt/.rst/.adoc/.html — not .json,
+      // so this confirms no regression if someone adds json to DOC_EXTENSIONS later.
+      // The test is included for documentation parity; it should trivially pass.
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-03.json',
+        '{"message":"master-slave architecture detected"}\n',
+      );
+
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the JSON report file must not produce any findings
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('still flags a legitimate README.md containing the same non-inclusive term', async () => {
+      // Arrange: report file (must be excluded) + legitimate doc file (must be flagged)
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-04.md',
+        '# Scan Report\nnon-inclusive term "master" found\n',
+      );
+      writeFixture(
+        tmpDir,
+        'README.md',
+        'This repo uses a master-slave architecture.\n',
+      );
+
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: README.md finding exists, report file finding does not
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+
+      const readmeFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.category === 'inclusive-language',
+      );
+      expect(readmeFindings.length).toBeGreaterThan(0);
+    });
+  });
 });
