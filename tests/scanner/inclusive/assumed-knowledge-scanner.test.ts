@@ -559,4 +559,73 @@ describe('AssumedKnowledgeScanner', () => {
       expect(contributingFindings.length).toBeGreaterThan(0);
     });
   });
+
+  describe('real-word dictionary (#151 reopen)', () => {
+    it('does NOT flag "NEW" used as emphasis in **NEW**', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\n**NEW**: This feature was recently added.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const newFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"NEW"'),
+      );
+      expect(newFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "SECURITY", "ACTIVE", "NEVER", "ALWAYS", "REQUIRED" used as emphasis', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\n**SECURITY** note: NEVER share your token. ALWAYS set REQUIRED fields. Keep the connection ACTIVE.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const emphasisFindings = findings.filter(
+        (f) =>
+          f.category === 'undefined-acronym' &&
+          ['SECURITY', 'ACTIVE', 'NEVER', 'ALWAYS', 'REQUIRED'].some((w) =>
+            f.message.includes(`"${w}"`),
+          ),
+      );
+      expect(emphasisFindings).toHaveLength(0);
+    });
+
+    it('does NOT flag "START", "STOP", "OPEN", "READY" (common state words)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nPress START to begin. Press STOP when READY. Keep the connection OPEN.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const stateFinding = findings.filter(
+        (f) =>
+          f.category === 'undefined-acronym' &&
+          ['START', 'STOP', 'OPEN', 'READY'].some((w) => f.message.includes(`"${w}"`)),
+      );
+      expect(stateFinding).toHaveLength(0);
+    });
+
+    it('still flags genuinely-undefined domain acronym "HCS"', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThis project integrates with HCS for data synchronization.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const hcsFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('HCS'),
+      );
+      expect(hcsFinding).toBeDefined();
+      expect(hcsFinding!.severity).toBe(Severity.INFO);
+    });
+  });
 });
