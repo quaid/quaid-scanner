@@ -1419,7 +1419,7 @@ model-index:
 | 6.1c.3 | Allow per-line suppression with comment `// inclusive-naming-ignore` or `# inclusive-naming-ignore` | Suppression support |
 | 6.1c.4 | Config option `inclusive.ignore_terms: ["master"]` to skip specific terms | Config support |
 
-**Tier 1 - Replace Immediately (CRITICAL):**
+**Tier 1 - Replace Immediately:**
 
 | Term | Regex Pattern | Replacements |
 |------|---------------|--------------|
@@ -1449,7 +1449,7 @@ model-index:
 |---|-----------|--------------|
 | 6.1d.1 | Group findings by tier with severity mapping | Tier aggregation |
 | 6.1d.2 | Calculate score: 100 - (tier1 × 10 + tier2 × 5 + tier3 × 2) capped at 0 | Score formula |
-| 6.1d.3 | CRITICAL if score < 50 | Threshold check |
+| 6.1d.3 | WARNING if score < 50 (inclusive scanners cap at WARNING; CRITICAL is reserved for harm-class findings) | Threshold check |
 | 6.1d.4 | WARNING if score 50-80 | Threshold check |
 | 6.1d.5 | PASS if score > 80 | Threshold check |
 
@@ -1488,7 +1488,7 @@ model-index:
 | 6.1e.1 | Check `package.json` `name` field against all loaded INI terms | Tests pass |
 | 6.1e.2 | Check README.md first H1 line against all loaded INI terms | Tests pass |
 | 6.1e.3 | Check git remote slug (last URL path segment) against all loaded INI terms | Tests pass |
-| 6.1e.4 | Severity: CRITICAL (tier 1), WARNING (tier 2), INFO (tier 3) | Severity mapping correct |
+| 6.1e.4 | Severity: WARNING (tier 1), WARNING (tier 2), INFO (tier 3); INI tier surfaced as `[Tier N — label]` prefix in reports (#165) | Severity mapping correct |
 | 6.1e.5 | `suggestion` field includes recommended rename path and INI replacements | Suggestion present |
 | 6.1e.6 | Graceful degradation when `package.json` missing or malformed | INFO finding, no throw |
 
@@ -1516,7 +1516,7 @@ model-index:
 | 6.2.7 | Group findings by file with counts | Aggregation |
 | 6.2.8 | PASS if welcoming score > 85 | Threshold check |
 | 6.2.9 | WARNING if score 60-85 | Threshold check |
-| 6.2.10 | CRITICAL if score < 60 | Threshold check |
+| 6.2.10 | WARNING if score < 60 (inclusive scanners cap at WARNING; CRITICAL reserved for harm-class findings) | Threshold check |
 
 **Diminishing Language Patterns:**
 
@@ -1636,6 +1636,26 @@ captured as a future story.
 - Write the Docs Style Guides — https://www.writethedocs.org/guide/writing/style-guides/
 - Alex.js — https://alexjs.com/
 - Vale — https://vale.sh/
+
+#### Severity Model Decision Record (v0.1.4 — #165)
+
+**Decision:** `Severity.CRITICAL` is reserved for harm-class findings across all pillars —
+security vulnerabilities, legal exposure, and operational failures that, if ignored, cause
+direct risk to the project or its users. Inclusive-language findings do not meet this bar.
+
+**INI tier and severity are separate axes:**
+
+| Axis | What it expresses | Values |
+|------|------------------|--------|
+| **Severity** | Risk/impact if the finding is ignored | CRITICAL (harm-class) · WARNING · INFO · PASS |
+| **INI Tier** | Replacement urgency per the Inclusive Naming Initiative | Tier 1 — Replace Immediately · Tier 2 — Strongly Consider · Tier 3 — Recommended |
+
+**Effect on scanners (effective v0.1.4):**
+- `naming-scanner.ts`: `tierToSeverity` maps Tier 1 and Tier 2 → `WARNING`; Tier 3 → `INFO`.
+- `diminishing-scanner.ts`: welcoming-score summary caps at `WARNING` (sub-60 scores no longer produce `CRITICAL`).
+- INI tier is surfaced as a first-class label in markdown reports: `[Tier N — Replace Immediately / Strongly Consider / Recommended]` prefix on any finding with `metadata.tier`.
+
+**Not in scope for this decision:** `doc-scanner.ts`, `code-scanner.ts`, and `scoring.ts` retain their current tier→severity mappings; they are addressed separately in a future story.
 
 ---
 

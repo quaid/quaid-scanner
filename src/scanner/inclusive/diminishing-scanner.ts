@@ -255,14 +255,14 @@ export class DiminishingLanguageScanner implements Scanner {
     // Calculate welcoming score: 100 - (warning_count * 3 + info_count * 1), minimum 0
     const welcomingScore = Math.max(0, 100 - (warningCount * 3 + infoCount * 1));
 
-    // Determine severity based on thresholds
+    // Determine severity based on thresholds.
+    // Inclusive scanners cap at WARNING — CRITICAL is reserved for harm-class
+    // (security/legal/operational) findings. Sub-60 scores produce WARNING (#165).
     let summarySeverity: Severity;
     if (welcomingScore > 85) {
       summarySeverity = Severity.PASS;
-    } else if (welcomingScore >= 60) {
-      summarySeverity = Severity.WARNING;
     } else {
-      summarySeverity = Severity.CRITICAL;
+      summarySeverity = Severity.WARNING;
     }
 
     // Add summary finding

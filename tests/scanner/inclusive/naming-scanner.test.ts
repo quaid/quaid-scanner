@@ -39,7 +39,7 @@ import { NamingScanner } from '../../../src/scanner/inclusive/naming-scanner.js'
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** A minimal inclusive term for "whitelist" at tier 1 (CRITICAL). */
+/** A minimal inclusive term for "whitelist" at tier 1 (WARNING — see #165). */
 const WHITELIST_TERM = {
   term: 'whitelist',
   tier: 1 as const,
@@ -193,7 +193,7 @@ describe('NamingScanner', () => {
 
       const finding = findings.find((f) => f.file === 'package.json');
       expect(finding).toBeDefined();
-      expect(finding!.severity).toBe(Severity.CRITICAL);
+      expect(finding!.severity).toBe(Severity.WARNING);
       expect(finding!.pillar).toBe(Pillar.INCLUSIVE);
       expect(finding!.category).toBe('inclusive-naming');
       expect(finding!.suggestion).toContain('allowlist');
@@ -245,7 +245,7 @@ describe('NamingScanner', () => {
       expect(pkgFindings).toHaveLength(0);
     });
 
-    it('maps tier 1 term to CRITICAL severity', async () => {
+    it('maps tier 1 term to WARNING severity', async () => {
       const scanner = setupScanner([WHITELIST_TERM]);
       (fs.existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: unknown) =>
         (p as string).endsWith('package.json')
@@ -260,7 +260,7 @@ describe('NamingScanner', () => {
       const findings = await scanner.run(createContext());
 
       const finding = findings.find((f) => f.file === 'package.json');
-      expect(finding!.severity).toBe(Severity.CRITICAL);
+      expect(finding!.severity).toBe(Severity.WARNING);
     });
 
     it('maps tier 2 term to WARNING severity', async () => {
@@ -321,7 +321,7 @@ describe('NamingScanner', () => {
 
       const finding = findings.find((f) => f.file === 'README.md');
       expect(finding).toBeDefined();
-      expect(finding!.severity).toBe(Severity.CRITICAL);
+      expect(finding!.severity).toBe(Severity.WARNING);
       expect(finding!.category).toBe('inclusive-naming');
     });
 
@@ -390,7 +390,7 @@ describe('NamingScanner', () => {
 
       const finding = findings.find((f) => f.file === null);
       expect(finding).toBeDefined();
-      expect(finding!.severity).toBe(Severity.CRITICAL);
+      expect(finding!.severity).toBe(Severity.WARNING);
       expect(finding!.category).toBe('inclusive-naming');
       expect(finding!.suggestion).toContain('allowlist');
     });

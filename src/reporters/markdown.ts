@@ -76,6 +76,26 @@ function renderFindingExtras(f: Finding): string[] {
     return lines;
 }
 
+const INI_TIER_LABELS: Record<1 | 2 | 3, string> = {
+  1: 'Replace Immediately',
+  2: 'Strongly Consider',
+  3: 'Recommended',
+};
+
+/**
+ * Return the INI tier prefix string for a finding that has `metadata.tier` set,
+ * or an empty string for findings without tier metadata.
+ *
+ * Format: `[Tier N — <label>] `
+ */
+function tierPrefix(f: Finding): string {
+  const tier = f.metadata?.tier;
+  if (tier === 1 || tier === 2 || tier === 3) {
+    return `[Tier ${tier} — ${INI_TIER_LABELS[tier]}] `;
+  }
+  return '';
+}
+
 export interface MarkdownReportOptions {
   /** Optional ecosystem metadata to include as a dedicated section */
   ecosystem?: {
@@ -154,7 +174,7 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
     lines.push('## Warnings');
     lines.push('');
     for (const f of realWarnings) {
-      lines.push(`- **[${f.id}]** ${f.message} *(${f.suggestion})*`);
+      lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message} *(${f.suggestion})*`);
     }
     lines.push('');
   }
@@ -184,7 +204,7 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
     lines.push('## Info');
     lines.push('');
     for (const f of infos) {
-      lines.push(`- **[${f.id}]** ${f.message}`);
+      lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message}`);
     }
     lines.push('');
   }

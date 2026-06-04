@@ -20,12 +20,16 @@ import { TermListManager, type LoadedTerm } from './term-list.js';
 
 /**
  * Map term tier to finding severity.
- * Tier 1 = CRITICAL, Tier 2 = WARNING, Tier 3 = INFO.
+ * Inclusive scanners cap at WARNING — CRITICAL is reserved for harm-class
+ * (security/legal/operational) findings across all pillars. INI tier expresses
+ * replacement urgency and is surfaced as a tier label in reports (#165).
+ *
+ * Tier 1 → WARNING, Tier 2 → WARNING, Tier 3 → INFO.
  */
 function tierToSeverity(tier: 1 | 2 | 3): Severity {
   switch (tier) {
     case 1:
-      return Severity.CRITICAL;
+      return Severity.WARNING;
     case 2:
       return Severity.WARNING;
     case 3:
