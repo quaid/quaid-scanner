@@ -427,6 +427,32 @@ describe('DiminishingLanguageScanner', () => {
     });
   });
 
+  describe('source attribution (#152)', () => {
+    it('per-match findings cite Microsoft Style Guide, not inclusivenaming.org', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install to get started.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const matchFindings = findings.filter((f) => f.category === 'diminishing-language');
+      expect(matchFindings.length).toBeGreaterThan(0);
+      for (const finding of matchFindings) {
+        expect(finding.referenceUrl).toContain('learn.microsoft.com');
+        expect(finding.referenceUrl).not.toContain('inclusivenaming.org');
+      }
+    });
+
+    it('welcoming-score summary finding cites Microsoft Style Guide, not inclusivenaming.org', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install to get started.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const summary = findings.find((f) => f.category === 'welcoming-score');
+      expect(summary).toBeDefined();
+      expect(summary!.referenceUrl).toContain('learn.microsoft.com');
+      expect(summary!.referenceUrl).not.toContain('inclusivenaming.org');
+    });
+  });
+
   describe('ignore patterns (#122)', () => {
     it('skips files matching config excludePatterns', async () => {
       writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
