@@ -853,6 +853,88 @@ describe('renderMarkdown', () => {
     expect(md).toContain('| Pillar | Weight | Raw Score | Contribution |');
   });
 
+  // --- INI tier label rendering (#165) ---
+
+  describe('INI tier label (#165)', () => {
+    it('prefixes warning finding line with "[Tier 1 — Replace Immediately]" when metadata.tier is 1', () => {
+      const findings: Finding[] = [
+        {
+          id: 'ini-tier-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.INCLUSIVE,
+          category: 'inclusive-naming',
+          message: 'Project name contains non-inclusive term "whitelist"',
+          file: 'package.json',
+          line: null,
+          column: null,
+          suggestion: 'Rename using allowlist',
+          metadata: { tier: 1, term: 'whitelist', replacements: ['allowlist'] },
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).toContain('Tier 1');
+      expect(md).toContain('Replace Immediately');
+    });
+
+    it('prefixes warning finding line with "[Tier 2 — Strongly Consider]" when metadata.tier is 2', () => {
+      const findings: Finding[] = [
+        {
+          id: 'ini-tier-02',
+          severity: Severity.WARNING,
+          pillar: Pillar.INCLUSIVE,
+          category: 'inclusive-naming',
+          message: 'Project name contains non-inclusive term "blacklist"',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Rename using blocklist',
+          metadata: { tier: 2, term: 'blacklist', replacements: ['blocklist'] },
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).toContain('Tier 2');
+      expect(md).toContain('Strongly Consider');
+    });
+
+    it('prefixes info finding line with "[Tier 3 — Recommended]" when metadata.tier is 3', () => {
+      const findings: Finding[] = [
+        {
+          id: 'ini-tier-03',
+          severity: Severity.INFO,
+          pillar: Pillar.INCLUSIVE,
+          category: 'inclusive-naming',
+          message: 'Project name contains non-inclusive term "master"',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Rename using main',
+          metadata: { tier: 3, term: 'master', replacements: ['main'] },
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).toContain('Tier 3');
+      expect(md).toContain('Recommended');
+    });
+
+    it('does not add tier prefix to findings without metadata.tier', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-no-tier',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).not.toContain('[Tier');
+    });
+  });
+
   // --- scanner errors section (issue #154) ---
 
   describe('scanner errors section (#154)', () => {

@@ -305,8 +305,9 @@ describe('DiminishingLanguageScanner', () => {
       expect(score).toBeLessThanOrEqual(85);
     });
 
-    it('returns CRITICAL finding when welcoming score < 60', async () => {
+    it('returns WARNING finding when welcoming score < 60', async () => {
       // Need enough issues: 14 WARNINGs = 42 deducted => score 58
+      // Inclusive scanners are capped at WARNING — no CRITICAL emitted (#165)
       const lines = [
         'Just run this command.',
         'Just do this step.',
@@ -329,7 +330,8 @@ describe('DiminishingLanguageScanner', () => {
 
       const summary = findings.find((f) => f.category === 'welcoming-score');
       expect(summary).toBeDefined();
-      expect(summary!.severity).toBe(Severity.CRITICAL);
+      expect(summary!.severity).toBe(Severity.WARNING);
+      expect(summary!.severity).not.toBe(Severity.CRITICAL);
       const score = summary!.metadata?.welcomingScore as number;
       expect(score).toBeLessThan(60);
     });
@@ -524,6 +526,19 @@ describe('DiminishingLanguageScanner', () => {
       expect(summary!.referenceUrl).toBe(
         'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
       );
+    });
+  });
+
+  describe('severity ceiling (#165)', () => {
+    it('never emits a CRITICAL finding regardless of score', async () => {
+      // Saturate with diminishing language — score should drop well below 60
+      const lines = Array.from({ length: 20 }, (_, i) => `Just run step ${i + 1}.`);
+      writeFileSync(join(tmpDir, 'README.md'), lines.join('\n') + '\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const criticalFindings = findings.filter((f) => f.severity === Severity.CRITICAL);
+      expect(criticalFindings).toHaveLength(0);
     });
   });
 
