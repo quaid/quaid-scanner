@@ -24,14 +24,10 @@ const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git'];
 /** Inline suppression comment that disables scanning for a line. */
 const SUPPRESSION_MARKER = '<!-- inclusive-naming-ignore -->';
 
-/**
- * Map term tier to finding severity.
- * Tier 1 = CRITICAL, Tier 2 = WARNING, Tier 3 = INFO.
- */
 function tierToSeverity(tier: 1 | 2 | 3): Severity {
+  // Tier 1 caps at WARNING; CRITICAL is reserved for harm-class findings (#165).
   switch (tier) {
     case 1:
-      return Severity.CRITICAL;
     case 2:
       return Severity.WARNING;
     case 3:
