@@ -1,5 +1,6 @@
 import { Severity, Pillar, RiskLevel, PILLAR_WEIGHTS } from '../types/index.js';
 import type { ScanReport, Finding, FindingDataSource } from '../types/index.js';
+import { isErrorFinding } from '../issues.js';
 
 const PILLAR_LABELS: Record<Pillar, string> = {
   [Pillar.SECURITY]: 'Security',
@@ -118,10 +119,13 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
   }
   lines.push('');
 
-  // Findings grouped by severity
-  const criticals = findingsBySeverity(report.findings, Severity.CRITICAL);
-  const warnings = findingsBySeverity(report.findings, Severity.WARNING);
-  const infos = findingsBySeverity(report.findings, Severity.INFO);
+  // Findings grouped by severity — scanner-failure findings are separated out
+  const allWarnings = findingsBySeverity(report.findings, Severity.WARNING);
+  const realWarnings = allWarnings.filter((f) => !isErrorFinding(f));
+  const scannerErrorFindings = allWarnings.filter(isErrorFinding);
+
+  const criticals = findingsBySeverity(report.findings, Severity.CRITICAL).filter((f) => !isErrorFinding(f));
+  const infos = findingsBySeverity(report.findings, Severity.INFO).filter((f) => !isErrorFinding(f));
 
   if (criticals.length > 0) {
     lines.push('## Critical Findings');
@@ -146,11 +150,32 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
     }
   }
 
-  if (warnings.length > 0) {
+  if (realWarnings.length > 0) {
     lines.push('## Warnings');
     lines.push('');
-    for (const f of warnings) {
+    for (const f of realWarnings) {
       lines.push(`- **[${f.id}]** ${f.message} *(${f.suggestion})*`);
+    }
+    lines.push('');
+  }
+
+  // Scanner Errors section: shown when the report is partial OR when scanner-failure
+  // findings were collected. Prefers report.failedScanners[] (orchestrator canonical list)
+  // when non-empty; otherwise derives the list from filtered findings.
+  const showScannerErrors = report.partial || scannerErrorFindings.length > 0;
+  if (showScannerErrors) {
+    lines.push('## Scanner Errors');
+    lines.push('');
+    lines.push('_One or more scanners did not complete successfully. Findings below reflect scanner reliability issues, not repo health._');
+    lines.push('');
+    if (report.failedScanners != null && report.failedScanners.length > 0) {
+      for (const fs of report.failedScanners) {
+        lines.push(`- **[${fs.name}]** *(${fs.reason})* ${fs.pillar} — ${fs.message}`);
+      }
+    } else {
+      for (const f of scannerErrorFindings) {
+        lines.push(`- **[${f.id}]** *(${f.category})* ${f.pillar} — ${f.message}`);
+      }
     }
     lines.push('');
   }
