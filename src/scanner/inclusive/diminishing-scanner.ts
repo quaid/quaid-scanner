@@ -214,7 +214,7 @@ export class DiminishingLanguageScanner implements Scanner {
               column: match.index + 1,
               context: line.trim(),
               suggestion: dp.suggestion,
-              referenceUrl: 'https://inclusivenaming.org/',
+              referenceUrl: 'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
               dataSource: 'local',
             });
 
@@ -257,7 +257,7 @@ export class DiminishingLanguageScanner implements Scanner {
       file: null,
       line: null,
       column: null,
-      referenceUrl: 'https://inclusivenaming.org/',
+      referenceUrl: 'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
       dataSource: 'local',
       suggestion:
         welcomingScore > 85
