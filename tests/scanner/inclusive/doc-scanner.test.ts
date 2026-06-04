@@ -107,8 +107,8 @@ describe('InclusiveDocScanner', () => {
     });
   });
 
-  describe('tier 1 terms produce CRITICAL findings', () => {
-    it('finds tier 1 terms in .md files and returns CRITICAL findings', async () => {
+  describe('tier 1 terms produce WARNING findings (#165)', () => {
+    it('finds tier 1 terms in .md files and returns WARNING findings (capped per #165)', async () => {
       writeFixture(tmpDir, 'README.md', 'This uses a master-slave architecture.\n');
       const context = createScanContext(tmpDir);
 
@@ -117,8 +117,18 @@ describe('InclusiveDocScanner', () => {
       expect(findings.length).toBeGreaterThan(0);
       const finding = findings.find((f) => f.message.includes('master-slave'));
       expect(finding).toBeDefined();
-      expect(finding!.severity).toBe(Severity.CRITICAL);
+      expect(finding!.severity).toBe(Severity.WARNING);
       expect(finding!.pillar).toBe(Pillar.INCLUSIVE);
+    });
+
+    it('never emits CRITICAL severity for any tier (#165)', async () => {
+      writeFixture(tmpDir, 'README.md', 'master-slave whitelist blacklist sanity check man-hours\n');
+      const context = createScanContext(tmpDir);
+
+      const findings = await scanner.run(context);
+
+      const criticals = findings.filter((f) => f.severity === Severity.CRITICAL);
+      expect(criticals).toHaveLength(0);
     });
   });
 

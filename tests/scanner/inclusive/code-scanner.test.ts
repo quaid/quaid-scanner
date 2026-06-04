@@ -97,7 +97,7 @@ describe('InclusiveCodeScanner', () => {
       expect(findings.length).toBeGreaterThanOrEqual(1);
       const masterFinding = findings.find((f) => f.message.toLowerCase().includes('master'));
       expect(masterFinding).toBeDefined();
-      expect(masterFinding!.severity).toBe(Severity.CRITICAL);
+      expect(masterFinding!.severity).toBe(Severity.WARNING);
       expect(masterFinding!.file).toContain('app.ts');
       expect(masterFinding!.line).toBe(2);
     });
@@ -118,7 +118,7 @@ describe('InclusiveCodeScanner', () => {
       expect(findings.length).toBeGreaterThanOrEqual(1);
       const whitelistFinding = findings.find((f) => f.message.toLowerCase().includes('whitelist'));
       expect(whitelistFinding).toBeDefined();
-      expect(whitelistFinding!.severity).toBe(Severity.CRITICAL);
+      expect(whitelistFinding!.severity).toBe(Severity.WARNING);
       expect(whitelistFinding!.file).toContain('server.js');
     });
   });
@@ -137,7 +137,7 @@ describe('InclusiveCodeScanner', () => {
       expect(findings.length).toBeGreaterThanOrEqual(1);
       const blacklistFinding = findings.find((f) => f.message.toLowerCase().includes('blacklist'));
       expect(blacklistFinding).toBeDefined();
-      expect(blacklistFinding!.severity).toBe(Severity.CRITICAL);
+      expect(blacklistFinding!.severity).toBe(Severity.WARNING);
       expect(blacklistFinding!.file).toContain('script.py');
       expect(blacklistFinding!.line).toBe(2);
     });
@@ -319,7 +319,7 @@ describe('InclusiveCodeScanner', () => {
   });
 
   describe('severity mapping', () => {
-    it('maps tier 1 to CRITICAL, tier 2 to WARNING, tier 3 to INFO', async () => {
+    it('maps tier 1 to WARNING, tier 2 to WARNING, tier 3 to INFO (#165)', async () => {
       writeFixture(tmpDir, 'mixed.ts', [
         '// The whitelist config',
         '// Sanity check this logic',
@@ -331,7 +331,7 @@ describe('InclusiveCodeScanner', () => {
 
       const whitelistF = findings.find((f) => f.message.toLowerCase().includes('whitelist'));
       expect(whitelistF).toBeDefined();
-      expect(whitelistF!.severity).toBe(Severity.CRITICAL);
+      expect(whitelistF!.severity).toBe(Severity.WARNING);
 
       const sanityF = findings.find((f) => f.message.toLowerCase().includes('sanity'));
       expect(sanityF).toBeDefined();
@@ -340,6 +340,20 @@ describe('InclusiveCodeScanner', () => {
       const manHoursF = findings.find((f) => f.message.toLowerCase().includes('man-hour'));
       expect(manHoursF).toBeDefined();
       expect(manHoursF!.severity).toBe(Severity.INFO);
+    });
+
+    it('never emits CRITICAL severity for any tier (#165)', async () => {
+      writeFixture(tmpDir, 'sample.ts', [
+        '// whitelist blacklist master-slave',
+        '// sanity check',
+        '// man-hours',
+      ].join('\n'));
+
+      const ctx = createContext(tmpDir);
+      const findings = await scanner.run(ctx);
+
+      const criticals = findings.filter((f) => f.severity === Severity.CRITICAL);
+      expect(criticals).toHaveLength(0);
     });
   });
 
