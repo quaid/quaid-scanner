@@ -346,6 +346,159 @@ describe('AssumedKnowledgeScanner', () => {
     });
   });
 
+  describe('emphasis word denylist (#151)', () => {
+    it('does NOT flag "WARNING" in a markdown line', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\n**WARNING**: This is an important notice.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const warningFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('WARNING'),
+      );
+      expect(warningFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "WARNINGS" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nCheck the WARNINGS section for details.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const warningsFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('WARNINGS'),
+      );
+      expect(warningsFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "TODO" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nTODO: add more documentation here.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const todoFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('TODO'),
+      );
+      expect(todoFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "FIXME" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nFIXME: this section is incomplete.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const fixmeFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('FIXME'),
+      );
+      expect(fixmeFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "README" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSee the README for more details.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const readmeFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('README'),
+      );
+      expect(readmeFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "GET" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a GET request to retrieve data from the endpoint.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const getFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"GET"'),
+      );
+      expect(getFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "POST" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a POST request to create a new resource.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const postFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"POST"'),
+      );
+      expect(postFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "PUT" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a PUT request to update the resource.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const putFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PUT"'),
+      );
+      expect(putFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "DELETE" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a DELETE request to remove the resource.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const deleteFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"DELETE"'),
+      );
+      expect(deleteFinding).toBeUndefined();
+    });
+
+    it('DOES still flag a real undefined acronym like "RBAC"', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThis project uses RBAC for access control.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const rbacFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('RBAC'),
+      );
+      expect(rbacFinding).toBeDefined();
+      expect(rbacFinding!.severity).toBe(Severity.INFO);
+    });
+  });
+
   describe('ignore patterns (#122)', () => {
     it('skips files matching config excludePatterns', async () => {
       fs.writeFileSync(
