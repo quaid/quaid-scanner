@@ -251,6 +251,28 @@ describe('BinaryArtifactScanner', () => {
     });
   });
 
+  describe('agent tooling directory exclusion', () => {
+    it('excludes .pyc files under .claude/worktrees/ from findings', async () => {
+      writeFixture(tmpDir, '.claude/worktrees/agent-xxx/sub/__pycache__/mod.pyc', Buffer.alloc(50));
+      const findings = await scanner.run(createContext(tmpDir));
+      expect(findings.some((f) => f.file?.includes('.claude'))).toBe(false);
+    });
+
+    it('excludes .pyc files under .ainative/ from findings', async () => {
+      writeFixture(tmpDir, '.ainative/sub/__pycache__/mod.pyc', Buffer.alloc(50));
+      const findings = await scanner.run(createContext(tmpDir));
+      expect(findings.some((f) => f.file?.includes('.ainative'))).toBe(false);
+    });
+
+    it('still detects real binaries at the repo root when agent dirs are excluded', async () => {
+      writeFixture(tmpDir, '.claude/worktrees/agent-xxx/cache.pyc', Buffer.alloc(50));
+      writeFixture(tmpDir, '.ainative/cache.pyc', Buffer.alloc(50));
+      writeFixture(tmpDir, 'real.pyc', Buffer.alloc(50));
+      const findings = await scanner.run(createContext(tmpDir));
+      expect(findings.some((f) => f.file === 'real.pyc')).toBe(true);
+    });
+  });
+
   describe('finding structure', () => {
     it('creates findings with all required fields', async () => {
       writeFixture(tmpDir, 'test.exe', Buffer.alloc(50));

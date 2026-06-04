@@ -28,7 +28,7 @@ const DEFAULT_ALLOWLIST = new Set([
 ]);
 
 /** Directories to exclude from scanning. */
-const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git', 'dist', 'build'];
+const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git', 'dist', 'build', '.claude', '.ainative'];
 
 /** Known magic byte signatures. */
 const MAGIC_SIGNATURES: Array<{ name: string; bytes: number[] }> = [
