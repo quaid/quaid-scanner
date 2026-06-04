@@ -46,6 +46,27 @@ const KNOWN_ACRONYMS = new Set<string>([
   'CD', 'PR', 'NPM', 'MIT',
 ]);
 
+/**
+ * Common English/Markdown emphasis words and HTTP verbs that look like
+ * acronyms but are not undefined technical terms. These are excluded from
+ * the undefined-acronym detector to prevent false positives (#151).
+ */
+const EMPHASIS_WORD_DENYLIST = new Set<string>([
+  // Markdown callout / emphasis tokens
+  'WARNING', 'WARNINGS', 'ERROR', 'ERRORS', 'IMPORTANT', 'NOTE', 'NOTES',
+  'TIP', 'TIPS',
+  // Code comment markers
+  'TODO', 'FIXME', 'XXX', 'HACK',
+  // Common documentation file names used inline
+  'README', 'CHANGELOG', 'LICENSE', 'AUTHORS', 'COPYING',
+  // Status / requirement adjectives
+  'ESTABLISHED', 'REQUIRED', 'OPTIONAL', 'DEPRECATED', 'OBSOLETE',
+  // Boolean / null literals
+  'TRUE', 'FALSE', 'NULL', 'NONE', 'YES', 'NO',
+  // HTTP verbs — common vocabulary in API docs, not undefined acronyms
+  'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'TRACE',
+]);
+
 /** Pattern to match prerequisite/requirements section headings. */
 const PREREQUISITES_HEADING = /^#{1,3}\s+(prerequisites|requirements)\s*$/im;
 
@@ -195,6 +216,11 @@ export class AssumedKnowledgeScanner implements Scanner {
 
         // Skip known acronyms
         if (KNOWN_ACRONYMS.has(acronym)) {
+          continue;
+        }
+
+        // Skip common emphasis words and HTTP verbs — not undefined acronyms
+        if (EMPHASIS_WORD_DENYLIST.has(acronym)) {
           continue;
         }
 
