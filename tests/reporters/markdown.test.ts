@@ -852,4 +852,93 @@ describe('renderMarkdown', () => {
     const md = renderMarkdown(makeReport());
     expect(md).toContain('| Pillar | Weight | Raw Score | Contribution |');
   });
+
+  // --- scanner errors section (issue #154) ---
+
+  describe('scanner errors section (#154)', () => {
+    it('puts timeout finding under ## Scanner Errors and real warning under ## Warnings, not under ## Scanner Errors', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+        {
+          id: 'scanner-timeout-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.SECURITY,
+          category: 'timeout',
+          message: 'scorecard scanner timed out after 30s',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Increase scanner timeout or check network',
+        },
+      ];
+      const report = makeReport(findings);
+      const md = renderMarkdown(report);
+
+      // Scanner Errors section must exist and contain the timeout finding message
+      expect(md).toContain('## Scanner Errors');
+      expect(md).toContain('scorecard scanner timed out after 30s');
+
+      // The real warning must appear in the ## Warnings section
+      expect(md).toContain('## Warnings');
+      expect(md).toContain('No license file found');
+
+      // The timeout finding message must NOT appear in the ## Warnings section
+      const warnStart = md.indexOf('## Warnings');
+      const errStart = md.indexOf('## Scanner Errors');
+      // ## Warnings appears before ## Scanner Errors
+      expect(warnStart).toBeLessThan(errStart);
+      const warnSection = md.slice(warnStart, errStart);
+      expect(warnSection).not.toContain('scorecard scanner timed out after 30s');
+    });
+
+    it('does not render ## Scanner Errors section when partial is false and there are no error/timeout findings', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+      ];
+      const report = makeReport(findings);
+      // Ensure partial is false
+      const nonPartialReport: ScanReport = { ...report, partial: false, failedScanners: [] };
+      const md = renderMarkdown(nonPartialReport);
+      expect(md).not.toContain('## Scanner Errors');
+    });
+
+    it('shows scanner name from failedScanners in ## Scanner Errors section when partial is true', () => {
+      const report = makeReport([]);
+      const partialReport: ScanReport = {
+        ...report,
+        partial: true,
+        failedScanners: [
+          {
+            name: 'scorecard',
+            pillar: 'security',
+            reason: 'timeout',
+            message: 'scorecard timed out after 30s',
+          },
+        ],
+      };
+      const md = renderMarkdown(partialReport);
+      expect(md).toContain('## Scanner Errors');
+      expect(md).toContain('scorecard');
+    });
+  });
 });
