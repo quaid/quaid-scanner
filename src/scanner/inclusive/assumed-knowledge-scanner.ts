@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { loadIgnorePatterns } from './ignore-file.js';
+import { COMMON_ENGLISH_WORDS } from './data/common-english-words.js';
 
 /** Files to scan for assumed knowledge. */
 const TARGET_FILES: string[] = [
@@ -219,7 +220,16 @@ export class AssumedKnowledgeScanner implements Scanner {
           continue;
         }
 
-        // Skip common emphasis words and HTTP verbs — not undefined acronyms
+        // Skip real English words used as ALL-CAPS emphasis (e.g. NEW, NEVER, SECURITY)
+        // A curated denylist can never keep up with arbitrary English vocabulary, so
+        // we check against a vendored common-words set instead (#151 reopen).
+        if (COMMON_ENGLISH_WORDS.has(acronym.toLowerCase())) {
+          continue;
+        }
+
+        // Skip common emphasis words and HTTP verbs — not undefined acronyms.
+        // Kept as a fallback for non-word tokens (TODO, FIXME, XXX, README, etc.)
+        // that are NOT in the general English dictionary.
         if (EMPHASIS_WORD_DENYLIST.has(acronym)) {
           continue;
         }
