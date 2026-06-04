@@ -128,6 +128,8 @@ export class InclusiveDocScanner implements Scanner {
     const patterns = DOC_EXTENSIONS.map((ext) => `**/*.${ext}`);
     const ignorePatterns = [
       ...EXCLUDED_DIRS.map((dir) => `${dir}/**`),
+      '**/quaid-scan-*.md',
+      '**/quaid-scan-*.json',
       ...userExcludes,
     ];
 

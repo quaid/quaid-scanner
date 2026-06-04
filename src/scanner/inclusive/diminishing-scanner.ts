@@ -306,7 +306,7 @@ export class DiminishingLanguageScanner implements Scanner {
         cwd: repoPath,
         absolute: true,
         nodir: true,
-        ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**', ...userIgnore],
+        ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/quaid-scan-*.md', '**/quaid-scan-*.json', ...userIgnore],
       });
       for (const f of matched) {
         fileSet.add(f);
