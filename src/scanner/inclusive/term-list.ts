@@ -13,6 +13,7 @@ export interface LoadedTerm {
   pattern: RegExp;
   replacements: string[];
   reason?: string;
+  referenceUrl?: string;
 }
 
 export interface LoadedTermList {
@@ -29,30 +30,35 @@ const TIER_1_TERMS: LoadedTerm[] = [
     tier: 1,
     pattern: /\bmaster[/-]slave\b/i,
     replacements: ['primary-secondary', 'leader-follower', 'controller-worker'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/master-slave/',
   },
   {
     term: 'master',
     tier: 1,
     pattern: /\bmaster\b(?!mind|y|piece|ful)/i,
     replacements: ['main', 'primary', 'source', 'original'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/master-slave/',
   },
   {
     term: 'slave',
     tier: 1,
     pattern: /\bslave\b/i,
     replacements: ['secondary', 'replica', 'follower', 'worker'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/master-slave/',
   },
   {
     term: 'whitelist',
     tier: 1,
     pattern: /\bwhite[-]?list\b/i,
     replacements: ['allowlist', 'approved list', 'safe list'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/whitelist/',
   },
   {
     term: 'blacklist',
     tier: 1,
     pattern: /\bblack[-]?list\b/i,
     replacements: ['blocklist', 'denylist', 'banned list'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/blacklist/',
   },
   {
     term: 'blackhat',
@@ -71,6 +77,7 @@ const TIER_1_TERMS: LoadedTerm[] = [
     tier: 1,
     pattern: /\bgrandfather(?:ed|ing)?\b/i,
     replacements: ['legacy', 'exempted', 'preapproved'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-2/grandfathered/',
   },
   {
     term: 'cripple',
@@ -89,6 +96,7 @@ const TIER_1_TERMS: LoadedTerm[] = [
     tier: 1,
     pattern: /\babort(?:ed|ing|s)?\b/i,
     replacements: ['cancel', 'terminate', 'stop', 'halt'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/abort/',
   },
 ];
 
@@ -101,6 +109,7 @@ const TIER_2_TERMS: LoadedTerm[] = [
     tier: 2,
     pattern: /\bsanity[- ]?check\b/i,
     replacements: ['confidence check', 'validity check', 'coherence check'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-2/sanity-check/',
   },
 ];
 
