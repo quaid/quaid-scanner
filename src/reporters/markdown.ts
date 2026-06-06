@@ -103,6 +103,99 @@ export interface MarkdownReportOptions {
     language?: string;
     stars?: number;
   };
+  /** Collapse repeat-message findings into one entry with count + file list. Applies to Warnings and Info only. */
+  grouped?: boolean;
+}
+
+interface FindingGroup {
+  key: string;
+  representative: Finding;
+  members: Finding[];
+}
+
+/**
+ * Normalise a finding message into a canonical group key by stripping
+ * occurrence-specific details (context suffix, package version, etc.).
+ */
+function canonicalKey(f: Finding): string {
+  const msg = f.message;
+
+  // "Non-inclusive term "X" found in <context>" → "Non-inclusive term "X""
+  const iniMatch = msg.match(/^(Non-inclusive term "[^"]+"|Found diminishing language "[^"]+")/);
+  if (iniMatch) return iniMatch[1];
+
+  // "Loosely pinned dependency "pkg": "^x.y.z" uses ^ prefix in devDependencies/..." → canonical
+  if (/Loosely pinned dependency .* uses \^ prefix in devDependencies/.test(msg)) {
+    return 'Loosely pinned devDependencies (^ prefix)';
+  }
+  if (/Loosely pinned dependency .* uses \^ prefix in/.test(msg)) {
+    return 'Loosely pinned dependency (^ prefix)';
+  }
+  if (/Loosely pinned dependency .* uses ~ prefix in devDependencies/.test(msg)) {
+    return 'Loosely pinned devDependencies (~ prefix)';
+  }
+
+  // "Undefined acronym "X" may confuse newcomers" → "Undefined acronym "X""
+  const acronymMatch = msg.match(/^(Undefined acronym "[^"]+")/);
+  if (acronymMatch) return acronymMatch[1];
+
+  // "Assumed knowledge: "X" command used without ..." → "Assumed knowledge: "X" command"
+  const akMatch = msg.match(/^(Assumed knowledge: "[^"]+" (?:command|operation))/);
+  if (akMatch) return akMatch[1];
+
+  // Fallback: use the full message as key (no grouping unless identical)
+  return msg;
+}
+
+function groupFindings(findings: Finding[]): FindingGroup[] {
+  const map = new Map<string, FindingGroup>();
+
+  for (const f of findings) {
+    const key = canonicalKey(f);
+    const existing = map.get(key);
+    if (existing) {
+      existing.members.push(f);
+    } else {
+      map.set(key, { key, representative: f, members: [f] });
+    }
+  }
+
+  return [...map.values()];
+}
+
+/** Render a grouped finding entry for Warnings/Info sections. */
+function renderGroupedFinding(group: FindingGroup): string[] {
+  const { key, representative: rep, members } = group;
+  const lines: string[] = [];
+
+  if (members.length === 1) {
+    // Single occurrence — render exactly as before
+    lines.push(`- **[${rep.id}]** ${tierPrefix(rep)}${rep.message} *(${rep.suggestion})*`);
+    return lines;
+  }
+
+  // Multi-occurrence grouped entry
+  const tierLabel = tierPrefix(rep);
+  const tierSuffix = tierLabel ? ` ${tierLabel.trim()}` : '';
+  lines.push(`- **[${rep.pillar}] ${key}** — ${members.length} occurrences${tierSuffix}`);
+
+  const extras: string[] = [];
+  if (rep.suggestion) extras.push(`  Replace with: ${rep.suggestion}`);
+  if (rep.referenceUrl) extras.push(`· [Reference](${rep.referenceUrl})`);
+  if (extras.length > 0) lines.push(`  ${extras.join(' ')}`);
+
+  // File:line refs — show first 5, then "+N more"
+  const MAX_REFS = 5;
+  const withFile = members.filter((m) => m.file);
+  const refs = withFile.slice(0, MAX_REFS).map((m) => {
+    const loc = m.line ? `${m.file}:${m.line}` : m.file!;
+    const ctx = m.context ? ` (${m.context})` : '';
+    return `\`${loc}\`${ctx}`;
+  });
+  if (withFile.length > MAX_REFS) refs.push(`_+${withFile.length - MAX_REFS} more_`);
+  if (refs.length > 0) lines.push(`  ${refs.join(' · ')}`);
+
+  return lines;
 }
 
 export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptions): string {
@@ -173,8 +266,14 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
   if (realWarnings.length > 0) {
     lines.push('## Warnings');
     lines.push('');
-    for (const f of realWarnings) {
-      lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message} *(${f.suggestion})*`);
+    if (options?.grouped) {
+      for (const group of groupFindings(realWarnings)) {
+        for (const line of renderGroupedFinding(group)) lines.push(line);
+      }
+    } else {
+      for (const f of realWarnings) {
+        lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message} *(${f.suggestion})*`);
+      }
     }
     lines.push('');
   }
@@ -203,8 +302,21 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
   if (infos.length > 0) {
     lines.push('## Info');
     lines.push('');
-    for (const f of infos) {
-      lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message}`);
+    if (options?.grouped) {
+      for (const group of groupFindings(infos)) {
+        for (const line of renderGroupedFinding(group)) {
+          // Info ungrouped format omits suggestion; grouped format includes it inline
+          if (group.members.length === 1) {
+            lines.push(`- **[${group.representative.id}]** ${tierPrefix(group.representative)}${group.representative.message}`);
+          } else {
+            lines.push(line);
+          }
+        }
+      }
+    } else {
+      for (const f of infos) {
+        lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message}`);
+      }
     }
     lines.push('');
   }
