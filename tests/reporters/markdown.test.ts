@@ -1023,4 +1023,130 @@ describe('renderMarkdown', () => {
       expect(md).toContain('scorecard');
     });
   });
+
+  describe('grouped rendering (#196)', () => {
+    function makeAbortFindings(count: number): Finding[] {
+      return Array.from({ length: count }, (_, i) => ({
+        id: `INC-NAMING-abort-src/client.ts:${i + 1}`,
+        severity: Severity.WARNING,
+        pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term',
+        message: `Non-inclusive term "abort" found in string literal`,
+        file: `src/client.ts`,
+        line: i + 1,
+        column: 1,
+        suggestion: 'Replace with: cancel, terminate, stop, halt',
+        referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/abort/',
+        dataSource: 'local' as const,
+        metadata: { tier: 1 as const },
+      }));
+    }
+
+    it('collapses repeat-message warnings into one grouped entry when grouped: true', () => {
+      const findings = makeAbortFindings(11);
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // Should be one grouped entry for abort, not 11 separate bullets
+      const abortMatches = [...md.matchAll(/Non-inclusive term "abort"/g)];
+      expect(abortMatches.length).toBe(1);
+      expect(md).toContain('11 occurrences');
+    });
+
+    it('shows up to 5 file:line refs then "+N more" for large groups', () => {
+      const findings = makeAbortFindings(11);
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).toContain('+6 more');
+    });
+
+    it('renders single-occurrence findings unchanged', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+      ];
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // Single finding renders normally (no "occurrences" count)
+      expect(md).toContain('No license file found');
+      expect(md).not.toContain('occurrences');
+    });
+
+    it('groups devDependency pin findings under a canonical key', () => {
+      const devDepFindings: Finding[] = [
+        '@changesets/cli', '@types/node', 'vitest',
+      ].map((pkg, i) => ({
+        id: `SEC-DEP-PIN-${pkg}`,
+        severity: Severity.INFO,
+        pillar: Pillar.SECURITY,
+        category: 'dep-pinning',
+        message: `Loosely pinned dependency "${pkg}": "^2.${i}.0" uses ^ prefix in devDependencies`,
+        file: 'package.json',
+        line: 10 + i,
+        column: 1,
+        suggestion: 'Pin to exact version',
+        dataSource: 'local' as const,
+      }));
+      const report = makeReport(devDepFindings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).toContain('3 occurrences');
+      // Should not show all 3 package names as separate bullets
+      const pkgMatches = [...md.matchAll(/Loosely pinned/g)];
+      expect(pkgMatches.length).toBe(1);
+    });
+
+    it('does NOT group critical findings — they keep full-detail rendering', () => {
+      const findings: Finding[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `SEC-CRIT-${i}`,
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'secret-exposure',
+        message: 'Hardcoded secret detected',
+        file: `src/file${i}.ts`,
+        line: 1,
+        column: 1,
+        suggestion: 'Remove and rotate this secret',
+      }));
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // All 3 criticals render individually under ## Critical Findings
+      expect(md).toContain('SEC-CRIT-0');
+      expect(md).toContain('SEC-CRIT-1');
+      expect(md).toContain('SEC-CRIT-2');
+      expect(md).not.toContain('3 occurrences');
+    });
+
+    it('ungrouped mode (grouped: false or omitted) renders same as before', () => {
+      const findings = makeAbortFindings(3);
+      const report = makeReport(findings);
+      const ungrouped = renderMarkdown(report);
+      const explicit = renderMarkdown(report, { grouped: false });
+
+      expect(ungrouped).toBe(explicit);
+      // All 3 findings have their own ID bullets
+      expect([...ungrouped.matchAll(/INC-NAMING-abort/g)].length).toBe(3);
+    });
+
+    it('includes the suggestion and referenceUrl in the grouped entry', () => {
+      const findings = makeAbortFindings(3);
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).toContain('Replace with: cancel, terminate, stop, halt');
+      expect(md).toContain('https://inclusivenaming.org/word-lists/tier-1/abort/');
+    });
+  });
 });

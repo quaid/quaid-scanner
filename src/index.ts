@@ -52,6 +52,7 @@ export { DEFAULT_CONFIG, buildConfig, validateTarget } from './config.js';
 // Reporters
 export { buildScanReport, serializeJson } from './reporters/json.js';
 export { renderMarkdown } from './reporters/markdown.js';
+export type { MarkdownReportOptions } from './reporters/markdown.js';
 export { renderTrendAscii, alertOnDrop } from './reporters/trend.js';
 
 // Issue helpers
