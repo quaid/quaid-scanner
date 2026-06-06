@@ -63,6 +63,12 @@ describe('TermListManager', () => {
         expect(term.replacements.length).toBeGreaterThan(0);
       }
     });
+
+    it('end-of-life term has per-term INI referenceUrl', () => {
+      const eol = BUNDLED_TERMS.find((t) => t.term === 'end-of-life');
+      expect(eol).toBeDefined();
+      expect(eol!.referenceUrl).toBe('https://inclusivenaming.org/word-lists/tier-3/end-of-life/');
+    });
   });
 
   describe('loadTerms()', () => {
