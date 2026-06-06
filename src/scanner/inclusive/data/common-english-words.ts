@@ -289,4 +289,37 @@ export const COMMON_ENGLISH_WORDS: ReadonlySet<string> = new Set([
   // Words from reopener that MUST be present
   'new', 'security', 'active', 'never', 'always', 'required',
   'start', 'stop', 'open', 'ready',
+
+  // Size / degree adjectives — commonly appear ALL-CAPS in docs (#151 regression)
+  'major', 'minor', 'significant', 'substantial', 'considerable',
+  'moderate', 'extensive', 'partial', 'complete', 'full',
+  'high', 'medium', 'low', 'severe', 'trivial',
+
+  // Intellectual / conceptual nouns (#151 regression: IDEA)
+  'idea', 'concept', 'notion', 'thought', 'theory', 'principle',
+  'overview', 'summary', 'description', 'definition', 'specification',
+  'explanation', 'example', 'sample', 'draft', 'outline', 'proposal',
+
+  // Process / contribution words (#151 regression: CONTRIBUTING)
+  'contributing', 'contribution', 'contributions', 'contributor',
+  'implementation', 'setup', 'teardown', 'migration', 'upgrade',
+  'installation', 'configuration', 'deployment', 'release',
+
+  // Placeholder / template words (#151 regression: PLACEHOLDER)
+  'placeholder', 'template', 'scaffold', 'boilerplate', 'skeleton',
+  'section', 'portion', 'segment', 'item', 'entry', 'slot', 'blank',
+
+  // Common nouns missing from earlier sweep
+  'caution', 'notice', 'reminder',
+  'stage', 'phase', 'iteration', 'cycle', 'round',
+  'goal', 'objective', 'purpose', 'intent', 'aim',
+  'reason', 'cause', 'effect', 'outcome', 'impact',
+  'change', 'difference', 'improvement', 'enhancement', 'addition', 'removal',
+
+  // Common verbs missing from earlier sweep
+  'contribute', 'review', 'approve', 'reject', 'accept', 'decline',
+  'exclude', 'include', 'append', 'prepend',
+  'expand', 'collapse', 'wrap', 'unwrap',
+  'increase', 'decrease', 'increment', 'decrement',
+  'activate', 'deactivate', 'toggle',
 ]);
