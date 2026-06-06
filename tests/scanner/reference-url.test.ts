@@ -597,6 +597,60 @@ describe('Tier B: Inclusive scanners — static referenceUrl', () => {
 });
 
 // ---------------------------------------------------------------------------
+// per-term INI deep-link referenceUrl (#174)
+// ---------------------------------------------------------------------------
+
+describe('per-term INI deep-link referenceUrl (#174)', () => {
+  let tmpDir: string;
+  beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ini-deeplink-')); });
+  afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
+
+  it('InclusiveCodeScanner: "abort" finding has per-term INI URL /tier-1/abort/', async () => {
+    const { InclusiveCodeScanner } = await import('../../src/scanner/inclusive/code-scanner.js');
+    const scanner = new InclusiveCodeScanner();
+    fs.writeFileSync(path.join(tmpDir, 'test.js'), '// abort the operation\n');
+    const ctx = makeContext(tmpDir);
+    const findings = await scanner.run(ctx);
+    const f = findings.find((x) => x.metadata?.term === 'abort');
+    expect(f).toBeDefined();
+    expect(f!.referenceUrl).toContain('/word-lists/tier-1/abort');
+  });
+
+  it('InclusiveCodeScanner: "whitelist" finding has per-term INI URL /tier-1/whitelist/', async () => {
+    const { InclusiveCodeScanner } = await import('../../src/scanner/inclusive/code-scanner.js');
+    const scanner = new InclusiveCodeScanner();
+    fs.writeFileSync(path.join(tmpDir, 'test.js'), '// use the whitelist\n');
+    const ctx = makeContext(tmpDir);
+    const findings = await scanner.run(ctx);
+    const f = findings.find((x) => x.metadata?.term === 'whitelist');
+    expect(f).toBeDefined();
+    expect(f!.referenceUrl).toContain('/word-lists/tier-1/whitelist');
+  });
+
+  it('InclusiveCodeScanner: "master" finding has per-term INI URL /tier-1/master-slave/', async () => {
+    const { InclusiveCodeScanner } = await import('../../src/scanner/inclusive/code-scanner.js');
+    const scanner = new InclusiveCodeScanner();
+    fs.writeFileSync(path.join(tmpDir, 'test.js'), '// master branch config\n');
+    const ctx = makeContext(tmpDir);
+    const findings = await scanner.run(ctx);
+    const f = findings.find((x) => x.metadata?.term === 'master');
+    expect(f).toBeDefined();
+    expect(f!.referenceUrl).toContain('/word-lists/tier-1/master-slave');
+  });
+
+  it('InclusiveDocScanner: "sanity check" finding has per-term INI URL /tier-2/sanity-check/', async () => {
+    const { InclusiveDocScanner } = await import('../../src/scanner/inclusive/doc-scanner.js');
+    const scanner = new InclusiveDocScanner();
+    fs.writeFileSync(path.join(tmpDir, 'README.md'), 'Do a sanity check before deploying.\n');
+    const ctx = makeContext(tmpDir);
+    const findings = await scanner.run(ctx);
+    const f = findings.find((x) => String(x.metadata?.matchedText ?? '').toLowerCase().includes('sanity'));
+    expect(f).toBeDefined();
+    expect(f!.referenceUrl).toContain('/word-lists/tier-2/sanity-check');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tier B — Technical scanners
 // ---------------------------------------------------------------------------
 
