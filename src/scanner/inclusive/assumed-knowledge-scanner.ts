@@ -12,6 +12,7 @@ import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { loadIgnorePatterns } from './ignore-file.js';
 import { COMMON_ENGLISH_WORDS } from './data/common-english-words.js';
+import { stripCodeFences } from './utils/strip-code-fences.js';
 
 /** Files to scan for assumed knowledge. */
 const TARGET_FILES: string[] = [
@@ -165,11 +166,12 @@ export class AssumedKnowledgeScanner implements Scanner {
       }
 
       const content = fs.readFileSync(absPath, 'utf-8');
-      const lines = content.split('\n');
+      const proseContent = stripCodeFences(content);
+      const proseLines = proseContent.split('\n');
 
-      findings.push(...this.detectGitOperations(relPath, lines));
-      findings.push(...this.detectToolAssumptions(relPath, lines, content));
-      findings.push(...this.detectUndefinedAcronyms(relPath, lines));
+      findings.push(...this.detectGitOperations(relPath, proseLines));
+      findings.push(...this.detectToolAssumptions(relPath, proseLines, proseContent));
+      findings.push(...this.detectUndefinedAcronyms(relPath, proseLines));
     }
 
     // Check README.md for missing prerequisites section
