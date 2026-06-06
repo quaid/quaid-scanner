@@ -628,4 +628,147 @@ describe('AssumedKnowledgeScanner', () => {
       expect(hcsFinding!.severity).toBe(Severity.INFO);
     });
   });
+
+  describe('layered acronym heuristics (#192)', () => {
+    // Layer 1 — morphological suffix suppression
+    it('does not flag REDACTED as undefined acronym (suffix -ED)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThe token value is REDACTED for security reasons.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"REDACTED"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag PROFANITY as undefined acronym (suffix -ITY)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nContent containing PROFANITY is not allowed.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PROFANITY"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag VIOLENCE as undefined acronym (suffix -NCE)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nContent depicting VIOLENCE is prohibited.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"VIOLENCE"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    // Layer 2 — length threshold suppression
+    it('does not flag SECURITY as undefined acronym (length > 5)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSECURITY is a top priority for this project.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"SECURITY"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag CONTRIBUTING as undefined acronym (length > 5)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSee CONTRIBUTING for guidelines.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"CONTRIBUTING"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    // Layer 3 — vowel ratio suppression
+    it('does not flag PHONE as undefined acronym (length 5, vowel ratio > 0.35)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nContact us by PHONE or email.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PHONE"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag EMAIL as undefined acronym (length 5, vowel ratio > 0.35)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend your questions to our EMAIL address.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"EMAIL"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    // Genuine short acronyms must still be flagged
+    it('still flags JWT as a potential undefined acronym', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nAuthentication uses JWT for session management.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"JWT"'),
+      );
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe(Severity.INFO);
+    });
+
+    it('still flags RLHF as a potential undefined acronym', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThe model was fine-tuned with RLHF.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"RLHF"'),
+      );
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe(Severity.INFO);
+    });
+  });
 });
