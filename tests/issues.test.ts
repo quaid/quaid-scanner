@@ -207,4 +207,17 @@ describe('renderIssueBody — per-pillar rationale (#182)', () => {
     const body = renderIssueBody(makeFinding({ pillar: Pillar.SECURITY }), makeReport());
     expect(body).not.toContain('dragging down the');
   });
+
+  it('falls back gracefully for an unrecognised pillar string', () => {
+    const finding = makeFinding({ pillar: 'experimental' as Pillar });
+    const body = renderIssueBody(finding, makeReport());
+    expect(body).toContain('experimental');
+    expect(body).not.toContain('dragging down the');
+  });
+
+  it('handles a non-numeric severity value without throwing', () => {
+    const finding = makeFinding({ severity: 'CRITICAL' as unknown as typeof Severity.CRITICAL });
+    const body = renderIssueBody(finding, makeReport());
+    expect(body).toContain('CRITICAL');
+  });
 });
