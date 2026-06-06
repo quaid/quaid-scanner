@@ -59,7 +59,9 @@ const EMPHASIS_WORD_DENYLIST = new Set<string>([
   // Code comment markers
   'TODO', 'FIXME', 'XXX', 'HACK',
   // Common documentation file names used inline
-  'README', 'CHANGELOG', 'LICENSE', 'AUTHORS', 'COPYING',
+  'README', 'CHANGELOG', 'LICENSE', 'AUTHORS', 'COPYING', 'CONTRIBUTING',
+  // Well-known product / tool proper names — not acronyms, not undefined
+  'CLAUDE', 'GITHUB', 'GITLAB', 'DOCKER', 'LINUX', 'WINDOWS', 'MACOS',
   // Status / requirement adjectives
   'ESTABLISHED', 'REQUIRED', 'OPTIONAL', 'DEPRECATED', 'OBSOLETE',
   // Boolean / null literals
