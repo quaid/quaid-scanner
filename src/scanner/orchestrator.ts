@@ -270,8 +270,11 @@ export class Orchestrator {
     const total = criticalCount + warningCount + infoCount + passCount;
     if (total === 0) return 10.0;
 
-    // Deductions: critical = 3 points, warning = 1.5 points, info = 0.5 points
-    const deductions = criticalCount * 3 + warningCount * 1.5 + infoCount * 0.5;
+    // Deductions: critical = 3 points, warning = 1.5 points, info = 0.1 points
+    // INFO findings are informational suggestions, not defects — a low weight
+    // prevents scanners that emit many INFO items (e.g. acronym/assumed-knowledge)
+    // from collapsing the pillar score to zero. See #175.
+    const deductions = criticalCount * 3 + warningCount * 1.5 + infoCount * 0.1;
     const score = Math.max(0, 10.0 - deductions);
 
     return Math.round(score * 10) / 10;
