@@ -204,7 +204,7 @@ export class InclusiveDocScanner implements Scanner {
             column,
             context: contextSnippet,
             suggestion: `Replace "${matchedText}" with one of: ${term.replacements.join(', ')}`,
-            referenceUrl: 'https://inclusivenaming.org/word-lists/',
+            referenceUrl: term.referenceUrl ?? 'https://inclusivenaming.org/word-lists/',
             dataSource: 'local',
             metadata: {
               matchedText,

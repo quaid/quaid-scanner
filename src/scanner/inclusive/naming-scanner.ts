@@ -152,7 +152,7 @@ export class NamingScanner implements Scanner {
         line: null,
         column: null,
         suggestion: `Rename the project using an alternative term per the Inclusive Naming Initiative: ${term.replacements.join(', ')}`,
-        referenceUrl: 'https://inclusivenaming.org/word-lists/',
+        referenceUrl: term.referenceUrl ?? 'https://inclusivenaming.org/word-lists/',
         dataSource: 'local',
         metadata: {
           term: term.term,
@@ -208,7 +208,7 @@ export class NamingScanner implements Scanner {
         line: null,
         column: null,
         suggestion: `Rename the project using an alternative term per the Inclusive Naming Initiative: ${term.replacements.join(', ')}`,
-        referenceUrl: 'https://inclusivenaming.org/word-lists/',
+        referenceUrl: term.referenceUrl ?? 'https://inclusivenaming.org/word-lists/',
         dataSource: 'local',
         metadata: {
           term: term.term,
@@ -267,7 +267,7 @@ export class NamingScanner implements Scanner {
         line: null,
         column: null,
         suggestion: `Rename the project using an alternative term per the Inclusive Naming Initiative: ${term.replacements.join(', ')}`,
-        referenceUrl: 'https://inclusivenaming.org/word-lists/',
+        referenceUrl: term.referenceUrl ?? 'https://inclusivenaming.org/word-lists/',
         dataSource: 'local',
         metadata: {
           term: term.term,
