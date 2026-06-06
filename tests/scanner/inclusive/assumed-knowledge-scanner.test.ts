@@ -84,7 +84,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "git clone" as assumed knowledge', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\nTo get started:\n\n```\ngit clone https://github.com/org/repo.git\n```\n',
+        '# Project\n\nTo get started, git clone https://github.com/org/repo.git.\n',
       );
 
       const context = createContext(tmpDir);
@@ -135,7 +135,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "npm install" without prerequisites section', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Getting Started\n\nRun `npm install` to install dependencies.\n',
+        '# Project\n\n## Getting Started\n\nRun npm install to install dependencies.\n',
       );
 
       const context = createContext(tmpDir);
@@ -151,7 +151,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "pip install" without prerequisites section', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Setup\n\nRun `pip install -r requirements.txt`.\n',
+        '# Project\n\n## Setup\n\nRun pip install -r requirements.txt.\n',
       );
 
       const context = createContext(tmpDir);
@@ -166,7 +166,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "docker run" without prerequisites section', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Running\n\n```\ndocker run -p 3000:3000 myapp\n```\n',
+        '# Project\n\n## Running\n\ndocker run -p 3000:3000 myapp\n',
       );
 
       const context = createContext(tmpDir);
@@ -229,7 +229,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('flags missing Prerequisites section when commands are present', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Getting Started\n\nRun `npm install` then `npm start`.\n',
+        '# Project\n\n## Getting Started\n\nRun npm install then npm start.\n',
       );
 
       const context = createContext(tmpDir);
@@ -541,7 +541,7 @@ describe('AssumedKnowledgeScanner', () => {
       fs.writeFileSync(path.join(tmpDir, 'README.md'), '# Clean\n');
       fs.writeFileSync(
         path.join(tmpDir, 'CONTRIBUTING.md'),
-        '# Contributing\n\nRun `npm install` first.\n',
+        '# Contributing\n\nRun npm install first.\n',
       );
       const context = createContext(tmpDir);
       context.config.inclusive = {
@@ -769,6 +769,134 @@ describe('AssumedKnowledgeScanner', () => {
       );
       expect(finding).toBeDefined();
       expect(finding!.severity).toBe(Severity.INFO);
+    });
+  });
+
+  describe('code fence skipping (#194)', () => {
+    it('does not flag acronyms inside fenced code blocks', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Project',
+          '',
+          'Content moderation categories:',
+          '',
+          '```typescript',
+          'const categories = {',
+          '  PROFANITY: true,',
+          '  VIOLENCE: false,',
+          '  EMAIL: true,',
+          '  PHONE: false,',
+          '  REDACTED: false,',
+          '};',
+          '```',
+          '',
+          'See above for the full list.',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const codeFenceAcronyms = findings.filter(
+        (f) =>
+          f.category === 'undefined-acronym' &&
+          /PROFANITY|VIOLENCE|EMAIL|PHONE|REDACTED/.test(f.message),
+      );
+      expect(codeFenceAcronyms).toHaveLength(0);
+    });
+
+    it('does not flag tool commands inside fenced code blocks', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Quickstart',
+          '',
+          'Run the following:',
+          '',
+          '```sh',
+          'npm install',
+          'npm run build',
+          'npm test',
+          '```',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const codeFenceTools = findings.filter(
+        (f) => f.category === 'assumed-knowledge' && f.id.startsWith('AK-TOOL-NPM'),
+      );
+      expect(codeFenceTools).toHaveLength(0);
+    });
+
+    it('does not flag git operations inside fenced code blocks', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Development',
+          '',
+          'To get the code:',
+          '',
+          '```sh',
+          'git clone https://github.com/example/repo',
+          'git checkout -b my-feature',
+          '```',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const codeFenceGit = findings.filter(
+        (f) =>
+          f.category === 'assumed-knowledge' &&
+          (f.id.includes('AK-GIT-CLONE') || f.id.includes('AK-GIT-BRANCH')),
+      );
+      expect(codeFenceGit).toHaveLength(0);
+    });
+
+    it('still flags acronyms in prose after a code block', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Project',
+          '',
+          '```sh',
+          'npm install',
+          '```',
+          '',
+          'The project uses RLHF for fine-tuning.',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const rlhfFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"RLHF"'),
+      );
+      expect(rlhfFinding).toBeDefined();
+    });
+
+    it('does not flag acronyms inside inline code', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Project',
+          '',
+          'Call the `PROFANITY_CHECK` function to validate input.',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const inlineAcronym = findings.filter(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PROFANITY_CHECK"'),
+      );
+      expect(inlineAcronym).toHaveLength(0);
     });
   });
 });
