@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.5
+# Quaid's OSS Repo Scanner - PRD v2.6
 
 ## Executive Summary
 
@@ -2002,6 +2002,78 @@ direct risk to the project or its users. Inclusive-language findings do not meet
 
 ---
 
+### Story 8.7a: ProvenanceInfo Type, ScanReport Field, and JSON Output (PROV-01a) 📋
+**As a** Developer Agent
+**I want** a `ProvenanceInfo` interface and an optional `provenance` field on `ScanReport`
+**So that** the report itself carries a machine-readable record of which model(s) generated it and at what token cost
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.7a.1 | `ProvenanceInfo` interface exported from `src/types/index.ts`: `{ models: string[]; inputTokens?: number; outputTokens?: number; totalTokens?: number; sessionId?: string; agentId?: string; generatedAt: string; notes?: string; }` | TypeScript compilation |
+| 8.7a.2 | `ScanReport` gains optional field `provenance?: ProvenanceInfo` | TypeScript compilation |
+| 8.7a.3 | JSON reporter includes a top-level `provenance` key when `report.provenance` is defined | JSON output test |
+| 8.7a.4 | JSON reporter omits `provenance` key entirely when `report.provenance` is absent (opt-in, not mandatory) | JSON output test |
+| 8.7a.5 | All existing JSON output tests pass unchanged | Regression test |
+
+**Story Points:** 2
+**Milestone:** 0.1.5
+**Issues:** #178
+
+---
+
+### Story 8.7b: Markdown Report Provenance Section Rendering (PROV-01b) 📋
+**As a** Human persona (via agent)
+**I want** the markdown report to include a `## Report Provenance` section when provenance data is present
+**So that** human reviewers can see who/what generated the report without inspecting raw JSON
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.7b.1 | Markdown reporter appends a `## Report Provenance` section as the final section when `report.provenance` is defined | Markdown output test |
+| 8.7b.2 | Section renders a two-column table: field name and value; only rows for defined fields are included | Table structure check |
+| 8.7b.3 | `models` array is rendered as a comma-separated string | Format check |
+| 8.7b.4 | Numeric token fields (inputTokens, outputTokens, totalTokens) are locale-formatted with thousands separators | Format check |
+| 8.7b.5 | Section is completely absent when `report.provenance` is undefined | Markdown output test |
+| 8.7b.6 | Depends on Story 8.7a (`ProvenanceInfo` type) being merged | Prerequisite |
+
+**Story Points:** 1
+**Milestone:** 0.1.5
+**Issues:** #179
+
+---
+
+### Story 8.7c: CLI `--provenance-file` Flag for Agent Session Metadata Injection (PROV-01c) 📋
+**As a** Developer Agent
+**I want** a `--provenance-file <path>` CLI option
+**So that** I can inject my session metadata (model, tokens, session ID) at scan time and have it embedded in the output report
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.7c.1 | CLI accepts `--provenance-file <path>` option; `--help` documents it | Help text check |
+| 8.7c.2 | File must be valid JSON conforming to `ProvenanceInfo`; loaded and validated at config-load time | Config loader test |
+| 8.7c.3 | If the file path is missing or contains invalid JSON, emit a WARNING message and continue the scan without provenance data (never abort) | Graceful degradation test |
+| 8.7c.4 | `ScannerConfig` gains optional `provenance?: ProvenanceInfo` field | TypeScript compilation |
+| 8.7c.5 | Orchestrator passes `config.provenance` through to `ScanReport.provenance` | Integration test |
+| 8.7c.6 | JSON output includes `provenance` when flag is used; markdown output includes `## Report Provenance` section (Story 8.7b) | End-to-end test |
+| 8.7c.7 | Depends on Story 8.7a (type) and Story 8.7b (markdown rendering) | Prerequisite |
+
+**Example agent invocation:**
+```bash
+echo '{"models":["claude-opus-4-7"],"inputTokens":12450,"outputTokens":3210,"totalTokens":15660,"sessionId":"sess_abc123","agentId":"karsten-ospo","generatedAt":"2026-06-05T14:23:00Z"}' > /tmp/provenance.json
+quaid-scanner . --format json --quiet --provenance-file /tmp/provenance.json
+```
+
+**Story Points:** 2
+**Milestone:** 0.1.5
+**Issues:** #180
+
+---
+
 ## Epic 10: Ecosystem Intelligence
 
 Strategic analysis of the competitive and cooperative OSS landscape. **Not a scored pillar** — does not affect `overallScore`. Opt-in via `--ecosystem` flag.
@@ -2498,17 +2570,28 @@ quaid-scanner/
 | Epic 5: AI-Native | 6 | 13 | Model Cards, Multi-Model Agentic Rules | 🚧 Partial (5.4 Metadata Quality) |
 | Epic 6: Inclusive | 5+1 | 14 | INI Terms, Naming, Diminishing Language | 🚧 Partial (6.1a INI API caching) |
 | Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality | ✅ Done |
-| Epic 8: Reporting | 4 | 11 | JSON/Markdown, Historical Trends | ✅ Done |
+| Epic 8: Reporting | 7 | 16 | JSON/Markdown, Historical Trends, Report Provenance | 🚧 Partial (8.7a/b/c planned) |
 | Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server | ✅ Done |
 | Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
 | Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
 | Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned |
 | Epic 13: Trust & Evidence | 5 | 13 | referenceUrl, dataSource, score rationale, .quaid-scanner-ignore | ✅ Done |
-| **Total** | **72** | **173** | | |
+| **Total** | **75** | **178** | | |
 
 ---
 
 ### Change Log
+
+#### v2.6 Changes (from v2.5)
+
+| Change | Impact |
+|--------|--------|
+| Add Story 8.7a: `ProvenanceInfo` type + `ScanReport.provenance` + JSON output | 📋 Planned — #178; 2 pts |
+| Add Story 8.7b: Markdown `## Report Provenance` section rendering | 📋 Planned — #179; 1 pt |
+| Add Story 8.7c: `--provenance-file` CLI flag for agent session metadata injection | 📋 Planned — #180; 2 pts |
+| Epic 8: Reporting story count 4 → 7, points 11 → 16 | Status updated to 🚧 Partial |
+| Story total: 72 → 75; Points total: 173 → 178 | |
+| PRD version: v2.5 → v2.6 | |
 
 #### v2.5 Changes (from v2.4)
 
