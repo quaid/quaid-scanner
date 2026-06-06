@@ -123,3 +123,88 @@ describe('renderIssueBody (#143)', () => {
     expect(body).toContain('quaid-scanner');
   });
 });
+
+// ── Bug #183 — verify selector falls back when category is null ────────────────
+
+describe('renderIssueBody — verify selector (#183)', () => {
+  it('uses category-based selector when category is a real string', () => {
+    const body = renderIssueBody(makeFinding({ category: 'code-of-conduct' }), makeReport());
+    expect(body).toContain('select(.category == "code-of-conduct")');
+  });
+
+  it('does NOT emit "unknown" in the verify command when category is null', () => {
+    const finding = makeFinding({ id: 'inclusive-code-scanner-3', category: undefined });
+    // Force category to null at runtime (the type says string but runtime may produce null/undefined)
+    (finding as unknown as Record<string, unknown>)['category'] = null;
+    const body = renderIssueBody(finding, makeReport());
+    // The verify command line must not contain the literal word "unknown"
+    const verifyLine = body.split('\n').find((l) => l.includes('quaid-scanner') && l.includes('jq'));
+    expect(verifyLine).toBeDefined();
+    expect(verifyLine).not.toContain('"unknown"');
+  });
+
+  it('falls back to ID-prefix startswith selector when category is null', () => {
+    const finding = makeFinding({ id: 'inclusive-code-scanner-3', category: undefined });
+    (finding as unknown as Record<string, unknown>)['category'] = null;
+    const body = renderIssueBody(finding, makeReport());
+    expect(body).toContain('startswith("inclusive-code-scanner")');
+  });
+});
+
+// ── Bug #184 — optional reportUrl in Context section ──────────────────────────
+
+describe('renderIssueBody — report URL (#184)', () => {
+  it('includes the report URL in Context when reportUrl is supplied', () => {
+    const body = renderIssueBody(
+      makeFinding(),
+      makeReport(),
+      'https://github.com/org/repo/pull/42',
+    );
+    expect(body).toContain('https://github.com/org/repo/pull/42');
+    expect(body).toContain('**Full report:**');
+  });
+
+  it('does NOT include a Full report line when reportUrl is omitted', () => {
+    const body = renderIssueBody(makeFinding(), makeReport());
+    expect(body).not.toContain('**Full report:**');
+  });
+});
+
+// ── Bug #182 — per-pillar rationale in "Why it matters" ───────────────────────
+
+describe('renderIssueBody — per-pillar rationale (#182)', () => {
+  it('uses security-specific rationale for security pillar findings', () => {
+    const body = renderIssueBody(makeFinding({ pillar: Pillar.SECURITY }), makeReport());
+    expect(body).toMatch(/[Ss]ecurity gaps|attack surface/);
+  });
+
+  it('uses governance-specific rationale for governance pillar findings', () => {
+    const body = renderIssueBody(makeFinding({ pillar: Pillar.GOVERNANCE }), makeReport());
+    expect(body).toMatch(/governance|license|[Cc]ode of [Cc]onduct/);
+  });
+
+  it('uses community-specific rationale for community pillar findings', () => {
+    const body = renderIssueBody(makeFinding({ pillar: Pillar.COMMUNITY }), makeReport());
+    expect(body).toMatch(/[Cc]ommunity health|contributor/i);
+  });
+
+  it('uses inclusive-specific rationale for inclusive pillar findings', () => {
+    const body = renderIssueBody(makeFinding({ pillar: Pillar.INCLUSIVE }), makeReport());
+    expect(body).toMatch(/[Ii]nclusive|barrier|newcomer/i);
+  });
+
+  it('uses technical-specific rationale for technical pillar findings', () => {
+    const body = renderIssueBody(makeFinding({ pillar: Pillar.TECHNICAL }), makeReport());
+    expect(body).toMatch(/[Tt]echnical|hygiene|tests|CI/i);
+  });
+
+  it('uses ai_readiness-specific rationale for ai_readiness pillar findings', () => {
+    const body = renderIssueBody(makeFinding({ pillar: Pillar.AI_READINESS }), makeReport());
+    expect(body).toMatch(/AI|machine-readable|agent/i);
+  });
+
+  it('does NOT contain the old generic boilerplate phrase', () => {
+    const body = renderIssueBody(makeFinding({ pillar: Pillar.SECURITY }), makeReport());
+    expect(body).not.toContain('dragging down the');
+  });
+});
