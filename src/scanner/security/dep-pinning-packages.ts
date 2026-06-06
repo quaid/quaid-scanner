@@ -82,7 +82,8 @@ export class DepPinningPackagesScanner implements Scanner {
       return [];
     }
 
-    const sections = ['dependencies', 'devDependencies'] as const;
+    const devSections = new Set(['devDependencies', 'optionalDependencies']);
+    const sections = ['dependencies', 'peerDependencies', 'devDependencies', 'optionalDependencies'] as const;
     for (const section of sections) {
       const deps = pkg[section] as Record<string, string> | undefined;
       if (!deps || typeof deps !== 'object') continue;
@@ -103,14 +104,21 @@ export class DepPinningPackagesScanner implements Scanner {
           continue;
         }
 
-        // ^ or ~ prefix → WARNING
+        // ^ or ~ prefix — severity depends on section
+        // devDependencies/optionalDependencies don't ship to end users: INFO
+        // dependencies/peerDependencies affect downstream installs: WARNING
         if (trimmed.startsWith('^') || trimmed.startsWith('~')) {
+          const isDevSection = devSections.has(section);
+          const severity = isDevSection ? Severity.INFO : Severity.WARNING;
+          const suggestion = isDevSection
+            ? `Consider pinning "${name}" to an exact version, or use a lock file for reproducibility`
+            : `Consider pinning "${name}" to an exact version for reproducible builds`;
           findings.push(makeFinding(
-            Severity.WARNING,
+            severity,
             `Loosely pinned dependency "${name}": "${trimmed}" uses ${trimmed[0]} prefix in ${section}`,
             'package.json',
             null,
-            `Consider pinning "${name}" to an exact version for reproducible builds`,
+            suggestion,
           ));
         }
       }

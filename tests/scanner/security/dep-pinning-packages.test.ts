@@ -146,6 +146,82 @@ describe('DepPinningPackagesScanner', () => {
       expect(findings.some((f) => f.message.includes('"a"'))).toBe(true);
       expect(findings.some((f) => f.message.includes('"b"'))).toBe(true);
     });
+
+    it('^ prefix in devDependencies scores INFO not WARNING', async () => {
+      writeFixture(tmpDir, 'package.json', JSON.stringify({
+        dependencies: { lodash: '^4.17.21' },
+        devDependencies: { vitest: '^1.0.0' },
+      }));
+      const findings = await scanner.run(createContext(tmpDir));
+
+      const lodashFinding = findings.find((f) => f.message.includes('"lodash"') && f.message.includes('^'));
+      expect(lodashFinding).toBeDefined();
+      expect(lodashFinding!.severity).toBe(Severity.WARNING);
+
+      const vitestFinding = findings.find((f) => f.message.includes('"vitest"') && f.message.includes('^'));
+      expect(vitestFinding).toBeDefined();
+      expect(vitestFinding!.severity).toBe(Severity.INFO);
+    });
+
+    it('~ prefix in devDependencies scores INFO not WARNING', async () => {
+      writeFixture(tmpDir, 'package.json', JSON.stringify({
+        devDependencies: { typescript: '~5.0.0' },
+      }));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('"typescript"') && f.message.includes('~'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.INFO);
+    });
+
+    it('^ prefix in optionalDependencies scores INFO not WARNING', async () => {
+      writeFixture(tmpDir, 'package.json', JSON.stringify({
+        optionalDependencies: { fsevents: '^2.3.2' },
+      }));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('"fsevents"') && f.message.includes('^'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.INFO);
+    });
+
+    it('^ prefix in peerDependencies scores WARNING', async () => {
+      writeFixture(tmpDir, 'package.json', JSON.stringify({
+        peerDependencies: { react: '^18.0.0' },
+      }));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('"react"') && f.message.includes('^'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.WARNING);
+    });
+
+    it('devDependencies INFO finding uses lock-file suggestion text', async () => {
+      writeFixture(tmpDir, 'package.json', JSON.stringify({
+        devDependencies: { vitest: '^1.0.0' },
+      }));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('"vitest"') && f.message.includes('^'));
+      expect(f).toBeDefined();
+      expect(f!.suggestion).toContain('lock file');
+    });
+
+    it('production dependency WARNING retains exact-version suggestion text', async () => {
+      writeFixture(tmpDir, 'package.json', JSON.stringify({
+        dependencies: { express: '^4.18.0' },
+      }));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('"express"') && f.message.includes('^'));
+      expect(f).toBeDefined();
+      expect(f!.suggestion).toContain('reproducible builds');
+    });
+
+    it('scans peerDependencies and optionalDependencies sections', async () => {
+      writeFixture(tmpDir, 'package.json', JSON.stringify({
+        peerDependencies: { react: '*' },
+        optionalDependencies: { fsevents: 'latest' },
+      }));
+      const findings = await scanner.run(createContext(tmpDir));
+      expect(findings.some((f) => f.message.includes('"react"'))).toBe(true);
+      expect(findings.some((f) => f.message.includes('"fsevents"'))).toBe(true);
+    });
   });
 
   describe('package-lock.json validation', () => {

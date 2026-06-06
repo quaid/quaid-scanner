@@ -529,6 +529,63 @@ describe('Orchestrator', () => {
     });
   });
 
+  describe('inclusive pillar score with INFO-heavy findings (#175)', () => {
+    it('scores inclusive pillar > 0 when scanner returns 20 INFO findings and 2 WARNING findings', async () => {
+      // Arrange: 20 INFO acronym findings + 2 WARNING naming findings — typical real-repo output
+      const infoFindings = Array.from({ length: 20 }, (_, i) =>
+        createFinding({
+          id: `INC-INFO-${String(i + 1).padStart(2, '0')}`,
+          severity: Severity.INFO,
+          pillar: Pillar.INCLUSIVE,
+        }),
+      );
+      const warningFindings = [
+        createFinding({ id: 'INC-WARN-01', severity: Severity.WARNING, pillar: Pillar.INCLUSIVE }),
+        createFinding({ id: 'INC-WARN-02', severity: Severity.WARNING, pillar: Pillar.INCLUSIVE }),
+      ];
+
+      registry.register(createMockScanner({
+        name: 'inclusive-scanner',
+        pillar: Pillar.INCLUSIVE,
+        findings: [...infoFindings, ...warningFindings],
+      }));
+
+      // Act
+      const result = await orchestrator.run(createMinimalContext());
+
+      // Assert: with old formula (infoCount * 0.5) → 20*0.5 + 2*1.5 = 13 deductions → score = 0
+      //         with new formula (infoCount * 0.1) → 20*0.1 + 2*1.5 = 5 deductions → score = 5
+      expect(result.pillars[Pillar.INCLUSIVE].score).toBeGreaterThan(0);
+    });
+
+    it('scores inclusive pillar approximately 5.0 with 20 INFO + 2 WARNING findings after fix', async () => {
+      // Arrange
+      const infoFindings = Array.from({ length: 20 }, (_, i) =>
+        createFinding({
+          id: `INC-INFO-${String(i + 1).padStart(2, '0')}`,
+          severity: Severity.INFO,
+          pillar: Pillar.INCLUSIVE,
+        }),
+      );
+      const warningFindings = [
+        createFinding({ id: 'INC-WARN-01', severity: Severity.WARNING, pillar: Pillar.INCLUSIVE }),
+        createFinding({ id: 'INC-WARN-02', severity: Severity.WARNING, pillar: Pillar.INCLUSIVE }),
+      ];
+
+      registry.register(createMockScanner({
+        name: 'inclusive-scanner-calibration',
+        pillar: Pillar.INCLUSIVE,
+        findings: [...infoFindings, ...warningFindings],
+      }));
+
+      // Act
+      const result = await orchestrator.run(createMinimalContext());
+
+      // Assert: 20*0.1 + 2*1.5 = 5.0 deductions → score = max(0, 10 - 5) = 5.0
+      expect(result.pillars[Pillar.INCLUSIVE].score).toBeCloseTo(5.0, 1);
+    });
+  });
+
   describe('scannerTimeout fallback (#135)', () => {
     it('uses DEFAULT_CONFIG.scannerTimeout when config.scannerTimeout is undefined', async () => {
       let timeoutUsed = 0;
