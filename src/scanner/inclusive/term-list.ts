@@ -134,6 +134,7 @@ const TIER_3_TERMS: LoadedTerm[] = [
     tier: 3,
     pattern: /\bend[- ]?of[- ]?life\b/i,
     replacements: ['deprecated', 'sunset', 'end of support'],
+    referenceUrl: 'https://inclusivenaming.org/word-lists/tier-3/end-of-life/',
   },
   {
     term: 'evangelist',

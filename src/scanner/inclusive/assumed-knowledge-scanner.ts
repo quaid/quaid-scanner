@@ -77,6 +77,62 @@ const PREREQUISITES_HEADING = /^#{1,3}\s+(prerequisites|requirements)\s*$/im;
 const ACRONYM_PATTERN = /\b[A-Z]{3,}\b/g;
 
 /**
+ * Common English word suffixes. A token that ends with one of these is almost
+ * certainly a real English word used for emphasis, not a technical initialism.
+ *
+ * Layer 1 of the layered false-positive suppression heuristic (#192).
+ */
+const WORD_SUFFIXES = [
+  'ED', 'ING', 'ION', 'TION', 'SION', 'ITY', 'NESS',
+  'MENT', 'FUL', 'LESS', 'ABLE', 'IBLE', 'LY', 'ER', 'EST',
+  'NCE', 'ANCE', 'ENCE', 'ISM', 'IST', 'IVE', 'OUS',
+] as const;
+
+/**
+ * Tokens longer than this are almost certainly English words used for
+ * emphasis, not technical initialisms.
+ *
+ * Layer 2 of the layered false-positive suppression heuristic (#192).
+ */
+const MAX_ACRONYM_LENGTH = 5;
+
+/**
+ * Returns true when `token` ends with a recognisable English word suffix.
+ * Used as layer 1 of the false-positive heuristic.
+ */
+function hasWordSuffix(token: string): boolean {
+  return WORD_SUFFIXES.some((s) => token.endsWith(s));
+}
+
+/**
+ * Returns the ratio of vowels to total characters in `token`.
+ * Real English words tend to have a ratio above ~35%.
+ * Used as layer 3 of the false-positive heuristic.
+ */
+function vowelRatio(token: string): number {
+  const vowels = (token.match(/[AEIOU]/g) ?? []).length;
+  return vowels / token.length;
+}
+
+/**
+ * Returns true when `token` is likely a real English word used for emphasis
+ * rather than a genuine undefined acronym. Applies three layers:
+ *   1. Morphological suffix check (fastest — catches most English words)
+ *   2. Length threshold (>5 chars are almost never initialisms)
+ *   3. Vowel-ratio check (≥4 chars with >35% vowels read as pronounceable words)
+ *
+ * The existing `COMMON_ENGLISH_WORDS` dictionary is retained as a fast path
+ * that is checked before calling this function.
+ */
+function isLikelyWord(token: string): boolean {
+  return (
+    hasWordSuffix(token) ||                              // layer 1
+    token.length > MAX_ACRONYM_LENGTH ||                 // layer 2
+    (token.length >= 4 && vowelRatio(token) > 0.35)     // layer 3
+  );
+}
+
+/**
  * Scanner that detects assumed prerequisite knowledge in documentation.
  *
  * Checks for:
@@ -222,10 +278,10 @@ export class AssumedKnowledgeScanner implements Scanner {
           continue;
         }
 
-        // Skip real English words used as ALL-CAPS emphasis (e.g. NEW, NEVER, SECURITY)
-        // A curated denylist can never keep up with arbitrary English vocabulary, so
-        // we check against a vendored common-words set instead (#151 reopen).
-        if (COMMON_ENGLISH_WORDS.has(acronym.toLowerCase())) {
+        // Skip real English words used as ALL-CAPS emphasis (e.g. NEW, NEVER, SECURITY).
+        // The dictionary is the fast path; the layered heuristic (#192) catches the long
+        // tail without requiring ongoing dictionary maintenance.
+        if (COMMON_ENGLISH_WORDS.has(acronym.toLowerCase()) || isLikelyWord(acronym)) {
           continue;
         }
 
