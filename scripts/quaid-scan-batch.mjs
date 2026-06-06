@@ -45,9 +45,24 @@ const {
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
+/**
+ * Returns the local calendar date as YYYY-MM-DD using the host's timezone,
+ * avoiding the UTC-date mismatch that occurs when toISOString() is used
+ * for runs near midnight local time.
+ *
+ * @param {Date} d - The Date to format. Defaults to the current time.
+ * @returns {string} e.g. "2026-06-05"
+ */
+function localDate(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 const BASE        = join(__dirname, '..', '..', 'AINative-Studio', 'src');
 const ORG         = 'AINative-Studio';
-const TODAY       = new Date().toISOString().slice(0, 10);
+const TODAY       = localDate();
 const BRANCH      = `chore/quaid-scan-${TODAY}`;
 const STATE_FILE  = join(__dirname, '.quaid-scan-state.json');
 const DRY         = process.argv.includes('--dry-run');
