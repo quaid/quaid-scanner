@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.6
+# Quaid's OSS Repo Scanner - PRD v2.7
 
 ## Executive Summary
 
@@ -2074,6 +2074,53 @@ quaid-scanner . --format json --quiet --provenance-file /tmp/provenance.json
 
 ---
 
+### Story 8.8: Self-Contained HTML Report Renderer (HTML-01) 📋
+
+**As a** Human reviewer
+**I want** a beautiful self-contained HTML report I can open in any browser
+**So that** I can review repo health without needing a terminal or markdown renderer
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.8.1 | `renderHtml(report, options?)` exported from `src/index.ts` | TypeScript compilation |
+| 8.8.2 | Output is a valid, fully self-contained HTML document (no external `<link>` or `<script src>`) | Self-contained test |
+| 8.8.3 | JSON scan data embedded as `<script id="scan-data" type="application/json">` | JSON embed test |
+| 8.8.4 | Score ring (SVG), 6-pillar card grid, and severity-grouped findings sections rendered | Visual structure check |
+| 8.8.5 | `grouped: true` collapses repeat-message findings identically to the markdown renderer | Grouped rendering test |
+| 8.8.6 | `prefers-color-scheme: dark` alternate palette present in inline CSS | CSS test |
+| 8.8.7 | `groupFindings()` and `canonicalKey()` extracted to `src/reporters/utils.ts` and imported by both renderers | Refactor — markdown tests still green |
+| 8.8.8 | `npm run test:coverage` ≥ 80% statements and branches | Coverage gate |
+
+**Story Points:** 3
+**Milestone:** 0.1.4
+**Issues:** #198
+
+---
+
+### Story 8.9: Scan Scripts Write HTML by Default (HTML-02) 📋
+
+**As a** Scan operator (human or agent)
+**I want** every scan to produce a `.html` alongside the `.md` and `.json`
+**So that** human reviewers always have a browser-ready artifact without an extra render step
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.9.1 | `quaid-scan-one.mjs <repo>` writes `quaid-scan-DATE.json`, `.md`, and `.html` | File existence check |
+| 8.9.2 | `quaid-render-one.mjs <repo>` (no flag) renders both `.md` and `.html` | File existence check |
+| 8.9.3 | `quaid-render-one.mjs <repo> --format html` renders `.html` only | Format flag test |
+| 8.9.4 | `quaid-render-one.mjs <repo> --format md` renders `.md` only | Format flag test |
+| 8.9.5 | Existing `.md` and `.json` write paths unchanged | Regression check |
+
+**Story Points:** 1
+**Milestone:** 0.1.4
+**Issues:** #199
+
+---
+
 ## Epic 10: Ecosystem Intelligence
 
 Strategic analysis of the competitive and cooperative OSS landscape. **Not a scored pillar** — does not affect `overallScore`. Opt-in via `--ecosystem` flag.
@@ -2570,7 +2617,7 @@ quaid-scanner/
 | Epic 5: AI-Native | 6 | 13 | Model Cards, Multi-Model Agentic Rules | 🚧 Partial (5.4 Metadata Quality) |
 | Epic 6: Inclusive | 5+1 | 14 | INI Terms, Naming, Diminishing Language | 🚧 Partial (6.1a INI API caching) |
 | Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality | ✅ Done |
-| Epic 8: Reporting | 7 | 16 | JSON/Markdown, Historical Trends, Report Provenance | 🚧 Partial (8.7a/b/c planned) |
+| Epic 8: Reporting | 9 | 20 | JSON/Markdown/HTML, Historical Trends, Report Provenance | 🚧 Partial (8.7–8.9 planned) |
 | Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server | ✅ Done |
 | Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
 | Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
@@ -2581,6 +2628,16 @@ quaid-scanner/
 ---
 
 ### Change Log
+
+#### v2.7 Changes (from v2.6)
+
+| Change | Impact |
+|--------|--------|
+| Add Story 8.8: Self-contained HTML report renderer (`renderHtml`) | 📋 Planned — #198; 3 pts |
+| Add Story 8.9: Scan scripts write HTML by default | 📋 Planned — #199; 1 pt |
+| Epic 8: Reporting story count 7 → 9, points 16 → 20 | Status updated to 🚧 Partial |
+| Story total: 75 → 77; Points total: 178 → 182 | |
+| PRD version: v2.6 → v2.7 | |
 
 #### v2.6 Changes (from v2.5)
 
