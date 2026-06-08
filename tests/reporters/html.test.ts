@@ -210,4 +210,252 @@ describe('renderHtml', () => {
       expect(html).toContain('<circle');
     });
   });
+
+  describe('critical finding card optional fields', () => {
+    it('renders file and line when present', () => {
+      const f: Finding = {
+        id: 'SEC-01', severity: Severity.CRITICAL, pillar: Pillar.SECURITY,
+        category: 'secret', message: 'Secret found', file: 'src/auth.ts', line: 42,
+        column: 1, suggestion: 'Remove it', referenceUrl: 'https://example.com',
+        context: 'const API_KEY = "abc123"',
+      };
+      const html = renderHtml(makeReport([f]));
+      expect(html).toContain('src/auth.ts');
+      expect(html).toContain(':42');
+      expect(html).toContain('example.com');
+      expect(html).toContain('abc123');
+    });
+
+    it('renders without optional fields when absent', () => {
+      const f: Finding = {
+        id: 'SEC-02', severity: Severity.CRITICAL, pillar: Pillar.SECURITY,
+        category: 'secret', message: 'Secret found', file: null, line: null,
+        column: null, suggestion: 'Remove it',
+      };
+      const html = renderHtml(makeReport([f]));
+      expect(html).toContain('SEC-02');
+      expect(html).toContain('Remove it');
+    });
+  });
+
+  describe('tier badge', () => {
+    it('renders tier badge for tier-1 findings', () => {
+      const f: Finding = {
+        id: 'INC-01', severity: Severity.CRITICAL, pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term', message: 'Non-inclusive term "abort" found',
+        file: null, line: null, column: null,
+        suggestion: 'Replace with: cancel',
+        metadata: { tier: 1 as const },
+      };
+      const html = renderHtml(makeReport([f]));
+      expect(html).toContain('tier-badge');
+      expect(html).toContain('Tier 1');
+    });
+
+    it('renders tier-2 and tier-3 badge labels', () => {
+      const f2: Finding = {
+        id: 'INC-02', severity: Severity.WARNING, pillar: Pillar.INCLUSIVE,
+        category: 'term', message: 'term found', file: null, line: null, column: null,
+        suggestion: 'Replace', metadata: { tier: 2 as const },
+      };
+      const f3: Finding = {
+        id: 'INC-03', severity: Severity.WARNING, pillar: Pillar.INCLUSIVE,
+        category: 'term', message: 'term found 2', file: null, line: null, column: null,
+        suggestion: 'Replace', metadata: { tier: 3 as const },
+      };
+      const html2 = renderHtml(makeReport([f2]));
+      const html3 = renderHtml(makeReport([f3]));
+      expect(html2).toContain('Tier 2');
+      expect(html3).toContain('Tier 3');
+    });
+  });
+
+  describe('pillar card score colors', () => {
+    function makePillarsWithScore(score: number) {
+      return Object.fromEntries(
+        Object.values(Pillar).map((p) => [
+          p,
+          {
+            score,
+            weight: PILLAR_WEIGHTS[p],
+            weightedScore: score * PILLAR_WEIGHTS[p],
+            counts: { critical: 1, warning: 1, info: 1, pass: 0 },
+            scanners: ['scanner-a'],
+          },
+        ]),
+      ) as OrchestratorResult['pillars'];
+    }
+
+    it('shows critical color (var(--critical)) for score < 4', () => {
+      const result: OrchestratorResult = {
+        overallScore: 3.0, riskLevel: RiskLevel.CRITICAL,
+        pillars: makePillarsWithScore(3.0),
+        findings: [], thresholdPassed: false, durationMs: 1000,
+      };
+      const report = buildScanReport(
+        { type: 'local' as const, value: '/tmp/low-score-repo' },
+        result, DEFAULT_CONFIG, MaturityLevel.INCUBATING, '1.0.0',
+      );
+      const html = renderHtml(report);
+      expect(html).toContain('var(--critical)');
+    });
+
+    it('shows warning color (var(--warning)) for score between 4 and 7', () => {
+      const result: OrchestratorResult = {
+        overallScore: 5.0, riskLevel: RiskLevel.HIGH,
+        pillars: makePillarsWithScore(5.0),
+        findings: [], thresholdPassed: true, durationMs: 1000,
+      };
+      const report = buildScanReport(
+        { type: 'local' as const, value: '/tmp/mid-score-repo' },
+        result, DEFAULT_CONFIG, MaturityLevel.INCUBATING, '1.0.0',
+      );
+      const html = renderHtml(report);
+      expect(html).toContain('var(--warning)');
+    });
+  });
+
+  describe('info section', () => {
+    it('renders info findings ungrouped by default', () => {
+      const infos: Finding[] = [
+        { id: 'AI-01', severity: Severity.INFO, pillar: Pillar.AI_READINESS,
+          category: 'model-card', message: 'No model card found', file: null,
+          line: null, column: null, suggestion: 'Add MODEL_CARD.md' },
+        { id: 'AI-02', severity: Severity.INFO, pillar: Pillar.AI_READINESS,
+          category: 'model-card', message: 'No dataset provenance', file: 'README.md',
+          line: 1, column: 1, suggestion: 'Document sources' },
+      ];
+      const html = renderHtml(makeReport(infos));
+      expect(html).toContain('AI-01');
+      expect(html).toContain('AI-02');
+      expect(html).toContain('README.md');
+    });
+
+    it('renders info findings grouped when grouped: true', () => {
+      const infos: Finding[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `AI-0${i}`, severity: Severity.INFO, pillar: Pillar.AI_READINESS,
+        category: 'model-card', message: 'No model card found',
+        file: `src/model${i}.ts`, line: 1, column: 1, suggestion: 'Add MODEL_CARD.md',
+      }));
+      const html = renderHtml(makeReport(infos), { grouped: true });
+      expect(html).toContain('occurrences');
+    });
+  });
+
+  describe('scanner errors section', () => {
+    it('shows scanner errors callout when report.partial is true', () => {
+      const report = makeReport();
+      const partialReport = {
+        ...report,
+        partial: true,
+        failedScanners: [{ name: 'openssf', reason: 'timeout', message: 'API timed out', pillar: 'security' }],
+      } as ScanReport;
+      const html = renderHtml(partialReport);
+      expect(html).toContain('Scanner Errors');
+      expect(html).toContain('openssf');
+    });
+
+    it('shows scanner error findings when no failedScanners list', () => {
+      const errorFinding: Finding = {
+        id: 'SCANNER-FAIL-openssf', severity: Severity.WARNING,
+        pillar: Pillar.SECURITY, category: 'timeout',
+        message: 'OpenSSF scorecard scanner failed', file: null,
+        line: null, column: null, suggestion: 'Retry later',
+      };
+      const report = makeReport([errorFinding]);
+      const html = renderHtml(report);
+      expect(html).toContain('Scanner Errors');
+    });
+  });
+
+  describe('empty findings', () => {
+    it('shows no-findings callout when findings array is empty', () => {
+      const result: OrchestratorResult = {
+        overallScore: 9.5, riskLevel: RiskLevel.LOW,
+        pillars: Object.fromEntries(
+          Object.values(Pillar).map((p) => [p, {
+            score: 9.5, weight: PILLAR_WEIGHTS[p], weightedScore: 9.5 * PILLAR_WEIGHTS[p],
+            counts: { critical: 0, warning: 0, info: 0, pass: 5 }, scanners: ['scanner-a'],
+          }]),
+        ) as OrchestratorResult['pillars'],
+        findings: [], thresholdPassed: true, durationMs: 500,
+      };
+      const report = buildScanReport(
+        { type: 'local' as const, value: '/tmp/clean-repo' },
+        result, DEFAULT_CONFIG, MaturityLevel.GRADUATED, '1.0.0',
+      );
+      const html = renderHtml(report);
+      expect(html).toContain('No findings');
+    });
+  });
+
+  describe('recommendations section', () => {
+    it('renders recommendations when present', () => {
+      const report = makeReport();
+      const withRecs: ScanReport = {
+        ...report,
+        recommendations: [
+          { action: 'Add a SECURITY.md', impact: 'high', effort: 'low', resources: ['https://example.com/security'] },
+          { action: 'Add CI badge', impact: 'medium', effort: 'medium' },
+        ],
+      };
+      const html = renderHtml(withRecs);
+      expect(html).toContain('Recommendations');
+      expect(html).toContain('Add a SECURITY.md');
+      expect(html).toContain('example.com/security');
+      expect(html).toContain('high impact');
+    });
+  });
+
+  describe('metadata fields', () => {
+    it('includes branch in header when metadata.branch is set', () => {
+      const report = makeReport();
+      const withBranch: ScanReport = {
+        ...report,
+        metadata: { ...report.metadata, branch: 'feat/html-reporter' },
+      };
+      const html = renderHtml(withBranch);
+      expect(html).toContain('feat/html-reporter');
+    });
+
+    it('includes commitSha in footer when set', () => {
+      const report = makeReport();
+      const withSha: ScanReport = {
+        ...report,
+        metadata: { ...report.metadata, commitSha: 'abc1234' },
+      };
+      const html = renderHtml(withSha);
+      expect(html).toContain('abc1234');
+    });
+
+    it('uses custom title when options.title is set', () => {
+      const html = renderHtml(makeReport(), { title: 'My Custom Title' });
+      expect(html).toContain('<title>My Custom Title</title>');
+    });
+  });
+
+  describe('single-occurrence grouped row', () => {
+    it('renders single occurrence without grouping header', () => {
+      const single: Finding = {
+        id: 'INC-NAMING-abort-src/one.ts:1',
+        severity: Severity.WARNING, pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term', message: 'Non-inclusive term "abort" found',
+        file: 'src/one.ts', line: 1, column: 1,
+        suggestion: 'Replace with: cancel',
+      };
+      const html = renderHtml(makeReport([single]), { grouped: true });
+      expect(html).toContain('src/one.ts');
+      expect(html).not.toContain('occurrences');
+    });
+
+    it('renders single occurrence without file chip when file is null', () => {
+      const single: Finding = {
+        id: 'GOV-01', severity: Severity.WARNING, pillar: Pillar.GOVERNANCE,
+        category: 'license', message: 'No license found', file: null,
+        line: null, column: null, suggestion: 'Add LICENSE',
+      };
+      const html = renderHtml(makeReport([single]), { grouped: true });
+      expect(html).toContain('GOV-01');
+    });
+  });
 });
