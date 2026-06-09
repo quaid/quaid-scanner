@@ -1149,6 +1149,34 @@ describe('renderMarkdown', () => {
       expect(md).toContain('https://inclusivenaming.org/word-lists/tier-1/abort/');
     });
 
+    // Regression: #201 — grouped renderer was emitting raw `context` field with no
+    // length cap. A single matched line inside a minified bundle could be 89 KB,
+    // blowing up the report to hundreds of KB of unreadable noise.
+    it('caps very long context excerpts in grouped file refs (#201)', () => {
+      const minifiedLine = 'function abort(){throw new Error("aborted")}'.repeat(2000); // ~90 KB
+      const findings: Finding[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `INC-NAMING-abort-html/assets/index-9agQl9q3.js:${i + 1}`,
+        severity: Severity.WARNING,
+        pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term',
+        message: `Non-inclusive term "abort" found in string literal`,
+        file: `html/assets/index-9agQl9q3.js`,
+        line: i + 1,
+        column: 1,
+        context: minifiedLine,
+        suggestion: 'Consider using: cancel, terminate, stop, halt',
+        dataSource: 'local' as const,
+      }));
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // No single line in the rendered output should be tens of KB long
+      const longestLine = md.split('\n').reduce((m, l) => Math.max(m, l.length), 0);
+      expect(longestLine).toBeLessThan(500);
+      // The context truncation marker should be present
+      expect(md).toContain('…');
+    });
+
     // Regression: #203 — grouped renderer was hardcoding "Replace with: " in front
     // of suggestions that already carried their own lead-in ("Consider using:",
     // "Remove ...", "Consider removing ..."), producing doubled phrasing.
