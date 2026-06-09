@@ -15,6 +15,7 @@ import { TermListManager, type LoadedTerm } from './term-list.js';
 import { loadIgnorePatterns } from './ignore-file.js';
 import { resolveInclusiveConfig } from './resolve-config.js';
 import { isMinifiedContent } from './utils/is-minified.js';
+import { SELF_REPORT_GLOBS } from './utils/self-report-globs.js';
 
 /** File extensions considered documentation files. */
 const DOC_EXTENSIONS = ['md', 'txt', 'rst', 'adoc', 'html'];
@@ -133,8 +134,7 @@ export class InclusiveDocScanner implements Scanner {
     const patterns = DOC_EXTENSIONS.map((ext) => `**/*.${ext}`);
     const ignorePatterns = [
       ...EXCLUDED_DIRS.map((dir) => `${dir}/**`),
-      '**/quaid-scan-*.md',
-      '**/quaid-scan-*.json',
+      ...SELF_REPORT_GLOBS,
       ...userExcludes,
     ];
 

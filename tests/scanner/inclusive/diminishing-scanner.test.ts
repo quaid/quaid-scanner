@@ -617,6 +617,26 @@ describe('DiminishingLanguageScanner', () => {
       expect(reportFindings).toHaveLength(0);
     });
 
+    // Regression: #207 — the .html report format added in #200 was not added to the
+    // self-report exclusion list, so scanners ingested their own prior HTML reports.
+    it('produces zero diminishing-language findings for a quaid-scan-*.html report file (#207)', async () => {
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-08.html'),
+        '<!DOCTYPE html><html><body>It is easy to see issues. Just run the scanner again.</body></html>\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
     it('produces zero diminishing-language findings for a quaid-scan-*.json report file', async () => {
       // Arrange: JSON report containing diminishing language in its text
       mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
