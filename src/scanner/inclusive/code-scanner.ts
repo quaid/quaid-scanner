@@ -14,6 +14,7 @@ import { loadIgnorePatterns } from './ignore-file.js';
 import { resolveInclusiveConfig } from './resolve-config.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
+import { isMinifiedContent } from './utils/is-minified.js';
 
 /** File extensions to scan. */
 const CODE_EXTENSIONS: string[] = [
@@ -36,6 +37,10 @@ const EXCLUDED_DIRS: string[] = [
   '.git/',
   'dist/',
   'build/',
+  'out/',
+  '.next/',
+  '.nuxt/',
+  'coverage/',
 ];
 
 /** Languages that use # for single-line comments. */
@@ -201,6 +206,11 @@ export class InclusiveCodeScanner implements Scanner {
       try {
         content = fs.readFileSync(filePath, 'utf-8');
       } catch {
+        continue;
+      }
+
+      // Skip minified/generated bundles — terms inside library code are not actionable (#202)
+      if (isMinifiedContent(content)) {
         continue;
       }
 

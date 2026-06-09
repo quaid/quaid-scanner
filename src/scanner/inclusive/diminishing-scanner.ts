@@ -14,6 +14,7 @@ import { glob } from 'glob';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { Pillar, Severity } from '../../types/index.js';
 import { loadIgnorePatterns } from './ignore-file.js';
+import { isMinifiedContent } from './utils/is-minified.js';
 
 /** A diminishing language pattern definition. */
 interface DiminishingPattern {
@@ -197,6 +198,11 @@ export class DiminishingLanguageScanner implements Scanner {
         continue;
       }
 
+      // Skip minified/generated content — patterns there are not actionable prose (#202)
+      if (isMinifiedContent(content)) {
+        continue;
+      }
+
       const lines = content.split('\n');
       const codeBlockLines = getCodeBlockLines(lines);
       const relPath = relative(context.repoPath, filePath);
@@ -306,7 +312,7 @@ export class DiminishingLanguageScanner implements Scanner {
         cwd: repoPath,
         absolute: true,
         nodir: true,
-        ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/quaid-scan-*.md', '**/quaid-scan-*.json', ...userIgnore],
+        ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/out/**', '**/.next/**', '**/.nuxt/**', '**/coverage/**', '**/.git/**', '**/quaid-scan-*.md', '**/quaid-scan-*.json', ...userIgnore],
       });
       for (const f of matched) {
         fileSet.add(f);

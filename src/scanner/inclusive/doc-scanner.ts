@@ -14,12 +14,13 @@ import { Pillar, Severity } from '../../types/index.js';
 import { TermListManager, type LoadedTerm } from './term-list.js';
 import { loadIgnorePatterns } from './ignore-file.js';
 import { resolveInclusiveConfig } from './resolve-config.js';
+import { isMinifiedContent } from './utils/is-minified.js';
 
 /** File extensions considered documentation files. */
 const DOC_EXTENSIONS = ['md', 'txt', 'rst', 'adoc', 'html'];
 
 /** Directories always excluded from scanning. */
-const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git'];
+const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git', 'dist', 'build', 'out', '.next', '.nuxt', 'coverage'];
 
 /** Inline suppression comment that disables scanning for a line. */
 const SUPPRESSION_MARKER = '<!-- inclusive-naming-ignore -->';
@@ -161,6 +162,11 @@ export class InclusiveDocScanner implements Scanner {
       content = fs.readFileSync(absolutePath, 'utf-8');
     } catch {
       // Skip files that cannot be read
+      return [];
+    }
+
+    // Skip minified/generated assets — terms inside machine-generated content are not actionable (#202)
+    if (isMinifiedContent(content)) {
       return [];
     }
 
