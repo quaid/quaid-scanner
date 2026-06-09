@@ -564,6 +564,24 @@ describe('InclusiveDocScanner', () => {
       expect(reportFindings).toHaveLength(0);
     });
 
+    // Regression: #207 — the .html report format added in #200 was not added to the
+    // self-report exclusion list, so scanners ingested their own prior HTML reports.
+    it('produces zero findings for a quaid-scan-*.html report file containing flagged terms (#207)', async () => {
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-08.html',
+        '<!DOCTYPE html><html><body>Non-inclusive term "master" found in src/app.ts</body></html>\n',
+      );
+
+      const context = createScanContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
     it('produces zero findings for a quaid-scan-*.json report file containing flagged terms', async () => {
       // Arrange: write a JSON report file that contains a non-inclusive term
       // doc-scanner walks .md/.txt/.rst/.adoc/.html — not .json,
