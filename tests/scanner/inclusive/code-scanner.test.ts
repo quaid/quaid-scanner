@@ -598,6 +598,36 @@ describe('InclusiveCodeScanner', () => {
     });
   });
 
+  describe('minified bundle exclusion (#202)', () => {
+    it('skips a Vite-shaped minified bundle even with flagged terms', async () => {
+      // Real-world shape: ai-kit's html/assets/index-9agQl9q3.js — a single 89 KB line of
+      // minified library code containing AbortController references. False positives
+      // from this kind of file are noise that maintainers cannot act on.
+      const minifiedLine = 'function abort(){throw new Error("aborted")}'.repeat(2000); // ~90 KB
+      writeFixture(tmpDir, 'html/assets/index-9agQl9q3.js', minifiedLine);
+      const ctx = createContext(tmpDir);
+
+      const findings = await scanner.run(ctx);
+      const fromMinified = findings.filter((f) => f.file?.includes('html/assets/'));
+      expect(fromMinified).toHaveLength(0);
+    });
+
+    it('still flags terms in authored code alongside a minified bundle', async () => {
+      // Defense: confirm the minified-skip doesn't suppress real findings in the same scan
+      writeFixture(tmpDir, 'src/app.ts', '// The whitelist needs review\n');
+      writeFixture(
+        tmpDir,
+        'dist/bundle.js',
+        'function abort(){throw new Error("aborted")}'.repeat(2000),
+      );
+      const ctx = createContext(tmpDir);
+
+      const findings = await scanner.run(ctx);
+      expect(findings.some((f) => f.file?.includes('src/app.ts'))).toBe(true);
+      expect(findings.some((f) => f.file?.includes('dist/'))).toBe(false);
+    });
+  });
+
   describe('finding de-duplication (#170)', () => {
     it('all emitted finding ids are unique (id invariant)', async () => {
       // Arrange: a file with several different flagged terms in comments
