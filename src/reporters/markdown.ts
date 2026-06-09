@@ -1,7 +1,7 @@
 import { Severity, Pillar, RiskLevel, PILLAR_WEIGHTS } from '../types/index.js';
 import type { ScanReport, Finding, FindingDataSource } from '../types/index.js';
 import { isErrorFinding } from '../issues.js';
-import { groupFindings, MAX_GROUP_REFS } from './utils.js';
+import { groupFindings, MAX_GROUP_REFS, truncateContext } from './utils.js';
 import type { FindingGroup } from './utils.js';
 
 const PILLAR_LABELS: Record<Pillar, string> = {
@@ -134,7 +134,8 @@ function renderGroupedFinding(group: FindingGroup): string[] {
   const withFile = members.filter((m) => m.file);
   const refs = withFile.slice(0, MAX_GROUP_REFS).map((m) => {
     const loc = m.line ? `${m.file}:${m.line}` : m.file!;
-    const ctx = m.context ? ` (${m.context})` : '';
+    const truncated = truncateContext(m.context);
+    const ctx = truncated ? ` (${truncated})` : '';
     return `\`${loc}\`${ctx}`;
   });
   if (withFile.length > MAX_GROUP_REFS) refs.push(`_+${withFile.length - MAX_GROUP_REFS} more_`);
