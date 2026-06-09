@@ -126,7 +126,7 @@ function renderGroupedFinding(group: FindingGroup): string[] {
   lines.push(`- **[${rep.pillar}] ${key}** — ${members.length} occurrences${tierSuffix}`);
 
   const extras: string[] = [];
-  if (rep.suggestion) extras.push(`  Replace with: ${rep.suggestion}`);
+  if (rep.suggestion) extras.push(`  ${rep.suggestion}`);
   if (rep.referenceUrl) extras.push(`· [Reference](${rep.referenceUrl})`);
   if (extras.length > 0) lines.push(`  ${extras.join(' ')}`);
 
