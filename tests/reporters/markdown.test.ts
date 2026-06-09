@@ -1148,5 +1148,29 @@ describe('renderMarkdown', () => {
       expect(md).toContain('Replace with: cancel, terminate, stop, halt');
       expect(md).toContain('https://inclusivenaming.org/word-lists/tier-1/abort/');
     });
+
+    // Regression: #203 — grouped renderer was hardcoding "Replace with: " in front
+    // of suggestions that already carried their own lead-in ("Consider using:",
+    // "Remove ...", "Consider removing ..."), producing doubled phrasing.
+    it('does not prepend "Replace with:" when the suggestion already carries a lead-in', () => {
+      const findings: Finding[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `INC-NAMING-abort-src/client.ts:${i + 1}`,
+        severity: Severity.WARNING,
+        pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term',
+        message: `Non-inclusive term "abort" found in string literal`,
+        file: `src/client.ts`,
+        line: i + 1,
+        column: 1,
+        suggestion: 'Consider using: cancel, terminate, stop, halt',
+        dataSource: 'local' as const,
+      }));
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).not.toMatch(/Replace with: Consider/);
+      expect(md).not.toMatch(/Replace with: Remove/);
+      expect(md).toContain('Consider using: cancel, terminate, stop, halt');
+    });
   });
 });
