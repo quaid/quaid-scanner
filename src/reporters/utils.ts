@@ -58,3 +58,24 @@ export function groupFindings(findings: Finding[]): FindingGroup[] {
 
 /** Maximum file:line refs to show before "+ more" truncation. */
 export const MAX_GROUP_REFS = 5;
+
+/**
+ * Truncate a `context` excerpt for safe display in reports.
+ * Collapses internal whitespace runs to single spaces by default — passing
+ * `collapseWhitespace: false` preserves newlines for block contexts.
+ * Appends '…' when the result is truncated. Returns '' for null/undefined.
+ *
+ * Why: minified single-line bundles can have matched lines tens of KB long,
+ * which dominate grouped reports with unreadable noise (#201).
+ */
+export function truncateContext(
+  s: string | null | undefined,
+  opts: { max?: number; collapseWhitespace?: boolean } = {},
+): string {
+  if (s == null) return '';
+  const max = opts.max ?? 120;
+  const collapse = opts.collapseWhitespace ?? true;
+  const normalized = (collapse ? s.replace(/\s+/g, ' ') : s).trim();
+  if (normalized.length <= max) return normalized;
+  return normalized.slice(0, max - 1) + '…';
+}
