@@ -13,6 +13,7 @@ import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { loadIgnorePatterns } from './ignore-file.js';
 import { COMMON_ENGLISH_WORDS } from './data/common-english-words.js';
 import { stripCodeFences } from './utils/strip-code-fences.js';
+import { isMinifiedContent } from './utils/is-minified.js';
 
 /** Files to scan for assumed knowledge. */
 const TARGET_FILES: string[] = [
@@ -166,6 +167,12 @@ export class AssumedKnowledgeScanner implements Scanner {
       }
 
       const content = fs.readFileSync(absPath, 'utf-8');
+
+      // Skip minified/generated content — prose checks don't apply to machine output (#202)
+      if (isMinifiedContent(content)) {
+        continue;
+      }
+
       const proseContent = stripCodeFences(content);
       const proseLines = proseContent.split('\n');
 
