@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.7
+# Quaid's OSS Repo Scanner - PRD v2.8
 
 ## Executive Summary
 
@@ -2121,6 +2121,46 @@ quaid-scanner . --format json --quiet --provenance-file /tmp/provenance.json
 
 ---
 
+### Story 8.10: Unified Artifact Workdir with First-Run Prompt (WORKDIR-01) 📋
+
+**As a** Scan operator (human or agent)
+**I want** quaid-scanner to ask me once where to put its files and then remember
+**So that** I'm never surprised by where a report landed, can audit and back up scanner caches, and can switch between self-scan-and-commit vs scan-without-touching workflows by changing one setting
+
+**Context:** Today, four distinct artifact types (remote-scan clones, OpenSSF cache, SPDX cache, output reports) live in four uncoordinated locations — `tmpdir()`, `~/.quaid/cache/`, `$TMPDIR/quaid-scanner-spdx/`, and "wherever `--output` says". A unified workdir root, picked once by the user from a small array of sane options and remembered in `~/.config/quaid-scanner/config.json`, resolves all four into deterministic subpaths.
+
+**The small array (presented at first run):**
+
+| # | Label | `workdir.root` |
+|---|---|---|
+| 1 | In the scanned repo | `<repo>/.quaid/` (reports mirrored to `<repo>/docs/reports/`) |
+| 2 | Current working directory | `./quaid-workdir/` |
+| 3 | User cache (XDG) | `~/.cache/quaid-scanner/` |
+| 4 | System temp (ephemeral) | `$TMPDIR/quaid-scanner/` |
+
+Non-TTY default (CI, piped stdin): option **3** (user cache); no prompt fired.
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.10.1 | `src/workdir.ts` exports `resolveWorkdir()` returning `{ root, mode, source }` from flag > env > config > default | Unit test |
+| 8.10.2 | First-run prompt fires only when no config exists AND stdin is a TTY | TTY-mocked test |
+| 8.10.3 | Prompt presents the four options and persists selection to `~/.config/quaid-scanner/config.json` | Integration test |
+| 8.10.4 | `--workdir <path>` CLI flag overrides config without modifying it | CLI test |
+| 8.10.5 | `$QUAID_WORKDIR` env var overrides config but not flag | Env-mocked test |
+| 8.10.6 | Non-TTY stdin skips prompt and uses `~/.cache/quaid-scanner/` | Non-TTY test |
+| 8.10.7 | OpenSSF and SPDX caches read/write under `<workdir>/cache/openssf/` and `<workdir>/cache/spdx/` | Scanner regression tests |
+| 8.10.8 | Remote-scan clones land under `<workdir>/clones/` and auto-delete unless `--keep-clone` is set | Clone lifecycle test |
+| 8.10.9 | One-time migration: if `~/.quaid/cache/scorecard/` exists, contents read once and a warning emitted | Backwards-compat test |
+| 8.10.10 | `npm run test:coverage` ≥ 80% statements and branches | Coverage gate |
+
+**Story Points:** 5
+**Milestone:** 0.2.0
+**Issues:** #204
+
+---
+
 ## Epic 10: Ecosystem Intelligence
 
 Strategic analysis of the competitive and cooperative OSS landscape. **Not a scored pillar** — does not affect `overallScore`. Opt-in via `--ecosystem` flag.
@@ -2617,17 +2657,26 @@ quaid-scanner/
 | Epic 5: AI-Native | 6 | 13 | Model Cards, Multi-Model Agentic Rules | 🚧 Partial (5.4 Metadata Quality) |
 | Epic 6: Inclusive | 5+1 | 14 | INI Terms, Naming, Diminishing Language | 🚧 Partial (6.1a INI API caching) |
 | Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality | ✅ Done |
-| Epic 8: Reporting | 9 | 20 | JSON/Markdown/HTML, Historical Trends, Report Provenance | 🚧 Partial (8.7–8.9 planned) |
+| Epic 8: Reporting | 10 | 25 | JSON/Markdown/HTML, Historical Trends, Report Provenance, Artifact Workdir | 🚧 Partial (8.7–8.10 planned) |
 | Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server | ✅ Done |
 | Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
 | Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
 | Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned |
 | Epic 13: Trust & Evidence | 5 | 13 | referenceUrl, dataSource, score rationale, .quaid-scanner-ignore | ✅ Done |
-| **Total** | **75** | **178** | | |
+| **Total** | **76** | **183** | | |
 
 ---
 
 ### Change Log
+
+#### v2.8 Changes (from v2.7)
+
+| Change | Impact |
+|--------|--------|
+| Add Story 8.10: Unified artifact workdir with first-run prompt | 📋 Planned — #204; 5 pts; **milestone 0.2.0** |
+| Epic 8: Reporting story count 9 → 10, points 20 → 25 | Status remains 🚧 Partial (8.7–8.10 planned) |
+| Story total: 75 → 76; Points total: 178 → 183 | |
+| PRD version: v2.7 → v2.8 | |
 
 #### v2.7 Changes (from v2.6)
 
