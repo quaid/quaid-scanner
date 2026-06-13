@@ -542,6 +542,21 @@ try {
 
 All exported types: `ScanReport`, `ScanFinding`, `ScanContext`, `Severity`, `Pillar`, `MaturityLevel`, `RiskLevel`, `ScanDepth`, `OutputFormat`, and more — see [`src/index.ts`](src/index.ts).
 
+**HTML reports** — `renderHtml(report)` generates a fully self-contained single-file HTML report
+with embedded CSS, pillar score bars, severity-coloured findings, and collapsible sections:
+
+```typescript
+import { renderHtml } from 'quaid-scanner';
+import { writeFileSync } from 'fs';
+
+const html = renderHtml(report);
+writeFileSync('scan-report.html', html);
+```
+
+**Grouped markdown** — `--format markdown` collapses repeat findings (same category, multiple
+files) into a single block with a file list, keeping reports readable for projects with widespread
+findings.
+
 ---
 
 ## Development
@@ -561,7 +576,7 @@ npm run test:coverage
 
 ## Project Health
 
-quaid-scanner scans itself. Current score as of v0.1.2:
+quaid-scanner scans itself. Current score as of v0.1.4:
 
 | Pillar | Score | Weight | Weighted |
 |--------|-------|--------|---------|
@@ -569,9 +584,9 @@ quaid-scanner scans itself. Current score as of v0.1.2:
 | Governance & Legal | 3.0/10 | 20% | 0.60 |
 | Community Health | 4.0/10 | 15% | 0.60 |
 | AI-Native & Agentic Readiness | 8.0/10 | 15% | 1.20 |
-| Inclusive Language | 0.0/10 | 15% | 0.00 |
+| Inclusive Language | 4.5/10 | 15% | 0.68 |
 | Technical Rigor | 8.5/10 | 10% | 0.85 |
-| **Overall** | **4.1/10** | | |
+| **Overall** | **4.8/10** | | |
 
 The score is honest. A solo-maintainer project at v0.1.x will have real gaps:
 
@@ -580,7 +595,6 @@ The score is honest. A solo-maintainer project at v0.1.x will have real gaps:
 | Finding | Severity | Issue |
 |---------|----------|-------|
 | GitHub Actions not pinned to commit SHAs | WARNING | [#123](https://github.com/quaid/quaid-scanner/issues/123) |
-| `diminishing-scanner` doesn't respect `.quaid-scanner-ignore` (inflating inclusive score) | Bug | [#122](https://github.com/quaid/quaid-scanner/issues/122) |
 | OpenSSF Scorecard not yet indexed (new project) | WARNING | — |
 | Bus factor: 1 (solo maintainer) | WARNING | [contribute](#contributing) |
 | Contributor funnel: 0% conversion (new project) | WARNING | [contribute](#contributing) |
@@ -589,10 +603,9 @@ The score is honest. A solo-maintainer project at v0.1.x will have real gaps:
 
 | Finding | Reason | Issue |
 |---------|--------|-------|
-| Inclusive CRITICAL: `"master"` in `dep-pinning-docker.ts` | Detection target string, not usage | [#124](https://github.com/quaid/quaid-scanner/issues/124) |
-| Welcoming score 0/100 | `diminishing-scanner` ignores the ignore file — see #122 | [#122](https://github.com/quaid/quaid-scanner/issues/122) |
+| Inclusive WARNING: `"master"` in `dep-pinning-docker.ts` | Detection target string, not usage | [#124](https://github.com/quaid/quaid-scanner/issues/124) |
 
-The AI readiness (8.0) and technical rigor (8.5) scores reflect the tool's strengths: MCP server, Claude Code skill, dataset provenance scanner, 80%+ test coverage. The security and governance scores reflect real gaps that contributions and time will close.
+The AI readiness (8.0) and technical rigor (8.5) scores reflect the tool's strengths: MCP server, Claude Code skill, dataset provenance scanner, 80%+ test coverage. The inclusive score improved significantly in v0.1.4 with elimination of false positives from minified bundles, self-generated reports, and the acronym heuristic overhaul. The security and governance scores reflect real gaps that contributions and time will close.
 
 ---
 

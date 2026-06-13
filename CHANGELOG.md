@@ -7,16 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for 0.1.4
+## [0.1.4] - 2026-06-12
 
-- **Epic 11 — Cross-Validation Harness**: `scripts/cross-validate.ts` diffs quaid findings against
-  authoritative external tools — OpenSSF Scorecard API (per-check verdict comparison) and the
-  `licensee` CLI (SPDX identifier comparison). Weekly GitHub Actions accuracy-regression workflow
-  running against 5 reference repos; fails if discrepancy rate exceeds threshold. (#68–71)
-- **Epic 12 — Ground-Truth Corpus**: Synthetic fixture repositories with precisely controlled
-  properties run through the full orchestrator on every `npm test`. Mutation tests start from a
-  "perfect repo" (all checks pass), apply one change, and assert the expected finding appears.
-  `tests/corpus/` runs in the standard vitest glob. (#72–75)
+### Fixed
+
+- **Inclusive scanner config hardening** — Additional defensive guards on all three inclusive
+  scanners (`inclusive-code-scanner`, `inclusive-doc-scanner`, `inclusive-naming-scanner`) for
+  every `config.inclusive` property access, beyond the crash fix shipped in v0.1.3. Eliminates a
+  remaining class of undefined-access failures when library callers supply a partial config. (#149)
+- **Exclude `.claude` and `.ainative` from binary-artifacts scan** — toolchain directories
+  contain compiled hooks and binary-like files that are not repository artifacts. They now receive
+  the same treatment as `node_modules/` and `dist/`. (#150, #161)
+- **Acronym heuristic overhaul — four-stage false-positive elimination** — The assumed-knowledge
+  scanner's acronym detector was generating heavy noise: it flagged markdown emphasis words
+  (`ALL_CAPS`), HTTP verbs (`GET`, `POST`, `PUT`), and common English words (`IT`, `OR`, `AND`).
+  Fixed progressively: (1) skip emphasis and HTTP verbs (#162), (2) skip real English words via a
+  300-word dictionary (#166), (3) expand the dictionary and emphasis denylist (#191), (4) replace
+  the heuristic with a principled suffix/length/vowel-pattern test (#193). (#151)
+- **Cite Microsoft Style Guide for diminishing-language findings** — `referenceUrl` on
+  diminishing-language findings now points to the Microsoft Style Guide entry for inclusive
+  language instead of a generic placeholder. (#152, #160)
+- **Split scanner errors into a separate report section** — Scanner failures (timeouts, crashes)
+  now render in their own `## Scanner Errors` section rather than mixed into finding sections,
+  making errors easier to notice and distinguish from real findings. (#154, #163)
+- **Cap inclusive pillar findings at WARNING; remove CRITICAL from inclusive scanners** — INI
+  tier 1/2/3 previously mapped directly to CRITICAL/WARNING/INFO severity, making the inclusive
+  pillar score contribution disproportionate. Tier is now a metadata label; severity is capped at
+  WARNING for all three inclusive scanners. (#165, #167, #168)
+- **Exclude self-generated output from inclusive content scanners** — The doc-scanner and
+  code-scanner were scanning quaid's own generated HTML reports and markdown output files,
+  producing findings about the scanner's own output. Generated output is now excluded. (#169, #172)
+- **De-duplicate file list and findings in inclusive scanners** — When multiple glob patterns
+  matched the same file, inclusive scanners could process it multiple times and emit duplicate
+  findings. Files are now deduplicated before processing; findings are deduplicated after
+  collection. (#170, #173)
+- **Per-term INI deep links in inclusive scanner findings** — `referenceUrl` on inclusive-scanner
+  findings now links to the specific INI term page
+  (`inclusivenaming.org/language-guide/terms/{term}`) rather than the INI homepage. (#174, #176)
+- **devDependency `^` prefix severity changed from WARNING to INFO** — semver range prefixes in
+  devDependencies don't ship with the library; WARNING overstated the risk. Changed to INFO. (#177, #186)
+- **Reduce INFO deduction to prevent inclusive pillar score 0.0** — A disproportionate per-finding
+  deduction on INFO-severity findings was driving the inclusive pillar to 0.0 even with no
+  CRITICAL or WARNING findings present. INFO findings now carry a lighter score deduction. (#175, #187)
+- **`renderIssueBody` — three correctness fixes** — Wrong querySelector that matched no elements;
+  broken report URL template; missing per-pillar rationale in the "Why it matters" section. All
+  three corrected. (#182, #183, #184, #189)
+- **Local timezone for report timestamps and filenames** — Report timestamps and auto-generated
+  filenames (e.g. `scan-2026-06-12T14-30-00.md`) were formatted in UTC regardless of host
+  timezone. Now use local time. (#188, #190)
+- **Skip code fences in prose checks (assumed-knowledge scanner)** — The assumed-knowledge
+  scanner was checking inside fenced code blocks for prose patterns, producing false positives for
+  technical terms in example code. Code blocks are now excluded from prose heuristics. (#194, #195)
+- **Drop hardcoded `'Replace with:'` prefix in grouped renderer** — The grouped markdown renderer
+  was prepending `'Replace with:'` to every suggestion, duplicating text the suggestion already
+  expressed. (#203, #205)
+- **Cap context length in grouped markdown renderer** — Long file paths and context snippets
+  could make grouped findings unreadably wide. Context is now capped at 120 characters. (#201, #206)
+- **Skip minified bundles in inclusive scanners** — Minified JavaScript (`*.min.js`,
+  `*.bundle.js`, etc.) was being scanned for inclusive language. These are now excluded alongside
+  `node_modules/`, `dist/`, and `build/`. (#202, #208)
+- **Exclude self-generated `.html` reports from inclusive scanners** — HTML report files written
+  by the scanner were being re-scanned on subsequent runs, generating findings about the scanner's
+  own output. (#207, #209)
+
+### Added
+
+- **Per-term `referenceUrl` on diminishing-language patterns** — Each pattern in the
+  diminishing-language scanner now carries its own `referenceUrl` linking to the Microsoft Style
+  Guide, Hemingway App, or other authoritative reference for that specific pattern rather than
+  sharing a single generic link. (#153, #164)
+- **INI tier as metadata, decoupled from severity** — INI tier (1/2/3) is now surfaced as a
+  classification label in finding metadata, independent of `severity`. Consumers can filter or
+  display by tier without overloading the severity field. (#165, #167)
+- **Grouped markdown rendering** — `--format markdown` output now collapses repeat findings (same
+  category, multiple files) into a single grouped block with a file list and representative
+  context, dramatically reducing report size for projects with widespread findings. (#196, #197)
+- **`renderHtml()` library export** — Generates a fully self-contained single-file HTML report
+  with embedded CSS, pillar score bars, severity-coloured findings, and collapsible sections. No
+  external dependencies. Available at the package root for consumers who want HTML output
+  programmatically. (Story 8.8, #200)
 
 ## [0.1.3] - 2026-06-02
 
