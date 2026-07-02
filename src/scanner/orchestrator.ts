@@ -18,6 +18,14 @@ import type {
   Scanner,
 } from '../types/index.js';
 import { ScannerRegistry } from './registry.js';
+import { DEFAULT_CONFIG } from '../config.js';
+
+export interface FailedScanner {
+  name: string;
+  pillar: string;
+  reason: 'timeout' | 'error';
+  message: string;
+}
 
 export interface OrchestratorResult {
   overallScore: number;
@@ -26,6 +34,8 @@ export interface OrchestratorResult {
   findings: Finding[];
   thresholdPassed: boolean;
   durationMs: number;
+  partial: boolean;
+  failedScanners: FailedScanner[];
 }
 
 export class Orchestrator {
@@ -96,6 +106,15 @@ export class Orchestrator {
 
     context.emit({ type: 'scan:complete', totalFindings: allFindings.length, durationMs });
 
+    const failedScanners: FailedScanner[] = allFindings
+      .filter((f) => f.category === 'timeout' || f.category === 'error')
+      .map((f) => ({
+        name: f.id.replace(/^(TIMEOUT|ERROR)-/, ''),
+        pillar: f.pillar,
+        reason: f.category as 'timeout' | 'error',
+        message: f.message,
+      }));
+
     return {
       overallScore,
       riskLevel,
@@ -103,6 +122,8 @@ export class Orchestrator {
       findings: allFindings,
       thresholdPassed,
       durationMs,
+      partial: failedScanners.length > 0,
+      failedScanners,
     };
   }
 
@@ -155,7 +176,9 @@ export class Orchestrator {
     scanner: Scanner,
     context: ScanContext,
   ): Promise<{ name: string; findings: Finding[] }> {
-    const timeout = context.config.scannerTimeout;
+    const timeout = typeof context.config.scannerTimeout === 'number' && context.config.scannerTimeout > 0
+      ? context.config.scannerTimeout
+      : DEFAULT_CONFIG.scannerTimeout;
 
     context.emit({
       type: 'scanner:start',
@@ -247,8 +270,11 @@ export class Orchestrator {
     const total = criticalCount + warningCount + infoCount + passCount;
     if (total === 0) return 10.0;
 
-    // Deductions: critical = 3 points, warning = 1.5 points, info = 0.5 points
-    const deductions = criticalCount * 3 + warningCount * 1.5 + infoCount * 0.5;
+    // Deductions: critical = 3 points, warning = 1.5 points, info = 0.1 points
+    // INFO findings are informational suggestions, not defects — a low weight
+    // prevents scanners that emit many INFO items (e.g. acronym/assumed-knowledge)
+    // from collapsing the pillar score to zero. See #175.
+    const deductions = criticalCount * 3 + warningCount * 1.5 + infoCount * 0.1;
     const score = Math.max(0, 10.0 - deductions);
 
     return Math.round(score * 10) / 10;

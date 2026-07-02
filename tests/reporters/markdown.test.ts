@@ -852,4 +852,353 @@ describe('renderMarkdown', () => {
     const md = renderMarkdown(makeReport());
     expect(md).toContain('| Pillar | Weight | Raw Score | Contribution |');
   });
+
+  // --- INI tier label rendering (#165) ---
+
+  describe('INI tier label (#165)', () => {
+    it('prefixes warning finding line with "[Tier 1 — Replace Immediately]" when metadata.tier is 1', () => {
+      const findings: Finding[] = [
+        {
+          id: 'ini-tier-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.INCLUSIVE,
+          category: 'inclusive-naming',
+          message: 'Project name contains non-inclusive term "whitelist"',
+          file: 'package.json',
+          line: null,
+          column: null,
+          suggestion: 'Rename using allowlist',
+          metadata: { tier: 1, term: 'whitelist', replacements: ['allowlist'] },
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).toContain('Tier 1');
+      expect(md).toContain('Replace Immediately');
+    });
+
+    it('prefixes warning finding line with "[Tier 2 — Strongly Consider]" when metadata.tier is 2', () => {
+      const findings: Finding[] = [
+        {
+          id: 'ini-tier-02',
+          severity: Severity.WARNING,
+          pillar: Pillar.INCLUSIVE,
+          category: 'inclusive-naming',
+          message: 'Project name contains non-inclusive term "blacklist"',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Rename using blocklist',
+          metadata: { tier: 2, term: 'blacklist', replacements: ['blocklist'] },
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).toContain('Tier 2');
+      expect(md).toContain('Strongly Consider');
+    });
+
+    it('prefixes info finding line with "[Tier 3 — Recommended]" when metadata.tier is 3', () => {
+      const findings: Finding[] = [
+        {
+          id: 'ini-tier-03',
+          severity: Severity.INFO,
+          pillar: Pillar.INCLUSIVE,
+          category: 'inclusive-naming',
+          message: 'Project name contains non-inclusive term "master"',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Rename using main',
+          metadata: { tier: 3, term: 'master', replacements: ['main'] },
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).toContain('Tier 3');
+      expect(md).toContain('Recommended');
+    });
+
+    it('does not add tier prefix to findings without metadata.tier', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-no-tier',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+      ];
+      const md = renderMarkdown(makeReport(findings));
+      expect(md).not.toContain('[Tier');
+    });
+  });
+
+  // --- scanner errors section (issue #154) ---
+
+  describe('scanner errors section (#154)', () => {
+    it('puts timeout finding under ## Scanner Errors and real warning under ## Warnings, not under ## Scanner Errors', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+        {
+          id: 'scanner-timeout-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.SECURITY,
+          category: 'timeout',
+          message: 'scorecard scanner timed out after 30s',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Increase scanner timeout or check network',
+        },
+      ];
+      const report = makeReport(findings);
+      const md = renderMarkdown(report);
+
+      // Scanner Errors section must exist and contain the timeout finding message
+      expect(md).toContain('## Scanner Errors');
+      expect(md).toContain('scorecard scanner timed out after 30s');
+
+      // The real warning must appear in the ## Warnings section
+      expect(md).toContain('## Warnings');
+      expect(md).toContain('No license file found');
+
+      // The timeout finding message must NOT appear in the ## Warnings section
+      const warnStart = md.indexOf('## Warnings');
+      const errStart = md.indexOf('## Scanner Errors');
+      // ## Warnings appears before ## Scanner Errors
+      expect(warnStart).toBeLessThan(errStart);
+      const warnSection = md.slice(warnStart, errStart);
+      expect(warnSection).not.toContain('scorecard scanner timed out after 30s');
+    });
+
+    it('does not render ## Scanner Errors section when partial is false and there are no error/timeout findings', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+      ];
+      const report = makeReport(findings);
+      // Ensure partial is false
+      const nonPartialReport: ScanReport = { ...report, partial: false, failedScanners: [] };
+      const md = renderMarkdown(nonPartialReport);
+      expect(md).not.toContain('## Scanner Errors');
+    });
+
+    it('shows scanner name from failedScanners in ## Scanner Errors section when partial is true', () => {
+      const report = makeReport([]);
+      const partialReport: ScanReport = {
+        ...report,
+        partial: true,
+        failedScanners: [
+          {
+            name: 'scorecard',
+            pillar: 'security',
+            reason: 'timeout',
+            message: 'scorecard timed out after 30s',
+          },
+        ],
+      };
+      const md = renderMarkdown(partialReport);
+      expect(md).toContain('## Scanner Errors');
+      expect(md).toContain('scorecard');
+    });
+  });
+
+  describe('grouped rendering (#196)', () => {
+    function makeAbortFindings(count: number): Finding[] {
+      return Array.from({ length: count }, (_, i) => ({
+        id: `INC-NAMING-abort-src/client.ts:${i + 1}`,
+        severity: Severity.WARNING,
+        pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term',
+        message: `Non-inclusive term "abort" found in string literal`,
+        file: `src/client.ts`,
+        line: i + 1,
+        column: 1,
+        suggestion: 'Replace with: cancel, terminate, stop, halt',
+        referenceUrl: 'https://inclusivenaming.org/word-lists/tier-1/abort/',
+        dataSource: 'local' as const,
+        metadata: { tier: 1 as const },
+      }));
+    }
+
+    it('collapses repeat-message warnings into one grouped entry when grouped: true', () => {
+      const findings = makeAbortFindings(11);
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // Should be one grouped entry for abort, not 11 separate bullets
+      const abortMatches = [...md.matchAll(/Non-inclusive term "abort"/g)];
+      expect(abortMatches.length).toBe(1);
+      expect(md).toContain('11 occurrences');
+    });
+
+    it('shows up to 5 file:line refs then "+N more" for large groups', () => {
+      const findings = makeAbortFindings(11);
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).toContain('+6 more');
+    });
+
+    it('renders single-occurrence findings unchanged', () => {
+      const findings: Finding[] = [
+        {
+          id: 'gov-01',
+          severity: Severity.WARNING,
+          pillar: Pillar.GOVERNANCE,
+          category: 'license',
+          message: 'No license file found',
+          file: null,
+          line: null,
+          column: null,
+          suggestion: 'Add a LICENSE file',
+        },
+      ];
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // Single finding renders normally (no "occurrences" count)
+      expect(md).toContain('No license file found');
+      expect(md).not.toContain('occurrences');
+    });
+
+    it('groups devDependency pin findings under a canonical key', () => {
+      const devDepFindings: Finding[] = [
+        '@changesets/cli', '@types/node', 'vitest',
+      ].map((pkg, i) => ({
+        id: `SEC-DEP-PIN-${pkg}`,
+        severity: Severity.INFO,
+        pillar: Pillar.SECURITY,
+        category: 'dep-pinning',
+        message: `Loosely pinned dependency "${pkg}": "^2.${i}.0" uses ^ prefix in devDependencies`,
+        file: 'package.json',
+        line: 10 + i,
+        column: 1,
+        suggestion: 'Pin to exact version',
+        dataSource: 'local' as const,
+      }));
+      const report = makeReport(devDepFindings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).toContain('3 occurrences');
+      // Should not show all 3 package names as separate bullets
+      const pkgMatches = [...md.matchAll(/Loosely pinned/g)];
+      expect(pkgMatches.length).toBe(1);
+    });
+
+    it('does NOT group critical findings — they keep full-detail rendering', () => {
+      const findings: Finding[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `SEC-CRIT-${i}`,
+        severity: Severity.CRITICAL,
+        pillar: Pillar.SECURITY,
+        category: 'secret-exposure',
+        message: 'Hardcoded secret detected',
+        file: `src/file${i}.ts`,
+        line: 1,
+        column: 1,
+        suggestion: 'Remove and rotate this secret',
+      }));
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // All 3 criticals render individually under ## Critical Findings
+      expect(md).toContain('SEC-CRIT-0');
+      expect(md).toContain('SEC-CRIT-1');
+      expect(md).toContain('SEC-CRIT-2');
+      expect(md).not.toContain('3 occurrences');
+    });
+
+    it('ungrouped mode (grouped: false or omitted) renders same as before', () => {
+      const findings = makeAbortFindings(3);
+      const report = makeReport(findings);
+      const ungrouped = renderMarkdown(report);
+      const explicit = renderMarkdown(report, { grouped: false });
+
+      expect(ungrouped).toBe(explicit);
+      // All 3 findings have their own ID bullets
+      expect([...ungrouped.matchAll(/INC-NAMING-abort/g)].length).toBe(3);
+    });
+
+    it('includes the suggestion and referenceUrl in the grouped entry', () => {
+      const findings = makeAbortFindings(3);
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).toContain('Replace with: cancel, terminate, stop, halt');
+      expect(md).toContain('https://inclusivenaming.org/word-lists/tier-1/abort/');
+    });
+
+    // Regression: #201 — grouped renderer was emitting raw `context` field with no
+    // length cap. A single matched line inside a minified bundle could be 89 KB,
+    // blowing up the report to hundreds of KB of unreadable noise.
+    it('caps very long context excerpts in grouped file refs (#201)', () => {
+      const minifiedLine = 'function abort(){throw new Error("aborted")}'.repeat(2000); // ~90 KB
+      const findings: Finding[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `INC-NAMING-abort-html/assets/index-9agQl9q3.js:${i + 1}`,
+        severity: Severity.WARNING,
+        pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term',
+        message: `Non-inclusive term "abort" found in string literal`,
+        file: `html/assets/index-9agQl9q3.js`,
+        line: i + 1,
+        column: 1,
+        context: minifiedLine,
+        suggestion: 'Consider using: cancel, terminate, stop, halt',
+        dataSource: 'local' as const,
+      }));
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      // No single line in the rendered output should be tens of KB long
+      const longestLine = md.split('\n').reduce((m, l) => Math.max(m, l.length), 0);
+      expect(longestLine).toBeLessThan(500);
+      // The context truncation marker should be present
+      expect(md).toContain('…');
+    });
+
+    // Regression: #203 — grouped renderer was hardcoding "Replace with: " in front
+    // of suggestions that already carried their own lead-in ("Consider using:",
+    // "Remove ...", "Consider removing ..."), producing doubled phrasing.
+    it('does not prepend "Replace with:" when the suggestion already carries a lead-in', () => {
+      const findings: Finding[] = Array.from({ length: 3 }, (_, i) => ({
+        id: `INC-NAMING-abort-src/client.ts:${i + 1}`,
+        severity: Severity.WARNING,
+        pillar: Pillar.INCLUSIVE,
+        category: 'non-inclusive-term',
+        message: `Non-inclusive term "abort" found in string literal`,
+        file: `src/client.ts`,
+        line: i + 1,
+        column: 1,
+        suggestion: 'Consider using: cancel, terminate, stop, halt',
+        dataSource: 'local' as const,
+      }));
+      const report = makeReport(findings);
+      const md = renderMarkdown(report, { grouped: true });
+
+      expect(md).not.toMatch(/Replace with: Consider/);
+      expect(md).not.toMatch(/Replace with: Remove/);
+      expect(md).toContain('Consider using: cancel, terminate, stop, halt');
+    });
+  });
 });

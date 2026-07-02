@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.5
+# Quaid's OSS Repo Scanner - PRD v2.8
 
 ## Executive Summary
 
@@ -1419,7 +1419,7 @@ model-index:
 | 6.1c.3 | Allow per-line suppression with comment `// inclusive-naming-ignore` or `# inclusive-naming-ignore` | Suppression support |
 | 6.1c.4 | Config option `inclusive.ignore_terms: ["master"]` to skip specific terms | Config support |
 
-**Tier 1 - Replace Immediately (CRITICAL):**
+**Tier 1 - Replace Immediately:**
 
 | Term | Regex Pattern | Replacements |
 |------|---------------|--------------|
@@ -1449,7 +1449,7 @@ model-index:
 |---|-----------|--------------|
 | 6.1d.1 | Group findings by tier with severity mapping | Tier aggregation |
 | 6.1d.2 | Calculate score: 100 - (tier1 × 10 + tier2 × 5 + tier3 × 2) capped at 0 | Score formula |
-| 6.1d.3 | CRITICAL if score < 50 | Threshold check |
+| 6.1d.3 | WARNING if score < 50 (inclusive scanners cap at WARNING; CRITICAL is reserved for harm-class findings) | Threshold check |
 | 6.1d.4 | WARNING if score 50-80 | Threshold check |
 | 6.1d.5 | PASS if score > 80 | Threshold check |
 
@@ -1488,7 +1488,7 @@ model-index:
 | 6.1e.1 | Check `package.json` `name` field against all loaded INI terms | Tests pass |
 | 6.1e.2 | Check README.md first H1 line against all loaded INI terms | Tests pass |
 | 6.1e.3 | Check git remote slug (last URL path segment) against all loaded INI terms | Tests pass |
-| 6.1e.4 | Severity: CRITICAL (tier 1), WARNING (tier 2), INFO (tier 3) | Severity mapping correct |
+| 6.1e.4 | Severity: WARNING (tier 1), WARNING (tier 2), INFO (tier 3); INI tier surfaced as `[Tier N — label]` prefix in reports (#165) | Severity mapping correct |
 | 6.1e.5 | `suggestion` field includes recommended rename path and INI replacements | Suggestion present |
 | 6.1e.6 | Graceful degradation when `package.json` missing or malformed | INFO finding, no throw |
 
@@ -1516,7 +1516,7 @@ model-index:
 | 6.2.7 | Group findings by file with counts | Aggregation |
 | 6.2.8 | PASS if welcoming score > 85 | Threshold check |
 | 6.2.9 | WARNING if score 60-85 | Threshold check |
-| 6.2.10 | CRITICAL if score < 60 | Threshold check |
+| 6.2.10 | WARNING if score < 60 (inclusive scanners cap at WARNING; CRITICAL reserved for harm-class findings) | Threshold check |
 
 **Diminishing Language Patterns:**
 
@@ -1578,6 +1578,129 @@ model-index:
 | docker without Docker | `docker\s+(run\|build\|compose)` without Docker prerequisite | Docker installation link |
 
 **Story Points:** 3
+
+---
+
+### Inclusive Pillar: 4-Category Framework (v0.1.4+)
+
+The inclusive pillar follows a four-category framework that maps each finding type to its
+authoritative source. This replaces the earlier single-source attribution (Inclusive Naming
+Initiative for all categories), which was correct only for Category A.
+
+**Source research:** [`Inclusive-Language-Guidelines-Research-Into-Actions.pdf`](research/Inclusive-Language-Guidelines-Research-Into-Actions.pdf)
+and [`Inclusive-Technical-Writing-Guidelines.pdf`](research/Inclusive-Technical-Writing-Guidelines.pdf)
+(both in `docs/research/`).
+
+| Category | What it covers | Authoritative sources | Implemented in |
+|---|---|---|---|
+| **A — Technical Nomenclature** | master/slave, whitelist/blacklist, sanity check, dummy, grandfathered (as inheritance) | [Inclusive Naming Initiative](https://inclusivenaming.org/), [ASWF Inclusive Language Guide](https://www.aswf.io/inclusive-language-guide/), [Google Developer Documentation Style Guide](https://developers.google.com/style), [AOUSD](https://aousd.org/) | Stories 6.1a–6.1e (v0.1.0+) |
+| **B — Socially Charged / Ableist / Ageist / Violent Metaphors** | wheelchair-bound, suffering from [X], normal/healthy (re people), kill two birds with one stone, grandfathered (as process), empower (paternalistic) | [Google Developer Style Guide](https://developers.google.com/style/inclusive-documentation), [MDN Writing Style Guide](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Writing_style_guide), [ASWF](https://www.aswf.io/inclusive-language-guide/) | Story 6.4 (planned, **deferred to 0.1.5**) |
+| **C — Diminishing Language & Adverbs of Assumption** | just, simply, obviously, clearly, basically, easy/easily, quite, very, quickly, effectively, of course, everyone knows | [Microsoft Writing Style Guide — words to use and avoid](https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid), [18F Content Guide](https://content-guide.18f.gov/), [plainlanguage.gov](https://www.plainlanguage.gov/), [WCAG 2.2 §3.1.5](https://www.w3.org/TR/WCAG22/#reading-level) | Stories 6.2, 6.3 (v0.1.0+; attribution corrected in v0.1.4 per #152) |
+| **D — Structural, Cognitive & Localization Obstacles** | and/or slash notation, modifier stacks >3 consecutive modifiers, paragraphs >5 sentences, translation fillers (actually, absolutely, could possibly, assemble together) | [WCAG 2.2](https://www.w3.org/TR/WCAG22/), [W3C COGA Task Force](https://www.w3.org/WAI/cognitive/), [Microsoft Writing Style Guide](https://learn.microsoft.com/en-us/style-guide), [Mailchimp Content Style Guide](https://styleguide.mailchimp.com/) | Story 6.5 (planned, **deferred to 0.1.5**) |
+
+**Framing principle (Category B):** shift deficit-based language to asset-based — "uses a
+wheelchair" over "wheelchair-bound", "experiencing [disability]" over "suffering from".
+
+**Cognitive-friction principle (Category C):** diminishing adverbs create an "illusion of ease"
+that shifts perceived failure onto the reader, raising task abandonment and support volume.
+
+#### Tooling direction: align with Vale + Alex.js (not integrate, for 0.1.4)
+
+The docs-as-code prose-linting ecosystem already has mature, maintained rule sets:
+
+- **[Vale](https://vale.sh/)** — Go, open-source, syntax-aware prose linter; supports
+  Google/Microsoft style packages + custom vocab; runs in CLI, editors, and CI.
+- **[Alex.js](https://alexjs.com/)** — Node, MIT; catches gender-favoring, ableist, racial,
+  and condescending language; flags "obviously", "clearly", "everyone knows".
+
+**Decision for 0.1.4:** *align* — quaid-scanner keeps its native regex rules but mirrors
+Vale/Alex.js category boundaries and cites them as upstream references. This keeps the scanner
+useful in repos that haven't adopted those tools while pointing maintainers to richer coverage
+when they want it.
+
+**Decision deferred to 0.1.5 (or later):** detection-and-delegation — if `vale` or `alex` is on
+the PATH, invoke as a subprocess and merge findings. Out of scope for the 0.1.4 bugfix release;
+captured as a future story.
+
+#### Attribution list (cited in `referenceUrl` data and the report footer)
+
+- Google Developer Documentation Style Guide (CC-BY 3.0) — https://developers.google.com/style
+- Microsoft Writing Style Guide — https://learn.microsoft.com/en-us/style-guide
+- MDN Writing Style Guide — https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Writing_style_guide
+- ASWF Inclusive Language Guide — https://www.aswf.io/inclusive-language-guide/
+- 18F Content Guide — https://content-guide.18f.gov/
+- plainlanguage.gov — https://www.plainlanguage.gov/
+- WCAG 2.2 — https://www.w3.org/TR/WCAG22/
+- W3C COGA Task Force — https://www.w3.org/WAI/cognitive/
+- Inclusive Naming Initiative (Category A only) — https://inclusivenaming.org/
+- Write the Docs Style Guides — https://www.writethedocs.org/guide/writing/style-guides/
+- Alex.js — https://alexjs.com/
+- Vale — https://vale.sh/
+
+#### Severity Model Decision Record (v0.1.4 — #165)
+
+**Decision:** `Severity.CRITICAL` is reserved for harm-class findings across all pillars —
+security vulnerabilities, legal exposure, and operational failures that, if ignored, cause
+direct risk to the project or its users. Inclusive-language findings do not meet this bar.
+
+**INI tier and severity are separate axes:**
+
+| Axis | What it expresses | Values |
+|------|------------------|--------|
+| **Severity** | Risk/impact if the finding is ignored | CRITICAL (harm-class) · WARNING · INFO · PASS |
+| **INI Tier** | Replacement urgency per the Inclusive Naming Initiative | Tier 1 — Replace Immediately · Tier 2 — Strongly Consider · Tier 3 — Recommended |
+
+**Effect on scanners (effective v0.1.4):**
+- `naming-scanner.ts`: `tierToSeverity` maps Tier 1 and Tier 2 → `WARNING`; Tier 3 → `INFO`.
+- `diminishing-scanner.ts`: welcoming-score summary caps at `WARNING` (sub-60 scores no longer produce `CRITICAL`).
+- INI tier is surfaced as a first-class label in markdown reports: `[Tier N — Replace Immediately / Strongly Consider / Recommended]` prefix on any finding with `metadata.tier`.
+
+**Not in scope for this decision:** `doc-scanner.ts`, `code-scanner.ts`, and `scoring.ts` retain their current tier→severity mappings; they are addressed separately in a future story.
+
+---
+
+### Story 6.4: Category B — Ableist / Metaphor Detection (INC-04) 📋 (deferred to 0.1.5)
+
+**As a** Developer Agent
+**I want** detection of ableist language, violent metaphors, and paternalistic framing
+**So that** documentation reaches a wider audience using asset-based language
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 6.4.1 | Detect ableist phrasing: `wheelchair-bound`, `suffering from`, `crippled by`, `bound to a [device]` | Pattern matching |
+| 6.4.2 | Detect "normal"/"healthy" used as the implicit opposite of disability | Contextual matching |
+| 6.4.3 | Detect violent metaphors: `kill two birds`, `take a stab at`, `pull the trigger`, `bite the bullet` | Pattern matching |
+| 6.4.4 | Detect paternalistic framing: `empower [users]`, `give a voice to` | Pattern matching |
+| 6.4.5 | Detect `grandfathered` used as a process verb (distinct from `grandfathered` as inheritance, already in Cat A) | Context disambiguation |
+| 6.4.6 | Each finding cites Google Developer Style Guide, MDN, or ASWF as authoritative source | Per-finding `referenceUrl` |
+| 6.4.7 | Suggestion offers an asset-based alternative ("uses a wheelchair", "achieve two things", "include users") | Suggestion field |
+
+**Story Points:** 3
+**Milestone:** 0.1.5
+
+---
+
+### Story 6.5: Category D — Structural & Cognitive Obstacles (INC-05) 📋 (deferred to 0.1.5)
+
+**As a** Developer Agent
+**I want** detection of structural patterns that raise cognitive load or block screen-reader / translation use
+**So that** documentation meets WCAG 2.2 cognitive guidance and translates cleanly
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 6.5.1 | Detect `and/or` and other slash notation in prose (screen-reader / dyslexia hurdle) | Pattern matching |
+| 6.5.2 | Detect modifier stacks of >3 consecutive modifiers ("the new fast distributed reliable cache") | Token-window scan |
+| 6.5.3 | Flag paragraphs with >5 sentences (WCAG 2.2 SC 3.1.5 reading-level guidance) | Sentence count |
+| 6.5.4 | Detect translation-hostile fillers: `actually`, `absolutely`, `could possibly`, `assemble together`, `combine together` | Pattern matching |
+| 6.5.5 | Each finding cites WCAG 2.2, W3C COGA Task Force, or Microsoft Style Guide | Per-finding `referenceUrl` |
+| 6.5.6 | Suggestion shows a structural rewrite or terser alternative | Suggestion field |
+
+**Story Points:** 3
+**Milestone:** 0.1.5
 
 ---
 
@@ -1876,6 +1999,165 @@ model-index:
 | 8.3b.7 | API endpoint consideration: `GET /history/{repo}` for dashboard integration | API design |
 
 **Story Points:** 3
+
+---
+
+### Story 8.7a: ProvenanceInfo Type, ScanReport Field, and JSON Output (PROV-01a) 📋
+**As a** Developer Agent
+**I want** a `ProvenanceInfo` interface and an optional `provenance` field on `ScanReport`
+**So that** the report itself carries a machine-readable record of which model(s) generated it and at what token cost
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.7a.1 | `ProvenanceInfo` interface exported from `src/types/index.ts`: `{ models: string[]; inputTokens?: number; outputTokens?: number; totalTokens?: number; sessionId?: string; agentId?: string; generatedAt: string; notes?: string; }` | TypeScript compilation |
+| 8.7a.2 | `ScanReport` gains optional field `provenance?: ProvenanceInfo` | TypeScript compilation |
+| 8.7a.3 | JSON reporter includes a top-level `provenance` key when `report.provenance` is defined | JSON output test |
+| 8.7a.4 | JSON reporter omits `provenance` key entirely when `report.provenance` is absent (opt-in, not mandatory) | JSON output test |
+| 8.7a.5 | All existing JSON output tests pass unchanged | Regression test |
+
+**Story Points:** 2
+**Milestone:** 0.1.5
+**Issues:** #178
+
+---
+
+### Story 8.7b: Markdown Report Provenance Section Rendering (PROV-01b) 📋
+**As a** Human persona (via agent)
+**I want** the markdown report to include a `## Report Provenance` section when provenance data is present
+**So that** human reviewers can see who/what generated the report without inspecting raw JSON
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.7b.1 | Markdown reporter appends a `## Report Provenance` section as the final section when `report.provenance` is defined | Markdown output test |
+| 8.7b.2 | Section renders a two-column table: field name and value; only rows for defined fields are included | Table structure check |
+| 8.7b.3 | `models` array is rendered as a comma-separated string | Format check |
+| 8.7b.4 | Numeric token fields (inputTokens, outputTokens, totalTokens) are locale-formatted with thousands separators | Format check |
+| 8.7b.5 | Section is completely absent when `report.provenance` is undefined | Markdown output test |
+| 8.7b.6 | Depends on Story 8.7a (`ProvenanceInfo` type) being merged | Prerequisite |
+
+**Story Points:** 1
+**Milestone:** 0.1.5
+**Issues:** #179
+
+---
+
+### Story 8.7c: CLI `--provenance-file` Flag for Agent Session Metadata Injection (PROV-01c) 📋
+**As a** Developer Agent
+**I want** a `--provenance-file <path>` CLI option
+**So that** I can inject my session metadata (model, tokens, session ID) at scan time and have it embedded in the output report
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.7c.1 | CLI accepts `--provenance-file <path>` option; `--help` documents it | Help text check |
+| 8.7c.2 | File must be valid JSON conforming to `ProvenanceInfo`; loaded and validated at config-load time | Config loader test |
+| 8.7c.3 | If the file path is missing or contains invalid JSON, emit a WARNING message and continue the scan without provenance data (never abort) | Graceful degradation test |
+| 8.7c.4 | `ScannerConfig` gains optional `provenance?: ProvenanceInfo` field | TypeScript compilation |
+| 8.7c.5 | Orchestrator passes `config.provenance` through to `ScanReport.provenance` | Integration test |
+| 8.7c.6 | JSON output includes `provenance` when flag is used; markdown output includes `## Report Provenance` section (Story 8.7b) | End-to-end test |
+| 8.7c.7 | Depends on Story 8.7a (type) and Story 8.7b (markdown rendering) | Prerequisite |
+
+**Example agent invocation:**
+```bash
+echo '{"models":["claude-opus-4-7"],"inputTokens":12450,"outputTokens":3210,"totalTokens":15660,"sessionId":"sess_abc123","agentId":"karsten-ospo","generatedAt":"2026-06-05T14:23:00Z"}' > /tmp/provenance.json
+quaid-scanner . --format json --quiet --provenance-file /tmp/provenance.json
+```
+
+**Story Points:** 2
+**Milestone:** 0.1.5
+**Issues:** #180
+
+---
+
+### Story 8.8: Self-Contained HTML Report Renderer (HTML-01) 📋
+
+**As a** Human reviewer
+**I want** a beautiful self-contained HTML report I can open in any browser
+**So that** I can review repo health without needing a terminal or markdown renderer
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.8.1 | `renderHtml(report, options?)` exported from `src/index.ts` | TypeScript compilation |
+| 8.8.2 | Output is a valid, fully self-contained HTML document (no external `<link>` or `<script src>`) | Self-contained test |
+| 8.8.3 | JSON scan data embedded as `<script id="scan-data" type="application/json">` | JSON embed test |
+| 8.8.4 | Score ring (SVG), 6-pillar card grid, and severity-grouped findings sections rendered | Visual structure check |
+| 8.8.5 | `grouped: true` collapses repeat-message findings identically to the markdown renderer | Grouped rendering test |
+| 8.8.6 | `prefers-color-scheme: dark` alternate palette present in inline CSS | CSS test |
+| 8.8.7 | `groupFindings()` and `canonicalKey()` extracted to `src/reporters/utils.ts` and imported by both renderers | Refactor — markdown tests still green |
+| 8.8.8 | `npm run test:coverage` ≥ 80% statements and branches | Coverage gate |
+
+**Story Points:** 3
+**Milestone:** 0.1.4
+**Issues:** #198
+
+---
+
+### Story 8.9: Scan Scripts Write HTML by Default (HTML-02) 📋
+
+**As a** Scan operator (human or agent)
+**I want** every scan to produce a `.html` alongside the `.md` and `.json`
+**So that** human reviewers always have a browser-ready artifact without an extra render step
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.9.1 | `quaid-scan-one.mjs <repo>` writes `quaid-scan-DATE.json`, `.md`, and `.html` | File existence check |
+| 8.9.2 | `quaid-render-one.mjs <repo>` (no flag) renders both `.md` and `.html` | File existence check |
+| 8.9.3 | `quaid-render-one.mjs <repo> --format html` renders `.html` only | Format flag test |
+| 8.9.4 | `quaid-render-one.mjs <repo> --format md` renders `.md` only | Format flag test |
+| 8.9.5 | Existing `.md` and `.json` write paths unchanged | Regression check |
+
+**Story Points:** 1
+**Milestone:** 0.1.4
+**Issues:** #199
+
+---
+
+### Story 8.10: Unified Artifact Workdir with First-Run Prompt (WORKDIR-01) 📋
+
+**As a** Scan operator (human or agent)
+**I want** quaid-scanner to ask me once where to put its files and then remember
+**So that** I'm never surprised by where a report landed, can audit and back up scanner caches, and can switch between self-scan-and-commit vs scan-without-touching workflows by changing one setting
+
+**Context:** Today, four distinct artifact types (remote-scan clones, OpenSSF cache, SPDX cache, output reports) live in four uncoordinated locations — `tmpdir()`, `~/.quaid/cache/`, `$TMPDIR/quaid-scanner-spdx/`, and "wherever `--output` says". A unified workdir root, picked once by the user from a small array of sane options and remembered in `~/.config/quaid-scanner/config.json`, resolves all four into deterministic subpaths.
+
+**The small array (presented at first run):**
+
+| # | Label | `workdir.root` |
+|---|---|---|
+| 1 | In the scanned repo | `<repo>/.quaid/` (reports mirrored to `<repo>/docs/reports/`) |
+| 2 | Current working directory | `./quaid-workdir/` |
+| 3 | User cache (XDG) | `~/.cache/quaid-scanner/` |
+| 4 | System temp (ephemeral) | `$TMPDIR/quaid-scanner/` |
+
+Non-TTY default (CI, piped stdin): option **3** (user cache); no prompt fired.
+
+**Acceptance Criteria:**
+
+| # | Criterion | Verification |
+|---|-----------|--------------|
+| 8.10.1 | `src/workdir.ts` exports `resolveWorkdir()` returning `{ root, mode, source }` from flag > env > config > default | Unit test |
+| 8.10.2 | First-run prompt fires only when no config exists AND stdin is a TTY | TTY-mocked test |
+| 8.10.3 | Prompt presents the four options and persists selection to `~/.config/quaid-scanner/config.json` | Integration test |
+| 8.10.4 | `--workdir <path>` CLI flag overrides config without modifying it | CLI test |
+| 8.10.5 | `$QUAID_WORKDIR` env var overrides config but not flag | Env-mocked test |
+| 8.10.6 | Non-TTY stdin skips prompt and uses `~/.cache/quaid-scanner/` | Non-TTY test |
+| 8.10.7 | OpenSSF and SPDX caches read/write under `<workdir>/cache/openssf/` and `<workdir>/cache/spdx/` | Scanner regression tests |
+| 8.10.8 | Remote-scan clones land under `<workdir>/clones/` and auto-delete unless `--keep-clone` is set | Clone lifecycle test |
+| 8.10.9 | One-time migration: if `~/.quaid/cache/scorecard/` exists, contents read once and a warning emitted | Backwards-compat test |
+| 8.10.10 | `npm run test:coverage` ≥ 80% statements and branches | Coverage gate |
+
+**Story Points:** 5
+**Milestone:** 0.2.0
+**Issues:** #204
 
 ---
 
@@ -2375,17 +2657,47 @@ quaid-scanner/
 | Epic 5: AI-Native | 6 | 13 | Model Cards, Multi-Model Agentic Rules | 🚧 Partial (5.4 Metadata Quality) |
 | Epic 6: Inclusive | 5+1 | 14 | INI Terms, Naming, Diminishing Language | 🚧 Partial (6.1a INI API caching) |
 | Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality | ✅ Done |
-| Epic 8: Reporting | 4 | 11 | JSON/Markdown, Historical Trends | ✅ Done |
+| Epic 8: Reporting | 10 | 25 | JSON/Markdown/HTML, Historical Trends, Report Provenance, Artifact Workdir | 🚧 Partial (8.7–8.10 planned) |
 | Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server | ✅ Done |
 | Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
 | Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
 | Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned |
 | Epic 13: Trust & Evidence | 5 | 13 | referenceUrl, dataSource, score rationale, .quaid-scanner-ignore | ✅ Done |
-| **Total** | **72** | **173** | | |
+| **Total** | **76** | **183** | | |
 
 ---
 
 ### Change Log
+
+#### v2.8 Changes (from v2.7)
+
+| Change | Impact |
+|--------|--------|
+| Add Story 8.10: Unified artifact workdir with first-run prompt | 📋 Planned — #204; 5 pts; **milestone 0.2.0** |
+| Epic 8: Reporting story count 9 → 10, points 20 → 25 | Status remains 🚧 Partial (8.7–8.10 planned) |
+| Story total: 75 → 76; Points total: 178 → 183 | |
+| PRD version: v2.7 → v2.8 | |
+
+#### v2.7 Changes (from v2.6)
+
+| Change | Impact |
+|--------|--------|
+| Add Story 8.8: Self-contained HTML report renderer (`renderHtml`) | 📋 Planned — #198; 3 pts |
+| Add Story 8.9: Scan scripts write HTML by default | 📋 Planned — #199; 1 pt |
+| Epic 8: Reporting story count 7 → 9, points 16 → 20 | Status updated to 🚧 Partial |
+| Story total: 75 → 77; Points total: 178 → 182 | |
+| PRD version: v2.6 → v2.7 | |
+
+#### v2.6 Changes (from v2.5)
+
+| Change | Impact |
+|--------|--------|
+| Add Story 8.7a: `ProvenanceInfo` type + `ScanReport.provenance` + JSON output | 📋 Planned — #178; 2 pts |
+| Add Story 8.7b: Markdown `## Report Provenance` section rendering | 📋 Planned — #179; 1 pt |
+| Add Story 8.7c: `--provenance-file` CLI flag for agent session metadata injection | 📋 Planned — #180; 2 pts |
+| Epic 8: Reporting story count 4 → 7, points 11 → 16 | Status updated to 🚧 Partial |
+| Story total: 72 → 75; Points total: 173 → 178 | |
+| PRD version: v2.5 → v2.6 | |
 
 #### v2.5 Changes (from v2.4)
 

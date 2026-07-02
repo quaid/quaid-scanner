@@ -305,8 +305,9 @@ describe('DiminishingLanguageScanner', () => {
       expect(score).toBeLessThanOrEqual(85);
     });
 
-    it('returns CRITICAL finding when welcoming score < 60', async () => {
+    it('returns WARNING finding when welcoming score < 60', async () => {
       // Need enough issues: 14 WARNINGs = 42 deducted => score 58
+      // Inclusive scanners are capped at WARNING — no CRITICAL emitted (#165)
       const lines = [
         'Just run this command.',
         'Just do this step.',
@@ -329,7 +330,8 @@ describe('DiminishingLanguageScanner', () => {
 
       const summary = findings.find((f) => f.category === 'welcoming-score');
       expect(summary).toBeDefined();
-      expect(summary!.severity).toBe(Severity.CRITICAL);
+      expect(summary!.severity).toBe(Severity.WARNING);
+      expect(summary!.severity).not.toBe(Severity.CRITICAL);
       const score = summary!.metadata?.welcomingScore as number;
       expect(score).toBeLessThan(60);
     });
@@ -424,6 +426,268 @@ describe('DiminishingLanguageScanner', () => {
       const fileGroups = summary!.metadata!.fileGroups as Record<string, number>;
       // README.md should have 2 findings, CONTRIBUTING.md should have 1
       expect(Object.keys(fileGroups).length).toBe(2);
+    });
+  });
+
+  describe('source attribution (#152)', () => {
+    it('per-match findings cite Microsoft Style Guide, not inclusivenaming.org', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install to get started.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const matchFindings = findings.filter((f) => f.category === 'diminishing-language');
+      expect(matchFindings.length).toBeGreaterThan(0);
+      for (const finding of matchFindings) {
+        expect(finding.referenceUrl).toContain('learn.microsoft.com');
+        expect(finding.referenceUrl).not.toContain('inclusivenaming.org');
+      }
+    });
+
+    it('welcoming-score summary finding cites Microsoft Style Guide, not inclusivenaming.org', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install to get started.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const summary = findings.find((f) => f.category === 'welcoming-score');
+      expect(summary).toBeDefined();
+      expect(summary!.referenceUrl).toContain('learn.microsoft.com');
+      expect(summary!.referenceUrl).not.toContain('inclusivenaming.org');
+    });
+  });
+
+  describe('per-term referenceUrl (#153)', () => {
+    it('finding for "just run" has referenceUrl containing /j/just', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('just run'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('/j/just');
+    });
+
+    it('finding for "simply add" has referenceUrl containing /s/simply', async () => {
+      writeFileSync(join(tmpDir, 'CONTRIBUTING.md'), 'You simply add the dependency.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('simply add'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('/s/simply');
+    });
+
+    it('finding for "easy" has referenceUrl containing /e/easy-easily', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'This is an easy setup process.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('easy'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('/e/easy-easily');
+    });
+
+    it('finding for "trivial" has referenceUrl containing plainlanguage.gov', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'The fix is trivial to implement.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('trivial'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('plainlanguage.gov');
+    });
+
+    it('finding for "everyone knows" has referenceUrl containing content-guide.18f.gov', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Everyone knows how to use git.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const match = findings.find(
+        (f) => f.category === 'diminishing-language' && f.message.includes('everyone knows'),
+      );
+      expect(match).toBeDefined();
+      expect(match!.referenceUrl).toContain('content-guide.18f.gov');
+    });
+
+    it('summary welcoming-score referenceUrl is unchanged (generic Microsoft URL)', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const summary = findings.find((f) => f.category === 'welcoming-score');
+      expect(summary).toBeDefined();
+      expect(summary!.referenceUrl).toBe(
+        'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
+      );
+    });
+  });
+
+  describe('severity ceiling (#165)', () => {
+    it('never emits a CRITICAL finding regardless of score', async () => {
+      // Saturate with diminishing language — score should drop well below 60
+      const lines = Array.from({ length: 20 }, (_, i) => `Just run step ${i + 1}.`);
+      writeFileSync(join(tmpDir, 'README.md'), lines.join('\n') + '\n');
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const criticalFindings = findings.filter((f) => f.severity === Severity.CRITICAL);
+      expect(criticalFindings).toHaveLength(0);
+    });
+  });
+
+  describe('ignore patterns (#122)', () => {
+    it('skips files matching config excludePatterns', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
+      const context = createContext(tmpDir);
+      context.config.inclusive = {
+        termListUrl: null,
+        customTerms: {},
+        ignoredTerms: [],
+        excludePatterns: ['README.md'],
+      };
+
+      const findings = await scanner.run(context);
+
+      const readmeFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.category === 'diminishing-language',
+      );
+      expect(readmeFindings).toHaveLength(0);
+    });
+
+    it('skips files matching .quaid-scanner-ignore patterns', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Just run npm install.\n');
+      writeFileSync(join(tmpDir, '.quaid-scanner-ignore'), 'README.md\n');
+      const context = createContext(tmpDir);
+
+      const findings = await scanner.run(context);
+
+      const readmeFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.category === 'diminishing-language',
+      );
+      expect(readmeFindings).toHaveLength(0);
+    });
+
+    it('still scans files not matching exclude patterns', async () => {
+      writeFileSync(join(tmpDir, 'README.md'), 'Clean readme.\n');
+      writeFileSync(join(tmpDir, 'CONTRIBUTING.md'), 'Obviously fork first.\n');
+      const context = createContext(tmpDir);
+      context.config.inclusive = {
+        termListUrl: null,
+        customTerms: {},
+        ignoredTerms: [],
+        excludePatterns: ['README.md'],
+      };
+
+      const findings = await scanner.run(context);
+
+      const contributingFindings = findings.filter(
+        (f) => f.file === 'CONTRIBUTING.md' && f.category === 'diminishing-language',
+      );
+      expect(contributingFindings.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('self-report exclusion (#169)', () => {
+    it('produces zero diminishing-language findings for a quaid-scan-*.md report file', async () => {
+      // Arrange: report file containing diminishing language
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-04.md'),
+        '# Scan Report\nIt is easy to see that the scan found issues.\nJust run the scanner again.\n',
+      );
+
+      const context = createContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the report file must produce zero diminishing-language findings
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    // Regression: #207 — the .html report format added in #200 was not added to the
+    // self-report exclusion list, so scanners ingested their own prior HTML reports.
+    it('produces zero diminishing-language findings for a quaid-scan-*.html report file (#207)', async () => {
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-08.html'),
+        '<!DOCTYPE html><html><body>It is easy to see issues. Just run the scanner again.</body></html>\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('produces zero diminishing-language findings for a quaid-scan-*.json report file', async () => {
+      // Arrange: JSON report containing diminishing language in its text
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-03.json'),
+        '{"message":"it is easy to fix this issue, just run the command"}\n',
+      );
+
+      const context = createContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the JSON report file must produce zero findings
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('still flags a legitimate CONTRIBUTING.md containing diminishing language', async () => {
+      // Arrange: report file (excluded) + legitimate doc (must be flagged)
+      mkdirSync(join(tmpDir, 'docs', 'reports'), { recursive: true });
+      writeFileSync(
+        join(tmpDir, 'docs', 'reports', 'quaid-scan-2026-06-04.md'),
+        '# Scan Report\nJust run the scanner to get easy results.\n',
+      );
+      writeFileSync(
+        join(tmpDir, 'CONTRIBUTING.md'),
+        'To contribute, just run npm install and it is easy.\n',
+      );
+
+      const context = createContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: CONTRIBUTING.md findings exist; report file findings do not
+      const reportFindings = findings.filter(
+        (f) =>
+          f.file?.startsWith('docs/reports/quaid-scan-') &&
+          f.category === 'diminishing-language',
+      );
+      expect(reportFindings).toHaveLength(0);
+
+      const contributingFindings = findings.filter(
+        (f) => f.file === 'CONTRIBUTING.md' && f.category === 'diminishing-language',
+      );
+      expect(contributingFindings.length).toBeGreaterThan(0);
     });
   });
 });

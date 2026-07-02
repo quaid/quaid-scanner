@@ -183,24 +183,26 @@ async function main(): Promise<void> {
         ? renderMarkdown(report)
         : serializeJson(report);
 
-    if (config.output) {
-      writeFileSync(config.output, output, 'utf-8');
-      if (!config.quiet) console.error(`Output written to ${config.output}`);
-    } else {
-      process.stdout.write(output + '\n');
-    }
+    // Exit codes: 0 = low risk (≥8), 1 = medium (5–7.9), 2 = high/critical (<5) or threshold missed
+    const exitCode = !result.thresholdPassed ? 2
+      : result.overallScore >= 8.0 ? 0
+      : result.overallScore >= 5.0 ? 1
+      : 2;
 
     if (!config.quiet) {
       console.error(`\nScore: ${result.overallScore.toFixed(1)}/10 (${result.riskLevel})`);
     }
 
-    // Exit codes: 0 = low risk (≥8), 1 = medium (5–7.9), 2 = high/critical (<5) or threshold missed
-    if (!result.thresholdPassed) {
-      cleanup();
-      process.exit(2);
-    }
     cleanup();
-    process.exit(result.overallScore >= 8.0 ? 0 : result.overallScore >= 5.0 ? 1 : 2);
+
+    if (config.output) {
+      writeFileSync(config.output, output, 'utf-8');
+      if (!config.quiet) console.error(`Output written to ${config.output}`);
+      process.exit(exitCode);
+    } else {
+      // Pass exit in the write callback so stdout fully drains before exit when piped (#137)
+      process.stdout.write(output + '\n', () => process.exit(exitCode));
+    }
   } catch (err) {
     cleanup();
     throw err;

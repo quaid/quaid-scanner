@@ -27,11 +27,11 @@ Built on [OpenSSF Scorecard](https://securityscorecards.dev/), [CHAOSS metrics](
 | [Node.js](https://nodejs.org) | ≥ 18.0.0 | Required |
 | [Git](https://git-scm.com) | any | Required for local repo scanning |
 | GitHub token | — | Optional — unlocks branch protection checks, OpenSSF Scorecard API, and issue/PR metrics |
-| [ZeroDB](https://github.com/ainative-studio/zerodb) | local instance | Optional — required for scan history, trend tracking, and OSS social graph |
+| [ZeroLocal](https://ainative.studio/open-source/zerodb-local) ([GitHub](https://github.com/AINative-Studio/zerodb-local)) | local instance | Optional — required for scan history, trend tracking, and OSS social graph. Open source; [cloud with free tier](https://ainative.studio) also available. |
 
 **GitHub token:** set either `GITHUB_TOKEN` or `GITHUB_PERSONAL_ACCESS_TOKEN` in your environment. A classic token with `public_repo` scope is sufficient for public repos. The token is never written to disk.
 
-**ZeroDB:** set `ZERODB_API_URL`, `ZERODB_API_KEY`, and `ZERODB_PROJECT_ID`. Without ZeroDB, scanning and reporting work normally — persistence and graph features are silently skipped.
+**ZeroLocal:** set `ZERODB_API_URL` (defaults to `http://localhost:8100`), `ZERODB_API_KEY`, and `ZERODB_PROJECT_ID`. Without ZeroLocal, scanning and reporting work normally — persistence and graph features are silently skipped.
 
 ---
 
@@ -372,27 +372,26 @@ Save the completed report to docs/scans/my-org-report-YYYY-MM-DD.md.
 
 ## Persistence & History
 
-Requires ZeroDB (`ZERODB_API_URL`, `ZERODB_API_KEY`, `ZERODB_PROJECT_ID`).
+Requires [ZeroLocal](https://ainative.studio/open-source/zerodb-local) ([GitHub](https://github.com/AINative-Studio/zerodb-local)) — open source, runs locally. A [cloud option with a free tier](https://ainative.studio) is also available. Set `ZERODB_API_URL`, `ZERODB_API_KEY`, and `ZERODB_PROJECT_ID`.
 
 Each scan result can be stored for trend analysis and regression detection. Over time, you can answer: _Is this project's security posture improving or declining?_
 
 ```bash
 # Store results automatically — set env vars before scanning
-export ZERODB_API_URL=https://your-zerodb-instance
+export ZERODB_API_URL=http://localhost:8100   # ZeroLocal default
 export ZERODB_API_KEY=your-key
 export ZERODB_PROJECT_ID=your-project-id
 
 quaid-scanner https://github.com/owner/repo --quiet --format json
-# scan result is stored automatically when ZeroDB vars are present
+# scan result is stored automatically when ZeroLocal vars are present
 ```
 
 **Library usage:**
 
 ```typescript
-import { storeScanHistory, queryTrend, renderTrendAscii, alertOnDrop } from 'quaid-scanner';
-import { ZeroDBClient } from 'zerodb-client';
+import { storeScanHistory, queryTrend, renderTrendAscii, alertOnDrop, ZeroDBClient } from 'quaid-scanner';
 
-const client = new ZeroDBClient({ /* ... */ });
+const client = new ZeroDBClient({ baseUrl: 'http://localhost:8100', apiKey: 'your-key', projectId: 'your-project-id' });
 
 // Store after a scan
 await storeScanHistory(report, client);
@@ -442,9 +441,9 @@ Returns:
 
 ## OSS Social Graph
 
-Requires ZeroDB (`ZERODB_API_URL`, `ZERODB_API_KEY`, `ZERODB_PROJECT_ID`).
+Requires ZeroLocal (`ZERODB_API_URL`, `ZERODB_API_KEY`, `ZERODB_PROJECT_ID`).
 
-Each scan registers the scanned repo as a graph node in ZeroDB. After scanning related projects, the graph captures the sociotechnical relationships between them — who contributes to what, which projects depend on each other, which orgs concentrate influence.
+Each scan registers the scanned repo as a graph node in ZeroLocal. After scanning related projects, the graph captures the sociotechnical relationships between them — who contributes to what, which projects depend on each other, which orgs concentrate influence.
 
 **Node types:** `contributor`, `project`, `organization`
 

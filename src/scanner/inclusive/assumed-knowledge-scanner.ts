@@ -10,6 +10,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
+import { loadIgnorePatterns } from './ignore-file.js';
+import { COMMON_ENGLISH_WORDS } from './data/common-english-words.js';
+import { stripCodeFences } from './utils/strip-code-fences.js';
+import { isMinifiedContent } from './utils/is-minified.js';
 
 /** Files to scan for assumed knowledge. */
 const TARGET_FILES: string[] = [
@@ -45,11 +49,90 @@ const KNOWN_ACRONYMS = new Set<string>([
   'CD', 'PR', 'NPM', 'MIT',
 ]);
 
+/**
+ * Common English/Markdown emphasis words and HTTP verbs that look like
+ * acronyms but are not undefined technical terms. These are excluded from
+ * the undefined-acronym detector to prevent false positives (#151).
+ */
+const EMPHASIS_WORD_DENYLIST = new Set<string>([
+  // Markdown callout / emphasis tokens
+  'WARNING', 'WARNINGS', 'ERROR', 'ERRORS', 'IMPORTANT', 'NOTE', 'NOTES',
+  'TIP', 'TIPS',
+  // Code comment markers
+  'TODO', 'FIXME', 'XXX', 'HACK',
+  // Common documentation file names used inline
+  'README', 'CHANGELOG', 'LICENSE', 'AUTHORS', 'COPYING', 'CONTRIBUTING',
+  // Well-known product / tool proper names — not acronyms, not undefined
+  'CLAUDE', 'GITHUB', 'GITLAB', 'DOCKER', 'LINUX', 'WINDOWS', 'MACOS',
+  // Status / requirement adjectives
+  'ESTABLISHED', 'REQUIRED', 'OPTIONAL', 'DEPRECATED', 'OBSOLETE',
+  // Boolean / null literals
+  'TRUE', 'FALSE', 'NULL', 'NONE', 'YES', 'NO',
+  // HTTP verbs — common vocabulary in API docs, not undefined acronyms
+  'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'TRACE',
+]);
+
 /** Pattern to match prerequisite/requirements section headings. */
 const PREREQUISITES_HEADING = /^#{1,3}\s+(prerequisites|requirements)\s*$/im;
 
 /** Pattern to match uppercase acronyms (3+ letters). */
 const ACRONYM_PATTERN = /\b[A-Z]{3,}\b/g;
+
+/**
+ * Common English word suffixes. A token that ends with one of these is almost
+ * certainly a real English word used for emphasis, not a technical initialism.
+ *
+ * Layer 1 of the layered false-positive suppression heuristic (#192).
+ */
+const WORD_SUFFIXES = [
+  'ED', 'ING', 'ION', 'TION', 'SION', 'ITY', 'NESS',
+  'MENT', 'FUL', 'LESS', 'ABLE', 'IBLE', 'LY', 'ER', 'EST',
+  'NCE', 'ANCE', 'ENCE', 'ISM', 'IST', 'IVE', 'OUS',
+] as const;
+
+/**
+ * Tokens longer than this are almost certainly English words used for
+ * emphasis, not technical initialisms.
+ *
+ * Layer 2 of the layered false-positive suppression heuristic (#192).
+ */
+const MAX_ACRONYM_LENGTH = 5;
+
+/**
+ * Returns true when `token` ends with a recognisable English word suffix.
+ * Used as layer 1 of the false-positive heuristic.
+ */
+function hasWordSuffix(token: string): boolean {
+  return WORD_SUFFIXES.some((s) => token.endsWith(s));
+}
+
+/**
+ * Returns the ratio of vowels to total characters in `token`.
+ * Real English words tend to have a ratio above ~35%.
+ * Used as layer 3 of the false-positive heuristic.
+ */
+function vowelRatio(token: string): number {
+  const vowels = (token.match(/[AEIOU]/g) ?? []).length;
+  return vowels / token.length;
+}
+
+/**
+ * Returns true when `token` is likely a real English word used for emphasis
+ * rather than a genuine undefined acronym. Applies three layers:
+ *   1. Morphological suffix check (fastest — catches most English words)
+ *   2. Length threshold (>5 chars are almost never initialisms)
+ *   3. Vowel-ratio check (≥4 chars with >35% vowels read as pronounceable words)
+ *
+ * The existing `COMMON_ENGLISH_WORDS` dictionary is retained as a fast path
+ * that is checked before calling this function.
+ */
+function isLikelyWord(token: string): boolean {
+  return (
+    hasWordSuffix(token) ||                              // layer 1
+    token.length > MAX_ACRONYM_LENGTH ||                 // layer 2
+    (token.length >= 4 && vowelRatio(token) > 0.35)     // layer 3
+  );
+}
 
 /**
  * Scanner that detects assumed prerequisite knowledge in documentation.
@@ -70,19 +153,32 @@ export class AssumedKnowledgeScanner implements Scanner {
    */
   async run(context: ScanContext): Promise<Finding[]> {
     const findings: Finding[] = [];
+    const userPatterns = await loadIgnorePatterns(context.repoPath);
+    const configPatterns = context.config.inclusive?.excludePatterns ?? [];
+    const allIgnore = [...userPatterns, ...configPatterns];
 
     for (const relPath of TARGET_FILES) {
+      if (allIgnore.some((pat) => relPath.startsWith(pat.replace(/\*\*$/, '').replace(/\*$/, '')))) {
+        continue;
+      }
       const absPath = path.join(context.repoPath, relPath);
       if (!fs.existsSync(absPath)) {
         continue;
       }
 
       const content = fs.readFileSync(absPath, 'utf-8');
-      const lines = content.split('\n');
 
-      findings.push(...this.detectGitOperations(relPath, lines));
-      findings.push(...this.detectToolAssumptions(relPath, lines, content));
-      findings.push(...this.detectUndefinedAcronyms(relPath, lines));
+      // Skip minified/generated content — prose checks don't apply to machine output (#202)
+      if (isMinifiedContent(content)) {
+        continue;
+      }
+
+      const proseContent = stripCodeFences(content);
+      const proseLines = proseContent.split('\n');
+
+      findings.push(...this.detectGitOperations(relPath, proseLines));
+      findings.push(...this.detectToolAssumptions(relPath, proseLines, proseContent));
+      findings.push(...this.detectUndefinedAcronyms(relPath, proseLines));
     }
 
     // Check README.md for missing prerequisites section
@@ -188,6 +284,20 @@ export class AssumedKnowledgeScanner implements Scanner {
 
         // Skip known acronyms
         if (KNOWN_ACRONYMS.has(acronym)) {
+          continue;
+        }
+
+        // Skip real English words used as ALL-CAPS emphasis (e.g. NEW, NEVER, SECURITY).
+        // The dictionary is the fast path; the layered heuristic (#192) catches the long
+        // tail without requiring ongoing dictionary maintenance.
+        if (COMMON_ENGLISH_WORDS.has(acronym.toLowerCase()) || isLikelyWord(acronym)) {
+          continue;
+        }
+
+        // Skip common emphasis words and HTTP verbs — not undefined acronyms.
+        // Kept as a fallback for non-word tokens (TODO, FIXME, XXX, README, etc.)
+        // that are NOT in the general English dictionary.
+        if (EMPHASIS_WORD_DENYLIST.has(acronym)) {
           continue;
         }
 

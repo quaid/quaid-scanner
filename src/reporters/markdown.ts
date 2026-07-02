@@ -1,5 +1,8 @@
 import { Severity, Pillar, RiskLevel, PILLAR_WEIGHTS } from '../types/index.js';
 import type { ScanReport, Finding, FindingDataSource } from '../types/index.js';
+import { isErrorFinding } from '../issues.js';
+import { groupFindings, MAX_GROUP_REFS, truncateContext } from './utils.js';
+import type { FindingGroup } from './utils.js';
 
 const PILLAR_LABELS: Record<Pillar, string> = {
   [Pillar.SECURITY]: 'Security',
@@ -75,6 +78,26 @@ function renderFindingExtras(f: Finding): string[] {
     return lines;
 }
 
+const INI_TIER_LABELS: Record<1 | 2 | 3, string> = {
+  1: 'Replace Immediately',
+  2: 'Strongly Consider',
+  3: 'Recommended',
+};
+
+/**
+ * Return the INI tier prefix string for a finding that has `metadata.tier` set,
+ * or an empty string for findings without tier metadata.
+ *
+ * Format: `[Tier N — <label>] `
+ */
+function tierPrefix(f: Finding): string {
+  const tier = f.metadata?.tier;
+  if (tier === 1 || tier === 2 || tier === 3) {
+    return `[Tier ${tier} — ${INI_TIER_LABELS[tier]}] `;
+  }
+  return '';
+}
+
 export interface MarkdownReportOptions {
   /** Optional ecosystem metadata to include as a dedicated section */
   ecosystem?: {
@@ -82,6 +105,43 @@ export interface MarkdownReportOptions {
     language?: string;
     stars?: number;
   };
+  /** Collapse repeat-message findings into one entry with count + file list. Applies to Warnings and Info only. */
+  grouped?: boolean;
+}
+
+/** Render a grouped finding entry for Warnings/Info sections. */
+function renderGroupedFinding(group: FindingGroup): string[] {
+  const { key, representative: rep, members } = group;
+  const lines: string[] = [];
+
+  if (members.length === 1) {
+    // Single occurrence — render exactly as before
+    lines.push(`- **[${rep.id}]** ${tierPrefix(rep)}${rep.message} *(${rep.suggestion})*`);
+    return lines;
+  }
+
+  // Multi-occurrence grouped entry
+  const tierLabel = tierPrefix(rep);
+  const tierSuffix = tierLabel ? ` ${tierLabel.trim()}` : '';
+  lines.push(`- **[${rep.pillar}] ${key}** — ${members.length} occurrences${tierSuffix}`);
+
+  const extras: string[] = [];
+  if (rep.suggestion) extras.push(`  ${rep.suggestion}`);
+  if (rep.referenceUrl) extras.push(`· [Reference](${rep.referenceUrl})`);
+  if (extras.length > 0) lines.push(`  ${extras.join(' ')}`);
+
+  // File:line refs — show first 5, then "+N more"
+  const withFile = members.filter((m) => m.file);
+  const refs = withFile.slice(0, MAX_GROUP_REFS).map((m) => {
+    const loc = m.line ? `${m.file}:${m.line}` : m.file!;
+    const truncated = truncateContext(m.context);
+    const ctx = truncated ? ` (${truncated})` : '';
+    return `\`${loc}\`${ctx}`;
+  });
+  if (withFile.length > MAX_GROUP_REFS) refs.push(`_+${withFile.length - MAX_GROUP_REFS} more_`);
+  if (refs.length > 0) lines.push(`  ${refs.join(' · ')}`);
+
+  return lines;
 }
 
 export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptions): string {
@@ -118,10 +178,13 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
   }
   lines.push('');
 
-  // Findings grouped by severity
-  const criticals = findingsBySeverity(report.findings, Severity.CRITICAL);
-  const warnings = findingsBySeverity(report.findings, Severity.WARNING);
-  const infos = findingsBySeverity(report.findings, Severity.INFO);
+  // Findings grouped by severity — scanner-failure findings are separated out
+  const allWarnings = findingsBySeverity(report.findings, Severity.WARNING);
+  const realWarnings = allWarnings.filter((f) => !isErrorFinding(f));
+  const scannerErrorFindings = allWarnings.filter(isErrorFinding);
+
+  const criticals = findingsBySeverity(report.findings, Severity.CRITICAL).filter((f) => !isErrorFinding(f));
+  const infos = findingsBySeverity(report.findings, Severity.INFO).filter((f) => !isErrorFinding(f));
 
   if (criticals.length > 0) {
     lines.push('## Critical Findings');
@@ -146,11 +209,38 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
     }
   }
 
-  if (warnings.length > 0) {
+  if (realWarnings.length > 0) {
     lines.push('## Warnings');
     lines.push('');
-    for (const f of warnings) {
-      lines.push(`- **[${f.id}]** ${f.message} *(${f.suggestion})*`);
+    if (options?.grouped) {
+      for (const group of groupFindings(realWarnings)) {
+        for (const line of renderGroupedFinding(group)) lines.push(line);
+      }
+    } else {
+      for (const f of realWarnings) {
+        lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message} *(${f.suggestion})*`);
+      }
+    }
+    lines.push('');
+  }
+
+  // Scanner Errors section: shown when the report is partial OR when scanner-failure
+  // findings were collected. Prefers report.failedScanners[] (orchestrator canonical list)
+  // when non-empty; otherwise derives the list from filtered findings.
+  const showScannerErrors = report.partial || scannerErrorFindings.length > 0;
+  if (showScannerErrors) {
+    lines.push('## Scanner Errors');
+    lines.push('');
+    lines.push('_One or more scanners did not complete successfully. Findings below reflect scanner reliability issues, not repo health._');
+    lines.push('');
+    if (report.failedScanners != null && report.failedScanners.length > 0) {
+      for (const fs of report.failedScanners) {
+        lines.push(`- **[${fs.name}]** *(${fs.reason})* ${fs.pillar} — ${fs.message}`);
+      }
+    } else {
+      for (const f of scannerErrorFindings) {
+        lines.push(`- **[${f.id}]** *(${f.category})* ${f.pillar} — ${f.message}`);
+      }
     }
     lines.push('');
   }
@@ -158,8 +248,21 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
   if (infos.length > 0) {
     lines.push('## Info');
     lines.push('');
-    for (const f of infos) {
-      lines.push(`- **[${f.id}]** ${f.message}`);
+    if (options?.grouped) {
+      for (const group of groupFindings(infos)) {
+        for (const line of renderGroupedFinding(group)) {
+          // Info ungrouped format omits suggestion; grouped format includes it inline
+          if (group.members.length === 1) {
+            lines.push(`- **[${group.representative.id}]** ${tierPrefix(group.representative)}${group.representative.message}`);
+          } else {
+            lines.push(line);
+          }
+        }
+      }
+    } else {
+      for (const f of infos) {
+        lines.push(`- **[${f.id}]** ${tierPrefix(f)}${f.message}`);
+      }
     }
     lines.push('');
   }

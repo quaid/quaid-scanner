@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for 0.1.3
+### Planned for 0.1.4
 
 - **Epic 11 — Cross-Validation Harness**: `scripts/cross-validate.ts` diffs quaid findings against
   authoritative external tools — OpenSSF Scorecard API (per-check verdict comparison) and the
@@ -17,6 +17,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   properties run through the full orchestrator on every `npm test`. Mutation tests start from a
   "perfect repo" (all checks pass), apply one change, and assert the expected finding appears.
   `tests/corpus/` runs in the standard vitest glob. (#72–75)
+
+## [0.1.3] - 2026-06-02
+
+### Fixed
+
+- **`scannerTimeout` undefined → 0 ms** — when library callers omit `scannerTimeout` from their
+  config, the orchestrator now falls back to `DEFAULT_CONFIG.scannerTimeout` (90 s) instead of
+  passing `undefined` to `setTimeout`, which Node.js silently coerced to 0 ms. This was the root
+  cause of ~281 bogus "timed out after undefinedms" issues filed across 27 external repos. (#135)
+- **Inclusive scanner crash on undefined `config.inclusive`** — all three inclusive scanners
+  (`inclusive-code-scanner`, `inclusive-doc-scanner`, `inclusive-naming-scanner`) now handle a
+  missing `config.inclusive` object gracefully by falling back to safe defaults. Previously they
+  crashed with `Cannot read properties of undefined (reading 'termListUrl')`, producing ~81 bogus
+  crash issues in external repos. (#136)
+- **CLI stdout flush race** — the CLI previously called `process.exit()` immediately after
+  `process.stdout.write()`, which could truncate output when stdout was piped. Now uses the
+  write-callback form (`process.stdout.write(output, () => process.exit(code))`) to guarantee the
+  write completes before the process exits. (#137)
+- **`partial` and `failedScanners` missing from scan reports** — `OrchestratorResult` and
+  `ScanReport` now carry `partial: boolean` and `failedScanners: FailedScannerRecord[]` so
+  consumers can detect and handle incomplete scans without parsing raw finding categories. (#138)
+- **`buildContext` not exported from the package** — `buildContext`, `readGitInfo`, `GitInfo`, and
+  `BuildContextResult` are now re-exported from `src/index.ts`. Previously consumers had to import
+  from the internal `dist/context-builder.js` path. (#140)
+- **`.quaid-scanner-ignore` not respected by `diminishing-language-scanner` and
+  `assumed-knowledge-scanner`** — these two scanners now load and apply both `.quaid-scanner-ignore`
+  file patterns and `config.inclusive.excludePatterns`, consistent with the other inclusive
+  scanners. (#122)
+
+### Added
+
+- **`isErrorFinding()` library export** — utility function that returns `true` for findings whose
+  `category` is `'timeout'` or `'error'` (i.e. scanner failures, not real repo findings). Batch
+  runners and agent tools should filter these out before filing issues. Re-exported from the
+  package root. (#139)
+- **`renderIssueBody()` library export** — produces a structured, agent-executable GitHub issue
+  body with five sections (What is wrong / Why it matters / How to fix it / How to verify /
+  Context) and a runnable `quaid-scanner` verification command. Available at the package root so
+  all consumers (batch runners, MCP tools, CI integrations) get a consistent template. (#143)
+- **`scripts/quaid-scan-batch.mjs`** — production batch runner that scans every repo in a GitHub
+  org, commits health reports, opens and merges PRs, and files structured GitHub issues. Fixes all
+  batch runner bugs from the June 2026 incident: idempotency state file, rate-limit backoff,
+  orphan-branch guard, `--head` flag on `gh pr create`, `git add -f`, `--body-file`, and actionable
+  finding filter. (#141–#148)
+- **`scripts/quaid-cleanup-bogus.mjs`** — closes bogus timeout/crash issues filed by a broken
+  batch run. Matches only the two title patterns produced by the scanner bugs fixed in this
+  release; does not touch any legitimate findings.
+- **`scripts/quaid-scan-recovery.mjs`** — post-batch recovery utility that creates missing PRs,
+  re-runs hard-error repos, and closes duplicate issues in a single repo.
 
 ## [0.1.2] - 2026-05-30
 

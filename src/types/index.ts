@@ -112,6 +112,13 @@ export type ScanEvent =
 
 // --- Report Output Types ---
 
+export interface FailedScannerRecord {
+  name: string;
+  pillar: string;
+  reason: 'timeout' | 'error';
+  message: string;
+}
+
 export interface ScanReport {
   repo: string;
   scannedAt: string;
@@ -125,6 +132,8 @@ export interface ScanReport {
   findings: Finding[];
   recommendations: Recommendation[];
   metadata: RepoMetadata;
+  partial: boolean;
+  failedScanners: FailedScannerRecord[];
   ecosystem?: import('../ecosystem/types.js').EcosystemIntelligence;
 }
 

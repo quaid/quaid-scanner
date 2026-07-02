@@ -11,8 +11,10 @@ import * as path from 'node:path';
 import { glob } from 'glob';
 import { TermListManager } from './term-list.js';
 import { loadIgnorePatterns } from './ignore-file.js';
+import { resolveInclusiveConfig } from './resolve-config.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
+import { isMinifiedContent } from './utils/is-minified.js';
 
 /** File extensions to scan. */
 const CODE_EXTENSIONS: string[] = [
@@ -35,6 +37,10 @@ const EXCLUDED_DIRS: string[] = [
   '.git/',
   'dist/',
   'build/',
+  'out/',
+  '.next/',
+  '.nuxt/',
+  'coverage/',
 ];
 
 /** Languages that use # for single-line comments. */
@@ -43,13 +49,10 @@ const HASH_COMMENT_EXTENSIONS = new Set(['.py', '.rb']);
 /** Per-line suppression marker. */
 const SUPPRESSION_MARKER = 'inclusive-naming-ignore';
 
-/**
- * Map term tiers to finding severities.
- */
 function tierToSeverity(tier: 1 | 2 | 3): Severity {
+  // Tier 1 caps at WARNING; CRITICAL is reserved for harm-class findings (#165).
   switch (tier) {
     case 1:
-      return Severity.CRITICAL;
     case 2:
       return Severity.WARNING;
     case 3:
@@ -176,7 +179,7 @@ export class InclusiveCodeScanner implements Scanner {
 
   async run(context: ScanContext): Promise<Finding[]> {
     const { repoPath, config } = context;
-    const inclusiveConfig = config.inclusive;
+    const inclusiveConfig = resolveInclusiveConfig(config.inclusive);
 
     // Load terms, respecting ignoredTerms config
     const { terms } = await this.termManager.loadTerms(inclusiveConfig);
@@ -203,6 +206,11 @@ export class InclusiveCodeScanner implements Scanner {
       try {
         content = fs.readFileSync(filePath, 'utf-8');
       } catch {
+        continue;
+      }
+
+      // Skip minified/generated bundles — terms inside library code are not actionable (#202)
+      if (isMinifiedContent(content)) {
         continue;
       }
 
@@ -316,7 +324,7 @@ export class InclusiveCodeScanner implements Scanner {
                 column: region.startCol + 1,
                 context: line.trim(),
                 suggestion: `Consider using: ${term.replacements.join(', ')}`,
-                referenceUrl: 'https://inclusivenaming.org/',
+                referenceUrl: term.referenceUrl ?? 'https://inclusivenaming.org/',
                 dataSource: 'local',
                 metadata: {
                   term: term.term,
@@ -330,7 +338,10 @@ export class InclusiveCodeScanner implements Scanner {
       }
     }
 
-    return findings;
+    // Backstop: de-duplicate findings by id so that an identical
+    // (scanner, file, line, term) tuple can only produce one finding even
+    // if a future code path reintroduces duplicate work.
+    return Array.from(new Map(findings.map((f) => [f.id, f])).values());
   }
 
   /**
@@ -421,6 +432,9 @@ export class InclusiveCodeScanner implements Scanner {
       ignore,
     });
 
-    return files.sort();
+    // De-duplicate: a file could theoretically match multiple patterns if the
+    // glob implementation does not merge results internally.  Using a Set keyed
+    // by absolute path mirrors the fileSet pattern in diminishing-scanner.ts.
+    return Array.from(new Set(files)).sort();
   }
 }

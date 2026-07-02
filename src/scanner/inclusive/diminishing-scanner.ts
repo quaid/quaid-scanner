@@ -13,6 +13,9 @@ import { relative } from 'path';
 import { glob } from 'glob';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { Pillar, Severity } from '../../types/index.js';
+import { loadIgnorePatterns } from './ignore-file.js';
+import { isMinifiedContent } from './utils/is-minified.js';
+import { SELF_REPORT_GLOBS } from './utils/self-report-globs.js';
 
 /** A diminishing language pattern definition. */
 interface DiminishingPattern {
@@ -20,6 +23,7 @@ interface DiminishingPattern {
   pattern: RegExp;
   severity: Severity;
   suggestion: string;
+  referenceUrl: string;
 }
 
 /** All diminishing language patterns to detect. */
@@ -30,6 +34,8 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.WARNING,
     suggestion:
       'Remove "just" — it implies the task is trivial and can discourage readers who find it difficult.',
+    referenceUrl:
+      'https://learn.microsoft.com/en-us/style-guide/a-z-word-list-term-collections/j/just',
   },
   {
     name: 'simply [verb]',
@@ -37,6 +43,8 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.WARNING,
     suggestion:
       'Remove "simply" — it implies the task should be obvious and can make readers feel inadequate.',
+    referenceUrl:
+      'https://learn.microsoft.com/en-us/style-guide/a-z-word-list-term-collections/s/simply',
   },
   {
     name: 'easy/easily',
@@ -44,6 +52,8 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.INFO,
     suggestion:
       'Consider removing "easy/easily" — what is easy for one person may be challenging for another.',
+    referenceUrl:
+      'https://learn.microsoft.com/en-us/style-guide/a-z-word-list-term-collections/e/easy-easily',
   },
   {
     name: 'obvious/obviously',
@@ -51,6 +61,8 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.WARNING,
     suggestion:
       'Remove "obvious/obviously" — if it were truly obvious, it would not need to be stated.',
+    referenceUrl:
+      'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
   },
   {
     name: 'trivial',
@@ -58,6 +70,7 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.INFO,
     suggestion:
       'Consider replacing "trivial" with specific guidance about the expected effort level.',
+    referenceUrl: 'https://www.plainlanguage.gov/guidelines/words/avoid-jargon/',
   },
   {
     name: 'everyone knows',
@@ -65,6 +78,7 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.WARNING,
     suggestion:
       'Remove "everyone knows" — not everyone has the same knowledge. Explain the concept instead.',
+    referenceUrl: 'https://content-guide.18f.gov/our-style/inclusive-language/',
   },
   {
     name: 'as you know',
@@ -72,6 +86,7 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.WARNING,
     suggestion:
       'Remove "as you know" — readers may not know. State the information directly.',
+    referenceUrl: 'https://content-guide.18f.gov/our-style/inclusive-language/',
   },
   {
     name: 'of course',
@@ -79,6 +94,8 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.INFO,
     suggestion:
       'Consider removing "of course" — it assumes shared knowledge that newcomers may lack.',
+    referenceUrl:
+      'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
   },
   {
     name: 'clearly',
@@ -86,6 +103,8 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.INFO,
     suggestion:
       'Consider removing "clearly" — if it is clear, the reader will see it without being told.',
+    referenceUrl:
+      'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
   },
   {
     name: 'basically',
@@ -93,6 +112,8 @@ const DIMINISHING_PATTERNS: DiminishingPattern[] = [
     severity: Severity.INFO,
     suggestion:
       'Consider removing "basically" — provide the actual explanation instead of a simplification signal.',
+    referenceUrl:
+      'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
   },
 ];
 
@@ -161,7 +182,9 @@ export class DiminishingLanguageScanner implements Scanner {
    * @returns Array of findings including per-match findings and a summary
    */
   async run(context: ScanContext): Promise<Finding[]> {
-    const files = await this.findFiles(context.repoPath);
+    const userPatterns = await loadIgnorePatterns(context.repoPath);
+    const configPatterns = context.config.inclusive?.excludePatterns ?? [];
+    const files = await this.findFiles(context.repoPath, [...userPatterns, ...configPatterns]);
     const findings: Finding[] = [];
     const fileGroups: Record<string, number> = {};
 
@@ -173,6 +196,11 @@ export class DiminishingLanguageScanner implements Scanner {
       try {
         content = readFileSync(filePath, 'utf-8');
       } catch {
+        continue;
+      }
+
+      // Skip minified/generated content — patterns there are not actionable prose (#202)
+      if (isMinifiedContent(content)) {
         continue;
       }
 
@@ -211,7 +239,7 @@ export class DiminishingLanguageScanner implements Scanner {
               column: match.index + 1,
               context: line.trim(),
               suggestion: dp.suggestion,
-              referenceUrl: 'https://inclusivenaming.org/',
+              referenceUrl: dp.referenceUrl,
               dataSource: 'local',
             });
 
@@ -234,14 +262,14 @@ export class DiminishingLanguageScanner implements Scanner {
     // Calculate welcoming score: 100 - (warning_count * 3 + info_count * 1), minimum 0
     const welcomingScore = Math.max(0, 100 - (warningCount * 3 + infoCount * 1));
 
-    // Determine severity based on thresholds
+    // Determine severity based on thresholds.
+    // Inclusive scanners cap at WARNING — CRITICAL is reserved for harm-class
+    // (security/legal/operational) findings. Sub-60 scores produce WARNING (#165).
     let summarySeverity: Severity;
     if (welcomingScore > 85) {
       summarySeverity = Severity.PASS;
-    } else if (welcomingScore >= 60) {
-      summarySeverity = Severity.WARNING;
     } else {
-      summarySeverity = Severity.CRITICAL;
+      summarySeverity = Severity.WARNING;
     }
 
     // Add summary finding
@@ -254,7 +282,7 @@ export class DiminishingLanguageScanner implements Scanner {
       file: null,
       line: null,
       column: null,
-      referenceUrl: 'https://inclusivenaming.org/',
+      referenceUrl: 'https://learn.microsoft.com/en-us/style-guide/word-choice/words-and-terms-to-use-and-avoid',
       dataSource: 'local',
       suggestion:
         welcomingScore > 85
@@ -277,7 +305,7 @@ export class DiminishingLanguageScanner implements Scanner {
    * @param repoPath - Root path of the repository
    * @returns Array of absolute file paths to scan
    */
-  private async findFiles(repoPath: string): Promise<string[]> {
+  private async findFiles(repoPath: string, userIgnore: string[] = []): Promise<string[]> {
     const fileSet = new Set<string>();
 
     for (const pattern of SCAN_PATTERNS) {
@@ -285,7 +313,7 @@ export class DiminishingLanguageScanner implements Scanner {
         cwd: repoPath,
         absolute: true,
         nodir: true,
-        ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**'],
+        ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/out/**', '**/.next/**', '**/.nuxt/**', '**/coverage/**', '**/.git/**', ...SELF_REPORT_GLOBS, ...userIgnore],
       });
       for (const f of matched) {
         fileSet.add(f);

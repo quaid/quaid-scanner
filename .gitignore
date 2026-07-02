@@ -36,3 +36,6 @@ coverage/
 
 # Claude local settings (NOT the symlinks - those are committed)
 .claude/settings.local.json
+
+# quaid-scanner batch runner state (local run tracking, not for VCS)
+scripts/.quaid-scan-state.json

@@ -107,8 +107,8 @@ describe('InclusiveDocScanner', () => {
     });
   });
 
-  describe('tier 1 terms produce CRITICAL findings', () => {
-    it('finds tier 1 terms in .md files and returns CRITICAL findings', async () => {
+  describe('tier 1 terms produce WARNING findings (#165)', () => {
+    it('finds tier 1 terms in .md files and returns WARNING findings (capped per #165)', async () => {
       writeFixture(tmpDir, 'README.md', 'This uses a master-slave architecture.\n');
       const context = createScanContext(tmpDir);
 
@@ -117,8 +117,18 @@ describe('InclusiveDocScanner', () => {
       expect(findings.length).toBeGreaterThan(0);
       const finding = findings.find((f) => f.message.includes('master-slave'));
       expect(finding).toBeDefined();
-      expect(finding!.severity).toBe(Severity.CRITICAL);
+      expect(finding!.severity).toBe(Severity.WARNING);
       expect(finding!.pillar).toBe(Pillar.INCLUSIVE);
+    });
+
+    it('never emits CRITICAL severity for any tier (#165)', async () => {
+      writeFixture(tmpDir, 'README.md', 'master-slave whitelist blacklist sanity check man-hours\n');
+      const context = createScanContext(tmpDir);
+
+      const findings = await scanner.run(context);
+
+      const criticals = findings.filter((f) => f.severity === Severity.CRITICAL);
+      expect(criticals).toHaveLength(0);
     });
   });
 
@@ -448,6 +458,181 @@ describe('InclusiveDocScanner', () => {
       // guide.md should still be scanned
       const guideFindings = findings.filter((f) => f.file === 'guide.md');
       expect(guideFindings.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('undefined config.inclusive — Refs #149', () => {
+    it('does not throw when config.inclusive is undefined', async () => {
+      // Arrange: a context where the caller omitted config.inclusive entirely.
+      // Cast through unknown to simulate a real-world caller that constructs
+      // ScannerConfig without the inclusive field.
+      writeFixture(tmpDir, 'guide.md', 'The whitelist entry here.\n');
+      const context = createScanContext(tmpDir);
+      (context.config as unknown as Record<string, unknown>)['inclusive'] = undefined;
+
+      // Act + Assert: must resolve without throwing
+      await expect(scanner.run(context)).resolves.toBeDefined();
+    });
+
+    it('returns no error-category findings when config.inclusive is undefined', async () => {
+      // Arrange
+      writeFixture(tmpDir, 'guide.md', 'The whitelist entry here.\n');
+      const context = createScanContext(tmpDir);
+      (context.config as unknown as Record<string, unknown>)['inclusive'] = undefined;
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: scanner should produce inclusive-language findings, not crash errors
+      const errorFindings = findings.filter((f) => f.category === 'error');
+      expect(errorFindings).toHaveLength(0);
+    });
+  });
+
+  describe('finding de-duplication (#170)', () => {
+    it('emits exactly one finding for a single occurrence of an INI Tier 1 term', async () => {
+      // Arrange: one file, one line, one occurrence of a Tier 1 term
+      writeFixture(tmpDir, 'README.md', 'This uses a master branch.\n');
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: exactly one finding for "master" in this file
+      const masterFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.message.includes('"master"'),
+      );
+      expect(masterFindings).toHaveLength(1);
+    });
+
+    it('all emitted finding ids are unique (id invariant)', async () => {
+      // Arrange: a file with several different flagged terms
+      writeFixture(
+        tmpDir,
+        'guide.md',
+        'The whitelist and blacklist. The master-slave setup.\n',
+      );
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: no two findings share the same id
+      const ids = findings.map((f) => f.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('emits findings with unique ids when the same term appears twice on the same line', async () => {
+      // Arrange: "whitelist" appears twice on line 1 — the old ID scheme
+      // (file:line:term) would produce the same id for both occurrences,
+      // then the backstop Map must collapse them to one finding.
+      writeFixture(
+        tmpDir,
+        'dup-term.md',
+        'The whitelist here and the whitelist there.\n',
+      );
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: id invariant holds — no duplicate ids regardless of how
+      // many times the term appears on one line
+      const ids = findings.map((f) => f.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
+  describe('self-report exclusion (#169)', () => {
+    it('produces zero findings for a quaid-scan-*.md report file containing flagged terms', async () => {
+      // Arrange: write a report file that contains a non-inclusive term
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-04.md',
+        '# Scan Report\nnon-inclusive term "master" found in README.md\n',
+      );
+
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the report file must produce zero findings
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    // Regression: #207 — the .html report format added in #200 was not added to the
+    // self-report exclusion list, so scanners ingested their own prior HTML reports.
+    it('produces zero findings for a quaid-scan-*.html report file containing flagged terms (#207)', async () => {
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-08.html',
+        '<!DOCTYPE html><html><body>Non-inclusive term "master" found in src/app.ts</body></html>\n',
+      );
+
+      const context = createScanContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('produces zero findings for a quaid-scan-*.json report file containing flagged terms', async () => {
+      // Arrange: write a JSON report file that contains a non-inclusive term
+      // doc-scanner walks .md/.txt/.rst/.adoc/.html — not .json,
+      // so this confirms no regression if someone adds json to DOC_EXTENSIONS later.
+      // The test is included for documentation parity; it should trivially pass.
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-03.json',
+        '{"message":"master-slave architecture detected"}\n',
+      );
+
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: the JSON report file must not produce any findings
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+    });
+
+    it('still flags a legitimate README.md containing the same non-inclusive term', async () => {
+      // Arrange: report file (must be excluded) + legitimate doc file (must be flagged)
+      writeFixture(
+        tmpDir,
+        'docs/reports/quaid-scan-2026-06-04.md',
+        '# Scan Report\nnon-inclusive term "master" found\n',
+      );
+      writeFixture(
+        tmpDir,
+        'README.md',
+        'This repo uses a master-slave architecture.\n',
+      );
+
+      const context = createScanContext(tmpDir);
+
+      // Act
+      const findings = await scanner.run(context);
+
+      // Assert: README.md finding exists, report file finding does not
+      const reportFindings = findings.filter((f) =>
+        f.file?.startsWith('docs/reports/quaid-scan-'),
+      );
+      expect(reportFindings).toHaveLength(0);
+
+      const readmeFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.category === 'inclusive-language',
+      );
+      expect(readmeFindings.length).toBeGreaterThan(0);
     });
   });
 });

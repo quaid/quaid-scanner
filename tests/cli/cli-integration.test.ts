@@ -327,8 +327,12 @@ describe('main() — in-process coverage', () => {
     );
 
     stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(
-      (chunk: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (chunk: unknown, encodingOrCb?: unknown, cb?: unknown) => {
         outputChunks.push(String(chunk));
+        // Invoke the drain callback if provided so the flush-aware exit fires (#137)
+        const callback = (typeof encodingOrCb === 'function' ? encodingOrCb : cb) as (() => void) | undefined;
+        if (callback) setImmediate(() => { try { callback(); } catch { /* process.exit mock throws */ } });
         return true;
       },
     );
@@ -503,10 +507,15 @@ describe('main() — in-process coverage', () => {
         return undefined as never;
       },
     );
-    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
-      outputChunks.push(String(chunk));
-      return true;
-    });
+    vi.spyOn(process.stdout, 'write').mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (chunk: unknown, encodingOrCb?: unknown, cb?: unknown) => {
+        outputChunks.push(String(chunk));
+        const callback = (typeof encodingOrCb === 'function' ? encodingOrCb : cb) as (() => void) | undefined;
+        if (callback) setImmediate(() => { try { callback(); } catch { /* process.exit mock throws */ } });
+        return true;
+      },
+    );
 
     try {
       await import('../../src/cli.js');

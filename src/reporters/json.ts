@@ -2,6 +2,25 @@ import { Severity, MaturityLevel } from '../types/index.js';
 import type { ScanReport, Recommendation, Finding, ScannerConfig } from '../types/index.js';
 import type { OrchestratorResult } from '../scanner/orchestrator.js';
 
+/**
+ * Returns an ISO 8601 string with the local timezone offset instead of UTC Z.
+ * Example: "2026-06-05T16:30:00-07:00" for a Pacific time run at 23:30 UTC.
+ *
+ * @param d - The Date to format. Defaults to the current time.
+ */
+export function localISOString(d: Date = new Date()): string {
+  const offset = -d.getTimezoneOffset(); // minutes ahead of UTC
+  const sign = offset >= 0 ? '+' : '-';
+  const pad = (n: number) => String(Math.abs(n)).padStart(2, '0');
+  const hh = Math.floor(Math.abs(offset) / 60);
+  const mm = Math.abs(offset) % 60;
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` +
+    `${sign}${pad(hh)}:${pad(mm)}`
+  );
+}
+
 const SEVERITY_LABELS: Record<number, string> = {
   [Severity.PASS]: 'PASS',
   [Severity.INFO]: 'INFO',
@@ -60,7 +79,7 @@ export function buildScanReport(
 ): ScanReport {
   return {
     repo: target.value,
-    scannedAt: new Date().toISOString(),
+    scannedAt: localISOString(),
     version,
     depth: config.depth,
     durationMs: result.durationMs,
@@ -70,6 +89,8 @@ export function buildScanReport(
     pillars: result.pillars,
     findings: result.findings,
     recommendations: buildRecommendations(result.findings),
+    partial: result.partial,
+    failedScanners: result.failedScanners,
     metadata: {
       commitSha: null,
       branch: null,

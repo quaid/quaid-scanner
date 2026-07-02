@@ -84,7 +84,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "git clone" as assumed knowledge', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\nTo get started:\n\n```\ngit clone https://github.com/org/repo.git\n```\n',
+        '# Project\n\nTo get started, git clone https://github.com/org/repo.git.\n',
       );
 
       const context = createContext(tmpDir);
@@ -135,7 +135,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "npm install" without prerequisites section', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Getting Started\n\nRun `npm install` to install dependencies.\n',
+        '# Project\n\n## Getting Started\n\nRun npm install to install dependencies.\n',
       );
 
       const context = createContext(tmpDir);
@@ -151,7 +151,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "pip install" without prerequisites section', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Setup\n\nRun `pip install -r requirements.txt`.\n',
+        '# Project\n\n## Setup\n\nRun pip install -r requirements.txt.\n',
       );
 
       const context = createContext(tmpDir);
@@ -166,7 +166,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('detects "docker run" without prerequisites section', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Running\n\n```\ndocker run -p 3000:3000 myapp\n```\n',
+        '# Project\n\n## Running\n\ndocker run -p 3000:3000 myapp\n',
       );
 
       const context = createContext(tmpDir);
@@ -229,7 +229,7 @@ describe('AssumedKnowledgeScanner', () => {
     it('flags missing Prerequisites section when commands are present', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'README.md'),
-        '# Project\n\n## Getting Started\n\nRun `npm install` then `npm start`.\n',
+        '# Project\n\n## Getting Started\n\nRun npm install then npm start.\n',
       );
 
       const context = createContext(tmpDir);
@@ -343,6 +343,560 @@ describe('AssumedKnowledgeScanner', () => {
         (f) => f.file === 'docs/getting-started.md',
       );
       expect(gsFinding).toBeDefined();
+    });
+  });
+
+  describe('emphasis word denylist (#151)', () => {
+    it('does NOT flag "WARNING" in a markdown line', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\n**WARNING**: This is an important notice.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const warningFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('WARNING'),
+      );
+      expect(warningFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "WARNINGS" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nCheck the WARNINGS section for details.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const warningsFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('WARNINGS'),
+      );
+      expect(warningsFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "TODO" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nTODO: add more documentation here.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const todoFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('TODO'),
+      );
+      expect(todoFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "FIXME" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nFIXME: this section is incomplete.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const fixmeFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('FIXME'),
+      );
+      expect(fixmeFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "README" in documentation text', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSee the README for more details.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const readmeFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('README'),
+      );
+      expect(readmeFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "GET" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a GET request to retrieve data from the endpoint.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const getFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"GET"'),
+      );
+      expect(getFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "POST" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a POST request to create a new resource.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const postFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"POST"'),
+      );
+      expect(postFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "PUT" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a PUT request to update the resource.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const putFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PUT"'),
+      );
+      expect(putFinding).toBeUndefined();
+    });
+
+    it('does NOT flag HTTP verb "DELETE" in API documentation', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend a DELETE request to remove the resource.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const deleteFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"DELETE"'),
+      );
+      expect(deleteFinding).toBeUndefined();
+    });
+
+    it('DOES still flag a real undefined acronym like "RBAC"', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThis project uses RBAC for access control.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const rbacFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('RBAC'),
+      );
+      expect(rbacFinding).toBeDefined();
+      expect(rbacFinding!.severity).toBe(Severity.INFO);
+    });
+  });
+
+  describe('ignore patterns (#122)', () => {
+    it('skips files matching config excludePatterns', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nRun `npm install` to get started.\n',
+      );
+      const context = createContext(tmpDir);
+      context.config.inclusive = {
+        termListUrl: null,
+        customTerms: {},
+        ignoredTerms: [],
+        excludePatterns: ['README.md'],
+      };
+
+      const findings = await scanner.run(context);
+
+      const readmeToolFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.id.startsWith('AK-TOOL-'),
+      );
+      expect(readmeToolFindings).toHaveLength(0);
+    });
+
+    it('skips files matching .quaid-scanner-ignore patterns', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nRun `npm install` to get started.\n',
+      );
+      fs.writeFileSync(path.join(tmpDir, '.quaid-scanner-ignore'), 'README.md\n');
+      const context = createContext(tmpDir);
+
+      const findings = await scanner.run(context);
+
+      const readmeToolFindings = findings.filter(
+        (f) => f.file === 'README.md' && f.id.startsWith('AK-TOOL-'),
+      );
+      expect(readmeToolFindings).toHaveLength(0);
+    });
+
+    it('still scans CONTRIBUTING.md when only README.md is excluded', async () => {
+      fs.writeFileSync(path.join(tmpDir, 'README.md'), '# Clean\n');
+      fs.writeFileSync(
+        path.join(tmpDir, 'CONTRIBUTING.md'),
+        '# Contributing\n\nRun npm install first.\n',
+      );
+      const context = createContext(tmpDir);
+      context.config.inclusive = {
+        termListUrl: null,
+        customTerms: {},
+        ignoredTerms: [],
+        excludePatterns: ['README.md'],
+      };
+
+      const findings = await scanner.run(context);
+
+      const contributingFindings = findings.filter(
+        (f) => f.file === 'CONTRIBUTING.md' && f.id.startsWith('AK-TOOL-'),
+      );
+      expect(contributingFindings.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('real-word dictionary (#151 reopen)', () => {
+    it('does NOT flag "NEW" used as emphasis in **NEW**', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\n**NEW**: This feature was recently added.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const newFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"NEW"'),
+      );
+      expect(newFinding).toBeUndefined();
+    });
+
+    it('does NOT flag "SECURITY", "ACTIVE", "NEVER", "ALWAYS", "REQUIRED" used as emphasis', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\n**SECURITY** note: NEVER share your token. ALWAYS set REQUIRED fields. Keep the connection ACTIVE.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const emphasisFindings = findings.filter(
+        (f) =>
+          f.category === 'undefined-acronym' &&
+          ['SECURITY', 'ACTIVE', 'NEVER', 'ALWAYS', 'REQUIRED'].some((w) =>
+            f.message.includes(`"${w}"`),
+          ),
+      );
+      expect(emphasisFindings).toHaveLength(0);
+    });
+
+    it('does NOT flag "START", "STOP", "OPEN", "READY" (common state words)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nPress START to begin. Press STOP when READY. Keep the connection OPEN.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const stateFinding = findings.filter(
+        (f) =>
+          f.category === 'undefined-acronym' &&
+          ['START', 'STOP', 'OPEN', 'READY'].some((w) => f.message.includes(`"${w}"`)),
+      );
+      expect(stateFinding).toHaveLength(0);
+    });
+
+    it('still flags genuinely-undefined domain acronym "HCS"', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThis project integrates with HCS for data synchronization.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const hcsFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('HCS'),
+      );
+      expect(hcsFinding).toBeDefined();
+      expect(hcsFinding!.severity).toBe(Severity.INFO);
+    });
+  });
+
+  describe('layered acronym heuristics (#192)', () => {
+    // Layer 1 — morphological suffix suppression
+    it('does not flag REDACTED as undefined acronym (suffix -ED)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThe token value is REDACTED for security reasons.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"REDACTED"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag PROFANITY as undefined acronym (suffix -ITY)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nContent containing PROFANITY is not allowed.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PROFANITY"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag VIOLENCE as undefined acronym (suffix -NCE)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nContent depicting VIOLENCE is prohibited.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"VIOLENCE"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    // Layer 2 — length threshold suppression
+    it('does not flag SECURITY as undefined acronym (length > 5)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSECURITY is a top priority for this project.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"SECURITY"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag CONTRIBUTING as undefined acronym (length > 5)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSee CONTRIBUTING for guidelines.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"CONTRIBUTING"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    // Layer 3 — vowel ratio suppression
+    it('does not flag PHONE as undefined acronym (length 5, vowel ratio > 0.35)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nContact us by PHONE or email.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PHONE"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it('does not flag EMAIL as undefined acronym (length 5, vowel ratio > 0.35)', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nSend your questions to our EMAIL address.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"EMAIL"'),
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    // Genuine short acronyms must still be flagged
+    it('still flags JWT as a potential undefined acronym', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nAuthentication uses JWT for session management.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"JWT"'),
+      );
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe(Severity.INFO);
+    });
+
+    it('still flags RLHF as a potential undefined acronym', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        '# Project\n\nThe model was fine-tuned with RLHF.\n',
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const finding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"RLHF"'),
+      );
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe(Severity.INFO);
+    });
+  });
+
+  describe('code fence skipping (#194)', () => {
+    it('does not flag acronyms inside fenced code blocks', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Project',
+          '',
+          'Content moderation categories:',
+          '',
+          '```typescript',
+          'const categories = {',
+          '  PROFANITY: true,',
+          '  VIOLENCE: false,',
+          '  EMAIL: true,',
+          '  PHONE: false,',
+          '  REDACTED: false,',
+          '};',
+          '```',
+          '',
+          'See above for the full list.',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const codeFenceAcronyms = findings.filter(
+        (f) =>
+          f.category === 'undefined-acronym' &&
+          /PROFANITY|VIOLENCE|EMAIL|PHONE|REDACTED/.test(f.message),
+      );
+      expect(codeFenceAcronyms).toHaveLength(0);
+    });
+
+    it('does not flag tool commands inside fenced code blocks', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Quickstart',
+          '',
+          'Run the following:',
+          '',
+          '```sh',
+          'npm install',
+          'npm run build',
+          'npm test',
+          '```',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const codeFenceTools = findings.filter(
+        (f) => f.category === 'assumed-knowledge' && f.id.startsWith('AK-TOOL-NPM'),
+      );
+      expect(codeFenceTools).toHaveLength(0);
+    });
+
+    it('does not flag git operations inside fenced code blocks', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Development',
+          '',
+          'To get the code:',
+          '',
+          '```sh',
+          'git clone https://github.com/example/repo',
+          'git checkout -b my-feature',
+          '```',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const codeFenceGit = findings.filter(
+        (f) =>
+          f.category === 'assumed-knowledge' &&
+          (f.id.includes('AK-GIT-CLONE') || f.id.includes('AK-GIT-BRANCH')),
+      );
+      expect(codeFenceGit).toHaveLength(0);
+    });
+
+    it('still flags acronyms in prose after a code block', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Project',
+          '',
+          '```sh',
+          'npm install',
+          '```',
+          '',
+          'The project uses RLHF for fine-tuning.',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const rlhfFinding = findings.find(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"RLHF"'),
+      );
+      expect(rlhfFinding).toBeDefined();
+    });
+
+    it('does not flag acronyms inside inline code', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'README.md'),
+        [
+          '# Project',
+          '',
+          'Call the `PROFANITY_CHECK` function to validate input.',
+        ].join('\n'),
+      );
+
+      const context = createContext(tmpDir);
+      const findings = await scanner.run(context);
+
+      const inlineAcronym = findings.filter(
+        (f) => f.category === 'undefined-acronym' && f.message.includes('"PROFANITY_CHECK"'),
+      );
+      expect(inlineAcronym).toHaveLength(0);
     });
   });
 });

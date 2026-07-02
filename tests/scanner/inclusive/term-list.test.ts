@@ -63,6 +63,12 @@ describe('TermListManager', () => {
         expect(term.replacements.length).toBeGreaterThan(0);
       }
     });
+
+    it('end-of-life term has per-term INI referenceUrl', () => {
+      const eol = BUNDLED_TERMS.find((t) => t.term === 'end-of-life');
+      expect(eol).toBeDefined();
+      expect(eol!.referenceUrl).toBe('https://inclusivenaming.org/word-lists/tier-3/end-of-life/');
+    });
   });
 
   describe('loadTerms()', () => {
@@ -127,6 +133,25 @@ describe('TermListManager', () => {
       // Custom should override bundled
       expect(whitelists).toHaveLength(1);
       expect(whitelists[0].replacements).toEqual(['custom-allowlist']);
+    });
+  });
+
+  describe('loadTerms() — undefined config (#136)', () => {
+    it('does not throw when called with undefined config', async () => {
+      await expect(manager.loadTerms(undefined)).resolves.not.toThrow();
+    });
+
+    it('returns bundled terms when config is undefined', async () => {
+      const result = await manager.loadTerms(undefined);
+      expect(result.terms.length).toBeGreaterThan(0);
+      expect(result.source).toBe('bundled');
+    });
+
+    it('does not include error or crash findings when config is undefined', async () => {
+      const result = await manager.loadTerms(undefined);
+      // Result should be valid — no error sentinel
+      expect(result.terms).toBeDefined();
+      expect(Array.isArray(result.terms)).toBe(true);
     });
   });
 

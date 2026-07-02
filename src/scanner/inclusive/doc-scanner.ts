@@ -13,24 +13,23 @@ import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { Pillar, Severity } from '../../types/index.js';
 import { TermListManager, type LoadedTerm } from './term-list.js';
 import { loadIgnorePatterns } from './ignore-file.js';
+import { resolveInclusiveConfig } from './resolve-config.js';
+import { isMinifiedContent } from './utils/is-minified.js';
+import { SELF_REPORT_GLOBS } from './utils/self-report-globs.js';
 
 /** File extensions considered documentation files. */
 const DOC_EXTENSIONS = ['md', 'txt', 'rst', 'adoc', 'html'];
 
 /** Directories always excluded from scanning. */
-const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git'];
+const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git', 'dist', 'build', 'out', '.next', '.nuxt', 'coverage'];
 
 /** Inline suppression comment that disables scanning for a line. */
 const SUPPRESSION_MARKER = '<!-- inclusive-naming-ignore -->';
 
-/**
- * Map term tier to finding severity.
- * Tier 1 = CRITICAL, Tier 2 = WARNING, Tier 3 = INFO.
- */
 function tierToSeverity(tier: 1 | 2 | 3): Severity {
+  // Tier 1 caps at WARNING; CRITICAL is reserved for harm-class findings (#165).
   switch (tier) {
     case 1:
-      return Severity.CRITICAL;
     case 2:
       return Severity.WARNING;
     case 3:
@@ -91,7 +90,7 @@ export class InclusiveDocScanner implements Scanner {
    */
   async run(context: ScanContext): Promise<Finding[]> {
     const { repoPath, config } = context;
-    const inclusiveConfig = config.inclusive;
+    const inclusiveConfig = resolveInclusiveConfig(config.inclusive);
 
     // Load terms (bundled + custom, minus ignored)
     const termList = await this.termListManager.loadTerms(inclusiveConfig);
@@ -106,7 +105,7 @@ export class InclusiveDocScanner implements Scanner {
     const configPatterns = inclusiveConfig.excludePatterns;
     const userExcludes = [...fileIgnorePatterns, ...configPatterns];
 
-    // Find documentation files
+    // Find documentation files (de-duplicated by absolute path)
     const files = await this.findDocFiles(repoPath, userExcludes);
     const findings: Finding[] = [];
 
@@ -116,7 +115,11 @@ export class InclusiveDocScanner implements Scanner {
       findings.push(...fileFindings);
     }
 
-    return findings;
+    // Backstop: de-duplicate findings by id so that an identical
+    // (scanner, file, line, term) tuple can only produce one finding even
+    // if a future code path reintroduces duplicate work.  The Map preserves
+    // insertion order so the first occurrence of each id wins.
+    return Array.from(new Map(findings.map((f) => [f.id, f])).values());
   }
 
   /**
@@ -131,6 +134,7 @@ export class InclusiveDocScanner implements Scanner {
     const patterns = DOC_EXTENSIONS.map((ext) => `**/*.${ext}`);
     const ignorePatterns = [
       ...EXCLUDED_DIRS.map((dir) => `${dir}/**`),
+      ...SELF_REPORT_GLOBS,
       ...userExcludes,
     ];
 
@@ -141,7 +145,10 @@ export class InclusiveDocScanner implements Scanner {
       ignore: ignorePatterns,
     });
 
-    return files;
+    // De-duplicate: a file could theoretically match multiple patterns if the
+    // glob implementation does not merge results internally.  Using a Set keyed
+    // by absolute path mirrors the fileSet pattern in diminishing-scanner.ts.
+    return Array.from(new Set(files));
   }
 
   /**
@@ -155,6 +162,11 @@ export class InclusiveDocScanner implements Scanner {
       content = fs.readFileSync(absolutePath, 'utf-8');
     } catch {
       // Skip files that cannot be read
+      return [];
+    }
+
+    // Skip minified/generated assets — terms inside machine-generated content are not actionable (#202)
+    if (isMinifiedContent(content)) {
       return [];
     }
 
@@ -198,7 +210,7 @@ export class InclusiveDocScanner implements Scanner {
             column,
             context: contextSnippet,
             suggestion: `Replace "${matchedText}" with one of: ${term.replacements.join(', ')}`,
-            referenceUrl: 'https://inclusivenaming.org/word-lists/',
+            referenceUrl: term.referenceUrl ?? 'https://inclusivenaming.org/word-lists/',
             dataSource: 'local',
             metadata: {
               matchedText,
