@@ -1,1 +1,1 @@
-/Users/karstenwade/Projects/AINative-Studio/src/core/.claude/RULES.MD
+../../../AINative-Studio/src/core/.claude/RULES.MD

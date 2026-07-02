@@ -1,1 +1,1 @@
-/Users/karstenwade/Projects/AINative-Studio/src/core/.claude/skills/daily-report.md
+../../../../AINative-Studio/src/core/.claude/skills/daily-report.md
