@@ -1,1 +1,1 @@
-../../../AINative-Studio/src/core/.claude/SYMLINK_SETUP.md
+../../AINative-Studio/src/core/.claude/SYMLINK_SETUP.md

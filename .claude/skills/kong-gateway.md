@@ -1,1 +1,1 @@
-../../../../AINative-Studio/src/core/.claude/skills/kong-gateway.md
+../../../AINative-Studio/src/core/.claude/skills/kong-gateway.md

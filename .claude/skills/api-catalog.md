@@ -1,1 +1,1 @@
-../../../../AINative-Studio/src/core/.claude/skills/api-catalog.md
+../../../AINative-Studio/src/core/.claude/skills/api-catalog.md

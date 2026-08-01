@@ -1,1 +1,1 @@
-../../../../AINative-Studio/src/core/.claude/skills/api-key-management.md
+../../../AINative-Studio/src/core/.claude/skills/api-key-management.md

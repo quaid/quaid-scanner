@@ -39,3 +39,6 @@ coverage/
 
 # quaid-scanner batch runner state (local run tracking, not for VCS)
 scripts/.quaid-scan-state.json
+
+# Local parallel-agent worktrees (machine-local, never committed)
+.claude/worktrees/

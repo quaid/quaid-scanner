@@ -1,1 +1,1 @@
-../../../../AINative-Studio/src/core/.claude/skills/api-testing-requirements.md
+../../../AINative-Studio/src/core/.claude/skills/api-testing-requirements.md

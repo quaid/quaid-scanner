@@ -1,1 +1,1 @@
-../../../../AINative-Studio/src/core/.claude/skills/audio-transcribe.md
+../../../AINative-Studio/src/core/.claude/skills/audio-transcribe.md
