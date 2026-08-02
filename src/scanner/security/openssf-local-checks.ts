@@ -12,6 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 
@@ -129,7 +130,7 @@ export class OpenSSFLocalChecksScanner implements Scanner {
     repoPath: string,
     make: (s: Severity, m: string, c: string, sg: string) => Finding,
   ): Promise<Finding> {
-    const ignore = ['**/node_modules/**', '**/vendor/**', '**/.git/**', '**/dist/**', '**/build/**'];
+    const ignore = excludeGlobs();
 
     let binaryCount = 0;
     try {

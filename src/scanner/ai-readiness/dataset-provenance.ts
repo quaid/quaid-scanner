@@ -9,6 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { AIRepoDetectionScanner } from './ai-repo-detection.js';
@@ -24,7 +25,6 @@ const DATASET_EXTENSIONS = new Set([
 const DATASET_DIRS = new Set(['data', 'datasets', 'dataset']);
 
 /** Directories to skip. */
-const EXCLUDED_DIRS = ['node_modules', '.git', 'vendor', 'dist', 'build', '__pycache__', '.dvc'];
 
 /** Datasheet documentation file candidates. */
 const DATASHEET_FILES = [
@@ -126,7 +126,7 @@ export class DatasetProvenanceScanner implements Scanner {
       }
 
       // Scan for dataset files
-      const ignorePatterns = EXCLUDED_DIRS.map((d) => `**/${d}/**`);
+      const ignorePatterns = excludeGlobs();
       const allFiles = await glob('**/*', {
         cwd: repoPath,
         absolute: true,

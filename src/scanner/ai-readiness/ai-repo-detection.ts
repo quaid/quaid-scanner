@@ -8,6 +8,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 
@@ -54,7 +55,6 @@ const ML_PACKAGES = new Set([
 ]);
 
 /** Directories to skip during scanning. */
-const EXCLUDED_DIRS = ['node_modules', '.git', 'vendor', 'dist', 'build', '__pycache__'];
 
 export class AIRepoDetectionScanner implements Scanner {
   readonly name = 'ai-repo-detection';
@@ -66,7 +66,7 @@ export class AIRepoDetectionScanner implements Scanner {
     const signals: string[] = [];
 
     try {
-      const ignorePatterns = EXCLUDED_DIRS.map((d) => `**/${d}/**`);
+      const ignorePatterns = excludeGlobs();
 
       const allFiles = await glob('**/*', {
         cwd: repoPath,
