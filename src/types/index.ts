@@ -135,6 +135,23 @@ export interface ScanReport {
   partial: boolean;
   failedScanners: FailedScannerRecord[];
   ecosystem?: import('../ecosystem/types.js').EcosystemIntelligence;
+  provenance?: ProvenanceInfo;
+}
+
+/**
+ * Machine-readable record of which agent/model(s) generated a scan report and
+ * at what token cost. Opt-in — populated via the `--provenance-file` flag and
+ * carried through to JSON and markdown output. See PRD Story 8.7a.
+ */
+export interface ProvenanceInfo {
+  models: string[];
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  sessionId?: string;
+  agentId?: string;
+  generatedAt: string;
+  notes?: string;
 }
 
 export interface PillarScore {
@@ -189,6 +206,7 @@ export interface ScannerConfig {
   pillars: PillarConfig;
   bots: BotFilterConfig;
   inclusive: InclusiveConfig;
+  provenance?: ProvenanceInfo;
 }
 
 export interface PillarConfig {

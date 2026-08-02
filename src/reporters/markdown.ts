@@ -309,6 +309,25 @@ export function renderMarkdown(report: ScanReport, options?: MarkdownReportOptio
   lines.push(`| **Overall** | **${(totalWeight * 100).toFixed(0)}%** | | **${report.overallScore.toFixed(2)}** |`);
   lines.push('');
 
+  // Report Provenance section (Story 8.7b) — final section, rendered only when
+  // provenance data is present. Only rows for defined fields are emitted.
+  if (report.provenance) {
+    const p = report.provenance;
+    lines.push('## Report Provenance');
+    lines.push('');
+    lines.push('| Field | Value |');
+    lines.push('|-------|-------|');
+    if (p.models.length > 0) lines.push(`| Models | ${p.models.join(', ')} |`);
+    if (p.inputTokens !== undefined) lines.push(`| Input tokens | ${p.inputTokens.toLocaleString('en-US')} |`);
+    if (p.outputTokens !== undefined) lines.push(`| Output tokens | ${p.outputTokens.toLocaleString('en-US')} |`);
+    if (p.totalTokens !== undefined) lines.push(`| Total tokens | ${p.totalTokens.toLocaleString('en-US')} |`);
+    if (p.sessionId !== undefined) lines.push(`| Session ID | ${p.sessionId} |`);
+    if (p.agentId !== undefined) lines.push(`| Agent ID | ${p.agentId} |`);
+    lines.push(`| Generated at | ${p.generatedAt} |`);
+    if (p.notes !== undefined) lines.push(`| Notes | ${p.notes} |`);
+    lines.push('');
+  }
+
   // Metadata footer
   lines.push('---');
   lines.push(`*quaid-scanner v${report.version} | ${report.scannedAt}*`);

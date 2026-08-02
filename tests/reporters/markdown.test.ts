@@ -1202,3 +1202,42 @@ describe('renderMarkdown', () => {
     });
   });
 });
+
+describe('Report Provenance section (Story 8.7b #179)', () => {
+  const sampleProvenance = {
+    models: ['claude-opus-4-8', 'claude-haiku-4-5'],
+    inputTokens: 12450,
+    outputTokens: 3210,
+    totalTokens: 15660,
+    sessionId: 'sess_abc123',
+    agentId: 'karsten-ospo',
+    generatedAt: '2026-08-02T14:23:00-07:00',
+  };
+
+  it('renders a ## Report Provenance section with a two-column table when provenance is present', () => {
+    const md = renderMarkdown({ ...makeReport(), provenance: sampleProvenance });
+    expect(md).toContain('## Report Provenance');
+    expect(md).toContain('| Field | Value |');
+    // models comma-separated (8.7b.3)
+    expect(md).toContain('| Models | claude-opus-4-8, claude-haiku-4-5 |');
+    // token fields locale-formatted with thousands separators (8.7b.4)
+    expect(md).toContain('| Input tokens | 12,450 |');
+    expect(md).toContain('| Total tokens | 15,660 |');
+    expect(md).toContain('| Session ID | sess_abc123 |');
+    expect(md).toContain('| Generated at | 2026-08-02T14:23:00-07:00 |');
+  });
+
+  it('only includes rows for defined fields (8.7b.2)', () => {
+    const md = renderMarkdown({ ...makeReport(), provenance: { models: ['m'], generatedAt: 'now' } });
+    expect(md).toContain('## Report Provenance');
+    expect(md).toContain('| Models | m |');
+    expect(md).toContain('| Generated at | now |');
+    expect(md).not.toContain('Input tokens');
+    expect(md).not.toContain('Session ID');
+    expect(md).not.toContain('Notes');
+  });
+
+  it('is completely absent when provenance is undefined (8.7b.5)', () => {
+    expect(renderMarkdown(makeReport())).not.toContain('Report Provenance');
+  });
+});

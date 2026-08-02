@@ -84,6 +84,10 @@ function createProgram(): Command {
       'Maturity level: sandbox, incubating, graduated, archived, or auto',
       'auto',
     )
+    .option(
+      '--provenance-file <path>',
+      'Inject agent session provenance (a JSON file with ProvenanceInfo: models[], token counts, sessionId, generatedAt) into the report',
+    )
     .option('--quiet', 'Suppress progress output')
     .option('--verbose', 'Show detailed progress')
     .option('--ecosystem', 'Run ecosystem intelligence analysis (rivals, partners, communities)')

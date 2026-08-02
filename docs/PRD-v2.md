@@ -2002,7 +2002,7 @@ direct risk to the project or its users. Inclusive-language findings do not meet
 
 ---
 
-### Story 8.7a: ProvenanceInfo Type, ScanReport Field, and JSON Output (PROV-01a) 📋
+### Story 8.7a: ProvenanceInfo Type, ScanReport Field, and JSON Output (PROV-01a) ✅
 **As a** Developer Agent
 **I want** a `ProvenanceInfo` interface and an optional `provenance` field on `ScanReport`
 **So that** the report itself carries a machine-readable record of which model(s) generated it and at what token cost
@@ -2023,7 +2023,7 @@ direct risk to the project or its users. Inclusive-language findings do not meet
 
 ---
 
-### Story 8.7b: Markdown Report Provenance Section Rendering (PROV-01b) 📋
+### Story 8.7b: Markdown Report Provenance Section Rendering (PROV-01b) ✅
 **As a** Human persona (via agent)
 **I want** the markdown report to include a `## Report Provenance` section when provenance data is present
 **So that** human reviewers can see who/what generated the report without inspecting raw JSON
@@ -2045,7 +2045,7 @@ direct risk to the project or its users. Inclusive-language findings do not meet
 
 ---
 
-### Story 8.7c: CLI `--provenance-file` Flag for Agent Session Metadata Injection (PROV-01c) 📋
+### Story 8.7c: CLI `--provenance-file` Flag for Agent Session Metadata Injection (PROV-01c) ✅
 **As a** Developer Agent
 **I want** a `--provenance-file <path>` CLI option
 **So that** I can inject my session metadata (model, tokens, session ID) at scan time and have it embedded in the output report
