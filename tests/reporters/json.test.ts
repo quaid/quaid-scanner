@@ -310,3 +310,31 @@ describe('buildScanReport scannedAt timezone (#188)', () => {
     expect(report.scannedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
   });
 });
+
+describe('provenance (Story 8.7a #178)', () => {
+  const target = { type: 'local' as const, value: '/tmp/test-repo' };
+  const sampleProvenance = {
+    models: ['claude-opus-4-8'],
+    inputTokens: 12450,
+    outputTokens: 3210,
+    totalTokens: 15660,
+    sessionId: 'sess_abc123',
+    agentId: 'karsten-ospo',
+    generatedAt: '2026-08-02T14:23:00-07:00',
+  };
+
+  it('sets ScanReport.provenance and includes a top-level provenance key when config.provenance is set', () => {
+    const config = { ...DEFAULT_CONFIG, provenance: sampleProvenance };
+    const report = buildScanReport(target, makeResult(), config, MaturityLevel.SANDBOX, '1.0.0');
+    expect(report.provenance).toEqual(sampleProvenance);
+    const parsed = JSON.parse(serializeJson(report));
+    expect(parsed.provenance).toEqual(sampleProvenance);
+  });
+
+  it('omits the provenance key entirely when config.provenance is absent (opt-in)', () => {
+    const report = buildScanReport(target, makeResult(), DEFAULT_CONFIG, MaturityLevel.SANDBOX, '1.0.0');
+    expect(report.provenance).toBeUndefined();
+    const parsed = JSON.parse(serializeJson(report));
+    expect('provenance' in parsed).toBe(false);
+  });
+});

@@ -101,6 +101,9 @@ export function buildScanReport(
       forks: null,
       openIssues: null,
     },
+    // Opt-in provenance: carried through only when supplied (e.g. via
+    // --provenance-file). Omitted entirely otherwise. See PRD Story 8.7a/8.7c.
+    ...(config.provenance ? { provenance: config.provenance } : {}),
   };
 }
 
