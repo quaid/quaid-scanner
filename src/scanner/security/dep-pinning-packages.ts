@@ -205,7 +205,7 @@ export class DepPinningPackagesScanner implements Scanner {
       }
 
       // No version specifier at all → CRITICAL
-      const pkgName = line.split(/[\[;]/)[0].trim();
+      const pkgName = line.split(/[[;]/)[0].trim();
       if (/^[a-zA-Z][\w.-]*$/.test(pkgName)) {
         findings.push(makeFinding(
           Severity.CRITICAL,

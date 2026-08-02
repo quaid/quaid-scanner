@@ -39,7 +39,7 @@ function extractExemptLabels(content: string): string[] {
   for (const key of ['exemptLabels', 'exempt-issue-labels', 'exempt-pr-labels']) {
     const val = extractYAMLValue(content, key);
     if (val) {
-      const cleaned = val.replace(/[\[\]]/g, '');
+      const cleaned = val.replace(/[[\]]/g, '');
       labels.push(...cleaned.split(',').map((l) => l.trim()).filter(Boolean));
     }
   }
