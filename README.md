@@ -117,6 +117,7 @@ Options:
   --maturity <level>      sandbox | incubating | graduated | archived | auto  [default: auto]
   --ecosystem             Run ecosystem intelligence (rivals, partners, communities, strategy)
   --ecosystem-depth       static | assisted  [default: static]
+  --provenance-file <p>   Inject agent session provenance (JSON conforming to ProvenanceInfo) into the report
   --quiet                 Suppress progress output (clean stdout for piping)
   --verbose               Show per-scanner progress
   -h, --help              Show help
