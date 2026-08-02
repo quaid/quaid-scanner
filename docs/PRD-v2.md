@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.8
+# Quaid's OSS Repo Scanner - PRD v2.9
 
 ## Executive Summary
 
@@ -10,7 +10,7 @@
 
 **Paradigm:** The most significant risks to modern projects are not syntactical errors in code, but sociotechnical failures—burnout, toxic exclusionary cultures, legal ambiguity, and supply chain fragility. Therefore, this tool prioritizes "Health as Code," treating community documentation and governance structures with the same rigor as the software itself.
 
-**Current release:** v0.1.2 (2026-05-27) — 43 scanners, 77 test files, 97.5% coverage. Status legend used throughout this document: ✅ Done · 🚧 Partial · 📋 Planned
+**Current release:** v0.1.4 (2026-08-01) — 43 scanners, 85 test files, 97.7% coverage. Status legend used throughout this document: ✅ Done · 🚧 Partial · 📋 Planned
 
 ---
 
@@ -2074,7 +2074,7 @@ quaid-scanner . --format json --quiet --provenance-file /tmp/provenance.json
 
 ---
 
-### Story 8.8: Self-Contained HTML Report Renderer (HTML-01) 📋
+### Story 8.8: Self-Contained HTML Report Renderer (HTML-01) ✅
 
 **As a** Human reviewer
 **I want** a beautiful self-contained HTML report I can open in any browser
@@ -2668,6 +2668,17 @@ quaid-scanner/
 ---
 
 ### Change Log
+
+#### v2.9 Changes (from v2.8)
+
+| Change | Impact |
+|--------|--------|
+| Story 8.8 (self-contained HTML report renderer, `renderHtml`) | 📋 → ✅ Done — shipped in v0.1.4 (#198); `renderHtml` exported from `src/index.ts`, `src/reporters/html.ts` present |
+| Executive Summary "Current release" refreshed v0.1.2 → v0.1.4 | 43 scanners, 77 → 85 test files, 97.5% → 97.7% coverage |
+| Recorded the v0.1.3/v0.1.4 inclusive-scanner fix wave (#149–#195) | Acronym-heuristic overhaul, INI severity/tier decoupling, self-report and minified-bundle exclusion, grouped rendering, dedup — accuracy hardening, no story-scope change |
+| Recorded repo-health hardening merged after v0.1.4 | Added `.github/GOVERNANCE.md` and `.github/FUNDING.yml`; added CI workflow (lint+build+test on PRs); pinned GitHub Actions to commit SHAs (#123); fixed response-time/response-classification GraphQL regression (#213) |
+| Story 8.9 (scan scripts write HTML by default) remains 📋 Planned | Verified: `quaid-scan-one.mjs` / `quaid-render-one.mjs` not yet present in the repo |
+| PRD version: v2.8 → v2.9 | |
 
 #### v2.8 Changes (from v2.7)
 
