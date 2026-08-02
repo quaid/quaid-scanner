@@ -118,7 +118,7 @@ function getVersion(): string {
     try {
       const pkg = JSON.parse(readFileSync(candidate, 'utf-8')) as Record<string, unknown>;
       if (pkg.name === 'quaid-scanner') return pkg.version as string;
-    } catch { }
+    } catch { /* ignore unreadable or malformed package.json */ }
     dir = resolve(dir, '..');
   }
   /* c8 ignore next 2 */

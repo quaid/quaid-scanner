@@ -55,7 +55,7 @@ function extractPackageKeywords(repoPath: string): string[] {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8') as string) as Record<string, unknown>;
     const kw = pkg['keywords'];
     if (Array.isArray(kw)) return kw.map((k) => String(k).toLowerCase());
-  } catch { }
+  } catch { /* ignore unreadable or malformed package.json */ }
   return [];
 }
 

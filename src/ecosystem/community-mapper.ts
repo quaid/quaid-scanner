@@ -22,7 +22,7 @@ function detectExistingCommunityLinks(repoPath: string): UserCommunity[] {
     if (!fs.existsSync(p)) continue;
     try {
       const content = fs.readFileSync(p, 'utf-8');
-      const urlMatches = content.match(/https?:\/\/[^\s\)\]>"]+/g) ?? [];
+      const urlMatches = content.match(/https?:\/\/[^\s)\]>"]+/g) ?? [];
       for (const url of urlMatches) {
         for (const { pattern, type, name } of COMMUNITY_URL_PATTERNS) {
           if (pattern.test(url) && !found.some((c) => c.url === url)) {

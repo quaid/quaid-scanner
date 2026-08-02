@@ -1,6 +1,8 @@
 # quaid-scanner
 
 [![npm version](https://img.shields.io/npm/v/quaid-scanner.svg)](https://www.npmjs.com/package/quaid-scanner)
+[![CI](https://github.com/quaid/quaid-scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/quaid/quaid-scanner/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen.svg)](https://github.com/quaid/quaid-scanner/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org)
 
