@@ -93,16 +93,21 @@ describe('Orchestrator', () => {
       }));
 
       const context = createMinimalContext();
-      const start = Date.now();
       await orchestrator.run(context);
-      const elapsed = Date.now() - start;
 
-      // Both should start before either ends (parallel)
-      expect(executionOrder.indexOf('sec-start')).toBeLessThan(executionOrder.indexOf('sec-end'));
-      expect(executionOrder.indexOf('gov-start')).toBeLessThan(executionOrder.indexOf('gov-end'));
-
-      // If truly parallel, total time should be less than sum of delays
-      expect(elapsed).toBeLessThan(150);
+      // Parallel proof: both scanners start before either finishes, i.e. their
+      // executions overlap. This is deterministic — unlike a wall-clock bound it
+      // does not flake under CI load, and (unlike the old `< 150ms` check) it
+      // actually distinguishes parallel from serial execution.
+      const bothStarted = Math.max(
+        executionOrder.indexOf('sec-start'),
+        executionOrder.indexOf('gov-start'),
+      );
+      const eitherEnded = Math.min(
+        executionOrder.indexOf('sec-end'),
+        executionOrder.indexOf('gov-end'),
+      );
+      expect(bothStarted).toBeLessThan(eitherEnded);
     });
   });
 
