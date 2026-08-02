@@ -1,7 +1,7 @@
 ---
 title: "Bluesky Thread: quaid-scanner v0.1.4"
 author: Karsten Wade
-date: 2026-06-12
+date: 2026-08-01
 status: draft
 target: bluesky
 note: "8 posts. Audience knows the tool from v0.1.2 announcement. Focus: what went wrong with the inclusive language scanner, what we fixed, what accurate output looks like. Honest tone — acknowledge the quality problem directly."
