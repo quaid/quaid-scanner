@@ -472,3 +472,23 @@ describe('ResponseTimeScanner', () => {
     });
   });
 });
+
+describe('ResponseTimeScanner — GraphQL query (regression #213)', () => {
+  it('does not order the inner comments connection by CREATED_AT (invalid IssueCommentOrderField)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({ data: { repository: { issues: { nodes: [] }, pullRequests: { nodes: [] } } } }),
+    } as Response);
+
+    await scanner.run(makeContext());
+
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    const query = (JSON.parse(init.body as string) as { query: string }).query;
+    // IssueCommentOrderField only accepts UPDATED_AT; CREATED_AT on the inner
+    // comments() connection hard-fails against GitHub's schema (#213).
+    expect(query).not.toMatch(/comments\(first: 1, orderBy: \{field: CREATED_AT/);
+    // Outer issue/PR ordering by CREATED_AT stays valid (IssueOrderField/PullRequestOrderField).
+    expect(query).toMatch(/issues\(first: 100, orderBy: \{field: CREATED_AT/);
+  });
+});
