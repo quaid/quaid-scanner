@@ -18,7 +18,7 @@ query ResponseClassification($owner: String!, $name: String!, $since: DateTime!)
       nodes {
         number
         createdAt
-        comments(first: 1, orderBy: {field: CREATED_AT, direction: ASC}) {
+        comments(first: 1) {
           nodes { createdAt author { login } }
         }
       }
@@ -27,7 +27,7 @@ query ResponseClassification($owner: String!, $name: String!, $since: DateTime!)
       nodes {
         number
         createdAt
-        comments(first: 1, orderBy: {field: CREATED_AT, direction: ASC}) {
+        comments(first: 1) {
           nodes { createdAt author { login } }
         }
       }
