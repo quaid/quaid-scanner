@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-08-02
+
+### Added
+
+- **Agent-session provenance** — A new `--provenance-file <path>` flag lets an agent inject a JSON
+  record of its session (models used, token counts, session/agent IDs, timestamp) at scan time. The
+  data is carried through as a top-level `provenance` object in JSON output and a `## Report
+  Provenance` section in markdown output — opt-in, omitted entirely when unused. The `ProvenanceInfo`
+  type is exported for library consumers. (#178, #179, #180)
+- **Project governance and funding** — Added a `GOVERNANCE.md` describing the maintainer-led model,
+  how decisions are made in the open, and the path to adding maintainers, plus a `FUNDING.yml`
+  Sponsor link (Open Collective).
+- **Continuous integration** — A CI workflow now runs lint, build, and the full test suite with
+  coverage on every push and pull request to `main`.
+
+### Fixed
+
+- **Response-time and response-classification scanners no longer error against GitHub's GraphQL
+  API** — Both scanners ordered an inner `comments` connection by `CREATED_AT`, which
+  `IssueCommentOrderField` no longer accepts, causing GitHub to reject the whole query and degrade
+  every affected finding to a WARNING carrying the raw API error. The invalid ordering is removed;
+  GitHub's default ascending-by-creation comment order preserves first-response timing exactly. (#213)
+
+### Changed
+
+- **Consolidated scanner directory exclusions** — Eight scanners each maintained their own drifting
+  `EXCLUDED_DIRS` lists. They now share a single `excludeGlobs()` baseline (dependencies, build
+  output, caches, toolchain directories, and quaid-scanner's own report output), closing the drift
+  that had reintroduced self-scan and cache bugs. The binary-artifacts scanner intentionally keeps
+  `__pycache__` visible so it can still flag committed `.pyc` bytecode. (#171)
+- **Supply-chain hardening** — GitHub Actions in the publish and CI workflows are pinned to full
+  commit SHAs instead of moving tags. (#123)
+
 ## [0.1.4] - 2026-06-12
 
 ### Fixed
