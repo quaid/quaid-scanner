@@ -3,7 +3,7 @@ title: "Signal Over Noise: What We Fixed in the Inclusive Language Scanner"
 slug: signal-over-noise-inclusive-scanner-v014
 description: v0.1.4 ships 21 bug fixes and 4 features concentrated almost entirely on inclusive language scanner quality — eliminating false positives so the real findings can finally be heard.
 author: Karsten Wade
-date: 2026-06-12
+date: 2026-08-01
 status: draft
 target: iquaid.org
 tags: [quaid-scanner, inclusive-language, open-source, oss-health, false-positives, signal-to-noise]

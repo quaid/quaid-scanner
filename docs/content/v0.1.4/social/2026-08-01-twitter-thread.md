@@ -1,7 +1,7 @@
 ---
 title: "Twitter/X Thread: quaid-scanner v0.1.4"
 author: Karsten Wade
-date: 2026-06-13
+date: 2026-08-01
 status: draft
 target: twitter
 note: "7 posts. Twitter audience more terse — cut the nuance, lead with the problem/fix loop, keep technical specifics tight. Same honest tone as Bluesky but shorter."
