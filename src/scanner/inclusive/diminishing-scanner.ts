@@ -11,11 +11,11 @@
 import { readFileSync } from 'fs';
 import { relative } from 'path';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { Pillar, Severity } from '../../types/index.js';
 import { loadIgnorePatterns } from './ignore-file.js';
 import { isMinifiedContent } from './utils/is-minified.js';
-import { SELF_REPORT_GLOBS } from './utils/self-report-globs.js';
 
 /** A diminishing language pattern definition. */
 interface DiminishingPattern {
@@ -313,7 +313,7 @@ export class DiminishingLanguageScanner implements Scanner {
         cwd: repoPath,
         absolute: true,
         nodir: true,
-        ignore: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/out/**', '**/.next/**', '**/.nuxt/**', '**/coverage/**', '**/.git/**', ...SELF_REPORT_GLOBS, ...userIgnore],
+        ignore: excludeGlobs(userIgnore),
       });
       for (const f of matched) {
         fileSet.add(f);

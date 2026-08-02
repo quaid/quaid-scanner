@@ -9,19 +9,18 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 import { Pillar, Severity } from '../../types/index.js';
 import { TermListManager, type LoadedTerm } from './term-list.js';
 import { loadIgnorePatterns } from './ignore-file.js';
 import { resolveInclusiveConfig } from './resolve-config.js';
 import { isMinifiedContent } from './utils/is-minified.js';
-import { SELF_REPORT_GLOBS } from './utils/self-report-globs.js';
 
 /** File extensions considered documentation files. */
 const DOC_EXTENSIONS = ['md', 'txt', 'rst', 'adoc', 'html'];
 
 /** Directories always excluded from scanning. */
-const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git', 'dist', 'build', 'out', '.next', '.nuxt', 'coverage'];
 
 /** Inline suppression comment that disables scanning for a line. */
 const SUPPRESSION_MARKER = '<!-- inclusive-naming-ignore -->';
@@ -132,11 +131,7 @@ export class InclusiveDocScanner implements Scanner {
    */
   private async findDocFiles(repoPath: string, userExcludes: string[] = []): Promise<string[]> {
     const patterns = DOC_EXTENSIONS.map((ext) => `**/*.${ext}`);
-    const ignorePatterns = [
-      ...EXCLUDED_DIRS.map((dir) => `${dir}/**`),
-      ...SELF_REPORT_GLOBS,
-      ...userExcludes,
-    ];
+    const ignorePatterns = excludeGlobs(userExcludes);
 
     const files = await glob(patterns, {
       cwd: repoPath,

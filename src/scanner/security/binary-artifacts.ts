@@ -9,6 +9,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 
@@ -28,7 +29,6 @@ const DEFAULT_ALLOWLIST = new Set([
 ]);
 
 /** Directories to exclude from scanning. */
-const EXCLUDED_DIRS = ['node_modules', 'vendor', '.git', 'dist', 'build', '.claude', '.ainative'];
 
 /** Known magic byte signatures. */
 const MAGIC_SIGNATURES: Array<{ name: string; bytes: number[] }> = [
@@ -53,7 +53,9 @@ export class BinaryArtifactScanner implements Scanner {
     let counter = 0;
 
     // Find all files, excluding certain directories
-    const ignorePatterns = EXCLUDED_DIRS.map((d) => `**/${d}/**`);
+    // Keep __pycache__ visible: committed .pyc bytecode is exactly the kind of
+    // binary artifact this scanner exists to flag (#171 regression guard).
+    const ignorePatterns = excludeGlobs([], { omit: ['__pycache__'] });
     const allFiles = await glob('**/*', {
       cwd: repoPath,
       absolute: true,

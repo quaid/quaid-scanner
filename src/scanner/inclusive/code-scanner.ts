@@ -9,6 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import { TermListManager } from './term-list.js';
 import { loadIgnorePatterns } from './ignore-file.js';
 import { resolveInclusiveConfig } from './resolve-config.js';
@@ -31,18 +32,6 @@ const CODE_EXTENSIONS: string[] = [
 ];
 
 /** Directories to exclude from scanning. */
-const EXCLUDED_DIRS: string[] = [
-  'node_modules/',
-  'vendor/',
-  '.git/',
-  'dist/',
-  'build/',
-  'out/',
-  '.next/',
-  '.nuxt/',
-  'coverage/',
-];
-
 /** Languages that use # for single-line comments. */
 const HASH_COMMENT_EXTENSIONS = new Set(['.py', '.rb']);
 
@@ -420,10 +409,7 @@ export class InclusiveCodeScanner implements Scanner {
    *   .quaid-scanner-ignore and config.inclusive.excludePatterns)
    */
   private async findCodeFiles(repoPath: string, userExcludes: string[] = []): Promise<string[]> {
-    const ignore = [
-      ...EXCLUDED_DIRS.map((d) => `**/${d}**`),
-      ...userExcludes,
-    ];
+    const ignore = excludeGlobs(userExcludes);
 
     const files = await glob(CODE_EXTENSIONS, {
       cwd: repoPath,

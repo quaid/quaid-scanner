@@ -9,6 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
+import { excludeGlobs } from '../shared/excludes.js';
 import { Pillar, Severity } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 
@@ -28,14 +29,6 @@ const SOURCE_PATTERNS: string[] = [
 ];
 
 /** Directories to exclude from scanning. */
-const EXCLUDED_DIRS: string[] = [
-  'node_modules/',
-  'vendor/',
-  '.git/',
-  'dist/',
-  'build/',
-];
-
 /** Maximum number of source files to scan to avoid perf issues on large repos. */
 const MAX_FILES_TO_SCAN = 100;
 
@@ -281,7 +274,7 @@ export class LicenseHeaderScanner implements Scanner {
    * Find source files matching known extensions, excluding common dirs.
    */
   private async findSourceFiles(repoPath: string): Promise<string[]> {
-    const ignorePatterns = EXCLUDED_DIRS.map((d) => `**/${d}**`);
+    const ignorePatterns = excludeGlobs();
 
     const files = await glob(SOURCE_PATTERNS, {
       cwd: repoPath,
