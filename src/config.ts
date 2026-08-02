@@ -6,11 +6,13 @@
  */
 
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
 import {
   ScanDepth,
   OutputFormat,
   MaturityLevel,
   type ScannerConfig,
+  type ProvenanceInfo,
 } from './types/index.js';
 
 /**
@@ -79,10 +81,65 @@ const GITHUB_URL_PATTERN =
  * @param cliOptions - Raw option values from CLI parsing
  * @returns A fully populated ScannerConfig
  */
+/**
+ * Minimal structural validation that a parsed value conforms to ProvenanceInfo:
+ * a required `models` string array and a required `generatedAt` string. Optional
+ * fields are not enforced.
+ */
+function isValidProvenance(value: unknown): value is ProvenanceInfo {
+  if (typeof value !== 'object' || value === null) return false;
+  const o = value as Record<string, unknown>;
+  return (
+    Array.isArray(o.models) &&
+    o.models.every((m) => typeof m === 'string') &&
+    typeof o.generatedAt === 'string'
+  );
+}
+
+/**
+ * Loads and validates a `--provenance-file` JSON document. On any failure
+ * (missing file, invalid JSON, or non-conforming shape) emits a WARNING to
+ * stderr and returns null so the scan continues without provenance (never
+ * aborts). See PRD Story 8.7c.
+ */
+export function loadProvenanceFile(path: string): ProvenanceInfo | null {
+  let raw: string;
+  try {
+    raw = readFileSync(path, 'utf-8');
+  } catch {
+    console.warn(
+      `Warning: could not read --provenance-file "${path}"; continuing without provenance.`,
+    );
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.warn(
+      `Warning: --provenance-file "${path}" is not valid JSON; continuing without provenance.`,
+    );
+    return null;
+  }
+  if (!isValidProvenance(parsed)) {
+    console.warn(
+      `Warning: --provenance-file "${path}" does not conform to ProvenanceInfo ` +
+        `(needs a "models" string array and a "generatedAt" string); continuing without provenance.`,
+    );
+    return null;
+  }
+  return parsed;
+}
+
 export function buildConfig(
   cliOptions: Record<string, unknown>,
 ): ScannerConfig {
   const config: ScannerConfig = { ...DEFAULT_CONFIG };
+
+  if (typeof cliOptions.provenanceFile === 'string') {
+    const provenance = loadProvenanceFile(cliOptions.provenanceFile);
+    if (provenance) config.provenance = provenance;
+  }
 
   if (typeof cliOptions.depth === 'string' && cliOptions.depth in DEPTH_MAP) {
     config.depth = DEPTH_MAP[cliOptions.depth];
