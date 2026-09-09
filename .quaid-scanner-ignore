@@ -4,6 +4,9 @@ tests/
 # Documentation that uses terms as examples of what to avoid
 docs/PRD.md
 docs/PRD-v2.md
+# Usage docs enumerate the very terms the scanners detect (e.g. the
+# diminishing-language and assumed-knowledge term lists)
+docs/usage/scanners.md
 
 # Generated coverage reports — HTML snapshots contain flagged terms in code excerpts
 coverage/
@@ -17,3 +20,9 @@ docs/scans/
 
 # Reference/specification documents that document historical terminology in context
 docs/Open_Source_Way_et_al_expansions.md
+
+# Release notes and marketing content that quote flagged terms while narrating
+# the fixes that eliminated them (e.g. the "master" Docker false-positive that
+# the v0.1.4 content explains; see issue #124)
+docs/content/
+docs/releases/

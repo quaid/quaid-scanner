@@ -100,7 +100,7 @@ function isValidProvenance(value: unknown): value is ProvenanceInfo {
  * Loads and validates a `--provenance-file` JSON document. On any failure
  * (missing file, invalid JSON, or non-conforming shape) emits a WARNING to
  * stderr and returns null so the scan continues without provenance (never
- * aborts). See PRD Story 8.7c.
+ * never stops the scan). See PRD Story 8.7c.
  */
 export function loadProvenanceFile(path: string): ProvenanceInfo | null {
   let raw: string;

@@ -579,28 +579,26 @@ npm run test:coverage
 
 ## Project Health
 
-quaid-scanner scans itself. Current score as of v0.1.4:
+quaid-scanner scans itself. Current score as of v0.1.5:
 
 | Pillar | Score | Weight | Weighted |
 |--------|-------|--------|---------|
-| Security & Supply Chain | 3.5/10 | 25% | 0.88 |
-| Governance & Legal | 3.0/10 | 20% | 0.60 |
-| Community Health | 4.0/10 | 15% | 0.60 |
-| AI-Native & Agentic Readiness | 8.0/10 | 15% | 1.20 |
-| Inclusive Language | 4.5/10 | 15% | 0.68 |
-| Technical Rigor | 8.5/10 | 10% | 0.85 |
-| **Overall** | **4.8/10** | | |
+| Security & Supply Chain | 6.9/10 | 25% | 1.73 |
+| Governance & Legal | 7.8/10 | 20% | 1.56 |
+| Community Health | 7.6/10 | 15% | 1.14 |
+| AI-Native & Agentic Readiness | 9.6/10 | 15% | 1.44 |
+| Inclusive Language | 8.1/10 | 15% | 1.22 |
+| Technical Rigor | 9.9/10 | 10% | 0.99 |
+| **Overall** | **8.1/10** | | |
 
-The score is honest. A solo-maintainer project at v0.1.x will have real gaps:
+The score is honest — and it moved. v0.1.5 took the project from **4.8/10 (HIGH risk) to 8.1/10 (LOW risk)** by closing its own gaps: a GOVERNANCE.md and Open Collective funding link, a CI workflow that enforces lint and 80%+ coverage on every PR, and GitHub Actions pinned to commit SHAs ([#123](https://github.com/quaid/quaid-scanner/issues/123)).
 
 **Open findings being tracked:**
 
 | Finding | Severity | Issue |
 |---------|----------|-------|
-| GitHub Actions not pinned to commit SHAs | WARNING | [#123](https://github.com/quaid/quaid-scanner/issues/123) |
 | OpenSSF Scorecard not yet indexed (new project) | WARNING | — |
 | Bus factor: 1 (solo maintainer) | WARNING | [contribute](#contributing) |
-| Contributor funnel: 0% conversion (new project) | WARNING | [contribute](#contributing) |
 
 **Known false positives being tracked:**
 
@@ -608,7 +606,7 @@ The score is honest. A solo-maintainer project at v0.1.x will have real gaps:
 |---------|--------|-------|
 | Inclusive WARNING: `"master"` in `dep-pinning-docker.ts` | Detection target string, not usage | [#124](https://github.com/quaid/quaid-scanner/issues/124) |
 
-The AI readiness (8.0) and technical rigor (8.5) scores reflect the tool's strengths: MCP server, Claude Code skill, dataset provenance scanner, 80%+ test coverage. The inclusive score improved significantly in v0.1.4 with elimination of false positives from minified bundles, self-generated reports, and the acronym heuristic overhaul. The security and governance scores reflect real gaps that contributions and time will close.
+The AI readiness (9.6) and technical rigor (9.9) scores reflect the tool's strengths: MCP server, Claude Code skill, dataset provenance scanner, and a CI-enforced 80%+ coverage gate. The remaining security and community gaps — OpenSSF Scorecard indexing and a bus factor of one — are exactly the kind that contributions and time close.
 
 ---
 
