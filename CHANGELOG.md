@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Supply-chain hardening** — GitHub Actions in the publish and CI workflows are pinned to full
   commit SHAs instead of moving tags. (#123)
 
-## [0.1.4] - 2026-06-12
+## [0.1.4] - 2026-08-01
 
 ### Fixed
 
