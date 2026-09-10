@@ -21,7 +21,14 @@ import {
   type MockInstance,
 } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { existsSync, unlinkSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  unlinkSync,
+  readFileSync,
+  mkdtempSync,
+  symlinkSync,
+  rmSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -534,4 +541,97 @@ describe('main() — in-process coverage', () => {
     exitSpy.mockRestore();
     vi.doUnmock('../../src/ecosystem/orchestrator.js');
   }, 30_000);
+});
+
+/**
+ * Bug #222 — the globally-installed binary was a silent no-op.
+ *
+ * `npm install -g` links `bin` as a symlink (~/.local/bin/quaid-scanner ->
+ * ../lib/node_modules/quaid-scanner/dist/cli.js). Node does NOT resolve symlinks
+ * when populating process.argv[1] — it keeps the path as invoked. The old guard
+ * tested `process.argv[1].endsWith('/cli.js')`, which is false for the link name,
+ * so main() never ran: no output, no error, exit 0.
+ *
+ * These tests invoke the built CLI through a symlink, which is the only shape
+ * that reproduces it. Every other test in this file calls dist/cli.js directly
+ * and therefore passed throughout the bug's lifetime.
+ */
+describe('#222: binary invoked through a symlink (global-install shape)', () => {
+  let linkDir: string;
+  let linkPath: string;
+
+  beforeEach(() => {
+    linkDir = mkdtempSync(join(tmpdir(), 'quaid-bin-'));
+    linkPath = join(linkDir, 'quaid-scanner');
+    symlinkSync(CLI, linkPath);
+  });
+
+  afterEach(() => {
+    rmSync(linkDir, { recursive: true, force: true });
+  });
+
+  function runLinked(args: string[]): ReturnType<typeof spawnSync> {
+    return spawnSync('node', [linkPath, ...args], {
+      cwd: PROJECT_ROOT,
+      encoding: 'utf-8',
+      timeout: DEFAULT_SUBPROCESS_TIMEOUT,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  }
+
+  it('--version produces output rather than exiting 0 silently', () => {
+    const result = runLinked(['--version']);
+    const combined = result.stdout + result.stderr;
+    expect(combined.trim()).not.toBe('');
+    expect(combined).toMatch(/\d+\.\d+\.\d+/);
+  });
+
+  it('--help produces output rather than exiting 0 silently', () => {
+    const result = runLinked(['--help']);
+    const combined = result.stdout + result.stderr;
+    expect(combined).toMatch(/--depth/);
+    expect(combined).toMatch(/--format/);
+  });
+
+  it('a real scan through the symlink emits a report', () => {
+    const result = runLinked(['.', '--depth', 'quick', '--format', 'json', '--quiet']);
+    expect([0, 1, 2]).toContain(result.status);
+    expect(result.stdout.trim()).not.toBe('');
+    expect(() => JSON.parse(result.stdout) as unknown).not.toThrow();
+  });
+
+  it('--threshold 10 through the symlink still exits 2, so CI gates are not silently passed', () => {
+    const result = runLinked([
+      '.', '--depth', 'quick', '--format', 'json', '--threshold', '10', '--quiet',
+    ]);
+    expect(result.status).toBe(2);
+  });
+});
+
+/**
+ * Bug #222, second defect — exposed only once the binary actually ran.
+ *
+ * `program.exitOverride()` makes commander throw after writing --help/--version
+ * output, so main().catch() reported those successful terminations as
+ * `Error: 0.1.5` and exited 1. Invisible while main() never ran globally.
+ */
+describe('#222: commander control-flow errors are not reported as failures', () => {
+  it('--version exits 0 and prints only the version', () => {
+    const result = runCLI(['--version']);
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(result.stderr).not.toMatch(/^Error:/m);
+  });
+
+  it('--help exits 0 and prints no error line', () => {
+    const result = runCLI(['--help']);
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toMatch(/^Error:/m);
+  });
+
+  it('an unknown option still fails, with a non-zero exit', () => {
+    const result = runCLI(['--no-such-flag']);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout + result.stderr).toMatch(/unknown option/i);
+  });
 });
