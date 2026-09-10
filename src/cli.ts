@@ -5,7 +5,7 @@
  */
 
 import { Command } from 'commander';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, realpathSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { buildConfig, validateTarget } from './config.js';
@@ -213,14 +213,56 @@ async function main(): Promise<void> {
   }
 }
 
-// Only run main() when executed directly, not when imported for testing
-const isDirectExecution =
-  typeof process !== 'undefined' &&
-  process.argv[1] &&
-  (process.argv[1].endsWith('/cli.js') || process.argv[1].endsWith('/cli.ts'));
+/**
+ * True when this module is the process entry point, rather than being imported
+ * (which the test suite does, to exercise `main()` in-process without running it
+ * on import).
+ *
+ * Compares real paths rather than matching on the filename. `npm install -g`
+ * links `bin` as a symlink, and Node leaves `process.argv[1]` as the path the
+ * user invoked — so for a global install argv[1] is `.../bin/quaid-scanner`, not
+ * `.../dist/cli.js`. The previous `endsWith('/cli.js')` test was false there,
+ * `main()` never ran, and every invocation exited 0 with no output. See #222.
+ */
+function isDirectExecution(): boolean {
+  if (typeof process === 'undefined' || !process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    // A path that cannot be resolved (deleted, permission-denied) is not our
+    // entry point; fall back to the filename test rather than throwing at import.
+    return process.argv[1].endsWith('/cli.js') || process.argv[1].endsWith('/cli.ts');
+  }
+}
 
-if (isDirectExecution) {
+/**
+ * Type guard for commander's own control-flow error.
+ *
+ * `program.exitOverride()` stops commander calling `process.exit` directly, so
+ * `--help` and `--version` write their output and then *throw* to unwind. Those
+ * are successful terminations, not failures, and must not be reported as errors
+ * or exited non-zero. This only became user-visible once #222 was fixed and the
+ * global binary actually reached this handler.
+ */
+function isCommanderError(
+  error: unknown,
+): error is Error & { code: string; exitCode: number } {
+  if (!(error instanceof Error)) return false;
+  const { code, exitCode } = error as unknown as {
+    code?: unknown;
+    exitCode?: unknown;
+  };
+  return (
+    typeof code === 'string' && code.startsWith('commander.') && typeof exitCode === 'number'
+  );
+}
+
+if (isDirectExecution()) {
   main().catch((error: unknown) => {
+    if (isCommanderError(error)) {
+      // Commander has already written help/version text or its own error message.
+      process.exit(error.exitCode);
+    }
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error: ${message}`);
     process.exit(1);
