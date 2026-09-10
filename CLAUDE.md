@@ -1,7 +1,7 @@
 # quaid-scanner - Project Memory
 
-> Last Updated: 2026-05-04
-> Project Root: /Users/karstenwade/Projects/quaid-scanner
+> Last Updated: 2026-09-10
+> Project Root: `~/Projects/quaid-scanner`
 
 ## Critical Rules
 
@@ -59,8 +59,9 @@ TypeScript CLI and library. Publishes to npm as `quaid-scanner`.
 ```
 quaid-scanner/
 ├── CLAUDE.md              # This file (project-specific context)
-├── .claude -> core/.claude  # Symlink — shared commands/skills/rules
-├── .ainative -> core/.ainative  # Symlink — universal AI coding rules
+├── .claude/               # Real dir; entries individually symlinked (see below)
+├── .ainative -> ../AINative-Studio/src/core/.ainative
+
 ├── .env                   # Local secrets (gitignored)
 ├── src/
 │   ├── cli.ts             # CLI entrypoint
@@ -74,6 +75,29 @@ quaid-scanner/
 │   └── setup/
 └── docs/                  # Documentation
 ```
+
+## Toolchain setup (required on a fresh checkout)
+
+The shared AI toolchain is **not vendored** — `.claude/` is a real directory whose entries
+(`commands`, `hooks`, `settings.json`, `RULES.MD`, `compressed`, `mcp.json.example`) and 42 of its
+44 `skills/` are individual symlinks into a sibling checkout, as is `.ainative`. Only the
+`quaid-release` and `quaid-scan` skills are real files in this repo.
+
+All of them resolve to `~/Projects/AINative-Studio/src/core/`. If that path is absent, every one of
+those 49 symlinks dangles and the commands, hooks, and guides are silently unavailable. To restore:
+
+```bash
+git clone git@github.com:AINative-Studio/core.git /tmp/ainative-core
+mkdir -p ~/Projects/AINative-Studio/src/core
+cp -R /tmp/ainative-core/.claude /tmp/ainative-core/.ainative ~/Projects/AINative-Studio/src/core/
+bash .claude/hooks/install-hooks.sh    # installs pre-commit, commit-msg, pre-push
+```
+
+Known gaps after restore: `blog-publish-pipeline` and `event-agent-pattern` do not exist upstream
+(#211); `init-project` points into the separate `AINative-Studio/devcontext` repo.
+
+**Git hooks are not automatic.** `install-hooks.sh` must be run per clone — the `commit-msg`
+attribution block is only enforced once it has been.
 
 ## Available Commands
 

@@ -24,10 +24,11 @@
       "command": "npx",
       "args": [
         "-y",
-        "@anthropic/zerodb-mcp"
+        "ainative-zerodb-memory-mcp"
       ],
       "env": {
-        "ZERODB_API_KEY": "${ZERODB_API_KEY}"
+        "ZERODB_API_KEY": "${ZERODB_API_KEY}",
+        "ZERODB_PROJECT_ID": "${ZERODB_PROJECT_ID}"
       }
     }
   }
