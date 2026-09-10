@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.9
+# Quaid's OSS Repo Scanner - PRD v2.10
 
 ## Executive Summary
 
@@ -10,7 +10,16 @@
 
 **Paradigm:** The most significant risks to modern projects are not syntactical errors in code, but sociotechnical failures—burnout, toxic exclusionary cultures, legal ambiguity, and supply chain fragility. Therefore, this tool prioritizes "Health as Code," treating community documentation and governance structures with the same rigor as the software itself.
 
-**Current release:** v0.1.4 (2026-08-01) — 43 scanners, 85 test files, 97.7% coverage. Status legend used throughout this document: ✅ Done · 🚧 Partial · 📋 Planned
+**Current release:** v0.1.4 (2026-08-01) — 43 scanners, 87 test files, 97.9% coverage. **v0.1.5 is merged to `main` but not yet tagged or published**, held by three field defects found in the 2026-09-09 LMCache dogfood (#221, #222, #223) plus #236. Status legend used throughout this document: ✅ Done · 🚧 Partial · 📋 Planned
+
+**Release plan:**
+
+| Milestone | Theme |
+|---|---|
+| **0.1.5** | Accuracy & trust — #221, #222, #223, #236, plus the provenance work (8.7a/b/c) already merged |
+| **0.1.6** | Accuracy *infrastructure* — Epic 11 (Cross-Validation), Epic 12 (Ground-Truth Corpus), and the Epic 14 debt below |
+| **0.1.7** | Inclusive pillar expansion — Stories 6.4, 6.5, and Vale/Alex.js delegation |
+| **0.2.0** | Story 8.10 (unified artifact workdir) |
 
 ---
 
@@ -955,7 +964,7 @@ Each story heading is marked with its current status as of v0.1.1:
 
 ---
 
-### Story 4.1b: Bot Filtering for Response Metrics (COM-01b) ✅
+### Story 4.1b: Bot Filtering for Response Metrics (COM-01b) 🚧
 **As a** OSPO Agent
 **I want** bot comment filtering using configurable patterns
 **So that** I measure genuine human engagement
@@ -971,6 +980,13 @@ Each story heading is marked with its current status as of v0.1.1:
 | 4.1b.5 | **Configurable bot list** via `.quaid-scanner.yaml`: `bots.additional: ["my-custom-bot"]` | Config support |
 
 **Story Points:** 2
+
+> **🚧 Downgraded from ✅ on 2026-09-10.** `BotFilter` is fully implemented and unit-tested in
+> `src/scanner/community/bot-filter.ts`, and `ScannerConfig.bots` is typed and defaulted — but
+> **no scanner imports it**. `contributor-data`, `response-time`, `response-classification` and
+> `issue-closure` contain no bot-filtering logic, so every community metric currently counts bots
+> as humans. Criterion 4.1b.5 additionally depends on the config-file loader, which does not exist
+> (#227). Tracked in **#226**; returns to ✅ when the filter is wired in.
 
 ---
 
@@ -2646,6 +2662,65 @@ quaid-scanner/
 
 ---
 
+## Epic 14: Scanner Accuracy & Field Hardening
+
+Added in v2.10. This epic is the home the PRD never had for its single largest stream of
+engineering effort: correcting scanner findings against reality.
+
+The #149–#209 fix wave in v0.1.3/v0.1.4 (acronym-heuristic overhaul, INI severity/tier decoupling,
+self-report and minified-bundle exclusion, dedup, grouped rendering) and the 2026-09-09 LMCache
+dogfood defects (#221, #222, #223, #236) all belong here. Recording them as "accuracy hardening, no
+story-scope change" — as v2.9 did — left the PRD describing a product whose dominant real work was
+invisible, and left no place to reason about whether that work is converging.
+
+**Why it matters.** The first target metric in Success Criteria above is *"False Positive Rate
+< 5% on High Risk flags."* Nothing in the PRD measured it. On LMCache, `dep-pinning-docker` alone
+ran at **86% false** (142 of 166 warnings, #221), and 13 of 15 Docker CRITICALs were also false
+(#236). A report that contradicts OpenSSF Scorecard by four points *in the direction of punishing
+correct behaviour* is worse than no report — and the failure mode is consistent: the scanners
+penalise the most sophisticated setups (SHA-pinned actions with Dependabot's own comment format,
+multi-stage Docker builds, Python projects with a venv).
+
+Epics 11 and 12 build the *infrastructure* to catch this class (cross-validation against
+authoritative tools; a ground-truth corpus). Epic 14 is the standing backlog of *known* accuracy
+debt, and the place future field defects land.
+
+### Story 14.1: Entry-point and packaging correctness ✅ (0.1.5, #222)
+The globally installed binary was a silent no-op — exit 0, no output — because the entry-point
+guard matched on filename and npm links `bin` as a symlink. Fixed, with tests that invoke the
+built CLI through a symlink. **2 pts**
+
+### Story 14.2: GitHub Actions ref parsing ✅ (0.1.5, #221)
+`uses:` values were parsed with the trailing YAML comment attached, so SHA-pinned actions carrying
+the conventional `# vX.Y.Z` were reported as unpinned, mutable refs were downgraded from CRITICAL,
+and missing versions emitted the comment text. Fixed. **2 pts**
+
+### Story 14.3: Language-ecosystem exclusion baseline ✅ (0.1.5, #223)
+`DEFAULT_SCAN_EXCLUDES` was JS/TS-centric; Python virtualenvs were walked in full. Added `.venv`,
+`venv`, `site-packages` and the tool caches. **1 pt**
+
+### Story 14.4: Dockerfile semantic parsing 📋 (0.1.5, #236)
+`dep-pinning-docker` reads `FROM` lines without understanding multi-stage builds or build ARGs, so
+internal stage references (`FROM base AS x`) and parameterised images (`FROM ${BASE_IMAGE}`) are
+reported as unpinned external images. Requires whole-file parsing: collect declared stage names,
+resolve ARG defaults, and downgrade genuinely unresolvable values to INFO. **3 pts**
+
+### Story 14.5: User-controlled suppression across all pillars 📋 (0.1.6, #231)
+`.quaid-scanner-ignore` is threaded only through the inclusive scanners, so security CRITICALs
+cannot be suppressed by any supported means. Thread user excludes through `excludeGlobs()`, and
+honour `.gitignore` by default — a project's own ignore file is the best available statement of
+"this is not our source", and prevents the next instance of this bug class rather than patching one
+more name into a list. **3 pts**
+
+### Story 14.6: False-positive rate measurement 📋 (0.1.6)
+Make the Success Criteria target testable. Depends on Epic 11 (cross-validation) and Epic 12
+(corpus): define the measurement, run it in CI, and record the rate per release so "< 5%" becomes
+an enforced gate rather than an aspiration. **3 pts**
+
+**Epic total: 6 stories, 14 pts** — 5 pts ✅ shipped in 0.1.5, 9 pts 📋 remaining.
+
+---
+
 ## Story Point Summary
 
 | Epic | Stories | Total Points | Key Focus | Status |
@@ -2653,21 +2728,55 @@ quaid-scanner/
 | Epic 1: Core Infrastructure | 4 | 9 | CLI, Plugin Architecture, Orchestrator | ✅ Done |
 | Epic 2: Security | 7 | 20 | OpenSSF Scorecard, Supply Chain | 🚧 Partial (2.1a Docker shell-out) |
 | Epic 3: Governance | 10+1 | 25 | License, Bus Factor, Vendor Neutrality | 🚧 Partial (3.1b ZeroDB caching) |
-| Epic 4: Community | 10 | 22 | OSW 2.0 Framework, Burnout Detection | ✅ Done |
+| Epic 4: Community | 10 | 22 | OSW 2.0 Framework, Burnout Detection | 🚧 Partial (4.1b bot filter not wired, #226) |
 | Epic 5: AI-Native | 6 | 13 | Model Cards, Multi-Model Agentic Rules | 🚧 Partial (5.4 Metadata Quality) |
 | Epic 6: Inclusive | 5+1 | 14 | INI Terms, Naming, Diminishing Language | 🚧 Partial (6.1a INI API caching) |
 | Epic 7: Technical | 5 | 11 | Linting, Coverage, Release Vitality | ✅ Done |
-| Epic 8: Reporting | 10 | 25 | JSON/Markdown/HTML, Historical Trends, Report Provenance, Artifact Workdir | 🚧 Partial (8.7–8.10 planned) |
+| Epic 8: Reporting | 10 | 25 | JSON/Markdown/HTML, Historical Trends, Report Provenance, Artifact Workdir | 🚧 Partial (8.7a/b/c ✅ merged; 8.9 📋, 8.10 📋 → 0.2.0) |
 | Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server | ✅ Done |
 | Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
 | Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
 | Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned |
 | Epic 13: Trust & Evidence | 5 | 13 | referenceUrl, dataSource, score rationale, .quaid-scanner-ignore | ✅ Done |
-| **Total** | **76** | **183** | | |
+| Epic 14: Scanner Accuracy & Field Hardening | 6 | 14 | Entry-point, Actions/Docker parsing, exclusions, FP-rate measurement | 🚧 Partial (14.1–14.3 ✅ in 0.1.5) |
+| **Total** | **82** | **197** | | |
+
+### Known capability gaps not yet carried as stories
+
+Recorded in v2.10 so they stop being invisible. Each has an issue; none is scheduled into 0.1.5.
+
+| Gap | State | Issue |
+|---|---|---|
+| `.quaid-scanner.yaml` config loading | Fully documented in `docs/usage/configuration.md`; `--config` is declared at `src/cli.ts:77` and never read, and there is no YAML parser dependency | #227 |
+| `PillarConfig` enforcement | `pillars.disabled` / `.disabledScanners` / `.weights` are typed and defaulted but read by nothing — there is no way to disable a pillar that does not apply, e.g. AI-readiness on a non-ML library | #228 |
+| `--format html` / `trend` | `renderHtml` (529 ln) and `renderTrendAscii` are built, tested and exported, but `--format` accepts only `json` and `markdown` — the CLI cannot produce the HTML report Story 8.8 shipped | #229 |
+| `zerodbAvailable` | Never true: `zerodbApiKey`/`zerodbProjectId` are never populated from flag or env, so the gate at `src/cli.ts:175` is dead and `ecosystem/orchestrator.ts` reads `process.env` directly instead. Also causes env-dependent test failures | #230 |
+| `calculateInclusiveScore` | A second, tier-weighted scoring formula that nothing calls — and which contradicts the tier/severity decoupling decided in #167/#168 | #232 |
+| Repo fails its own checks | No `CODEOWNERS`, PR template, or dependabot config; CI has no self-scan gate | #233 |
 
 ---
 
 ### Change Log
+
+#### v2.10 Changes (from v2.9)
+
+A reconcile pass: every ✅ was checked against the code, and the gaps were filed rather than
+narrated. Prompted by the 2026-09-09 LMCache dogfood, which found three defects severe enough to
+hold the v0.1.5 publish.
+
+| Change | Impact |
+|--------|--------|
+| **Add Epic 14: Scanner Accuracy & Field Hardening** | 6 stories, 14 pts. The home the PRD never had for its largest real work stream — the #149–#209 fix wave and the #221/#222/#223/#236 field defects. 14.1–14.3 ✅ in 0.1.5; 14.4 📋 0.1.5; 14.5–14.6 📋 0.1.6 |
+| **Story 4.1b (Bot Filtering) ✅ → 🚧** | `BotFilter` is implemented and unit-tested but imported by **no scanner**, so every community metric counts bots as humans. The ✅ was wrong. #226 |
+| Epic 4 status ✅ Done → 🚧 Partial | Follows from 4.1b |
+| Epic 8 summary row corrected | Said "8.7–8.10 planned" while the story bodies already marked 8.7a/b/c ✅. The table and the bodies now agree: 8.7a/b/c ✅ merged, 8.9 📋, 8.10 📋 → 0.2.0 |
+| **Add "Known capability gaps not yet carried as stories"** | Six documented-or-implied capabilities that do not exist in code: config-file loading (#227), `PillarConfig` enforcement (#228), `--format html` (#229), `zerodbAvailable` (#230), orphaned `calculateInclusiveScore` (#232), repo failing its own checks (#233) |
+| **Release plan added to Executive Summary** | 0.1.5 re-scoped to accuracy & trust. Epics 11+12 moved 0.1.5 → **0.1.6**; Stories 6.4/6.5 and Vale/Alex.js moved 0.1.5 → **0.1.7** |
+| Executive Summary refreshed | 85 → 87 test files, 97.7% → 97.9% coverage; records that v0.1.5 is merged but unpublished |
+| Story 8.9 (#199) reopened | Was closed as done. Its target scripts `quaid-scan-one.mjs` / `quaid-render-one.mjs` have never existed — verified across both checkouts, all 79 branches, full history, and GitHub code search. Retargeted onto `scripts/quaid-scan-batch.mjs`, which is real. Same correction applied to #185 (`quaid-pr-one.mjs`) |
+| Issue cross-references in #67 corrected | It cited Epic 11 as #118–#121 and Epic 12 as #122–#125; the real issues are #68–#71 and #72–#75 (#125 is a blog post) |
+| Story total: 76 → 82; Points: 183 → 197 | |
+| PRD version: v2.9 → v2.10 | |
 
 #### v2.9 Changes (from v2.8)
 
