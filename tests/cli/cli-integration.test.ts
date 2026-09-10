@@ -28,6 +28,7 @@ import {
   mkdtempSync,
   symlinkSync,
   rmSync,
+  writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -559,15 +560,25 @@ describe('main() — in-process coverage', () => {
 describe('#222: binary invoked through a symlink (global-install shape)', () => {
   let linkDir: string;
   let linkPath: string;
+  let targetRepo: string;
 
   beforeEach(() => {
     linkDir = mkdtempSync(join(tmpdir(), 'quaid-bin-'));
     linkPath = join(linkDir, 'quaid-scanner');
     symlinkSync(CLI, linkPath);
+
+    // Scan a minimal fixture rather than this repo. What is under test is the
+    // invocation path, not scan content, and scanning the full project here
+    // added enough CI wall-time to tip the neighbouring 30s in-process tests
+    // over their timeout.
+    targetRepo = mkdtempSync(join(tmpdir(), 'quaid-target-'));
+    writeFileSync(join(targetRepo, 'README.md'), '# fixture\n');
+    writeFileSync(join(targetRepo, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n');
   });
 
   afterEach(() => {
     rmSync(linkDir, { recursive: true, force: true });
+    rmSync(targetRepo, { recursive: true, force: true });
   });
 
   function runLinked(args: string[]): ReturnType<typeof spawnSync> {
@@ -594,18 +605,18 @@ describe('#222: binary invoked through a symlink (global-install shape)', () => 
   });
 
   it('a real scan through the symlink emits a report', () => {
-    const result = runLinked(['.', '--depth', 'quick', '--format', 'json', '--quiet']);
+    const result = runLinked([targetRepo, '--depth', 'quick', '--format', 'json', '--quiet']);
     expect([0, 1, 2]).toContain(result.status);
     expect(result.stdout.trim()).not.toBe('');
     expect(() => JSON.parse(result.stdout) as unknown).not.toThrow();
-  });
+  }, 30_000);
 
   it('--threshold 10 through the symlink still exits 2, so CI gates are not silently passed', () => {
     const result = runLinked([
-      '.', '--depth', 'quick', '--format', 'json', '--threshold', '10', '--quiet',
+      targetRepo, '--depth', 'quick', '--format', 'json', '--threshold', '10', '--quiet',
     ]);
     expect(result.status).toBe(2);
-  });
+  }, 30_000);
 });
 
 /**
