@@ -209,6 +209,90 @@ jobs:
     });
   });
 
+  /**
+   * Bug #221 — a trailing `# vX.Y.Z` comment is the documented OpenSSF convention
+   * and what Dependabot writes when it updates a SHA-pinned action. The `uses:`
+   * capture group ran to end of line and swallowed it, so the 40-hex test never
+   * matched and correctly-pinned actions were reported as unpinned.
+   *
+   * On LMCache this misclassified 142 of 166 findings and floored the Security
+   * pillar (25% weight) to 0.0 — penalising the repos with the best supply-chain
+   * hygiene hardest, and advising them to do what they had already done.
+   */
+  describe('#221: trailing version comments on uses: lines', () => {
+    const workflow = (usesLine: string): string => `
+name: CI
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      ${usesLine}
+`;
+
+    it('PASS for a SHA pin followed by a version comment', async () => {
+      writeFixture(tmpDir, '.github/workflows/ci.yml', workflow(
+        '- uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1',
+      ));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('actions/checkout'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.PASS);
+    });
+
+    it('PASS regardless of spacing before the comment', async () => {
+      writeFixture(tmpDir, '.github/workflows/ci.yml', workflow(
+        '- uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76    #v2.14.0',
+      ));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('harden-runner'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.PASS);
+    });
+
+    it('PASS for a semver pin followed by a comment', async () => {
+      writeFixture(tmpDir, '.github/workflows/ci.yml', workflow(
+        '- uses: actions/setup-node@v4.1.0 # pinned deliberately',
+      ));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('setup-node'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.PASS);
+    });
+
+    it('still WARNS for a major-only ref carrying a comment', async () => {
+      writeFixture(tmpDir, '.github/workflows/ci.yml', workflow(
+        '- uses: dorny/paths-filter@v3 # not pinned',
+      ));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('paths-filter'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.WARNING);
+      expect(f!.message).toContain('@v3');
+    });
+
+    it('still flags a mutable ref as CRITICAL when a comment follows', async () => {
+      writeFixture(tmpDir, '.github/workflows/ci.yml', workflow(
+        '- uses: actions/checkout@main # tracking tip',
+      ));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('actions/checkout'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.CRITICAL);
+    });
+
+    it('still flags a missing version as CRITICAL when a comment follows', async () => {
+      writeFixture(tmpDir, '.github/workflows/ci.yml', workflow(
+        '- uses: actions/checkout # no version at all',
+      ));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('actions/checkout'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.CRITICAL);
+      expect(f!.message).not.toContain('#');
+    });
+  });
+
   describe('no dependency files', () => {
     it('returns empty findings when no Dockerfiles or workflows exist', async () => {
       writeFixture(tmpDir, 'README.md', '# Hello\n');

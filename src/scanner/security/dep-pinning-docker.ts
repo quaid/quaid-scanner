@@ -14,6 +14,20 @@ import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 /** Mutable branch references that should not be used. */
 const MUTABLE_REFS = new Set(['main', 'master', 'latest']);
 
+/**
+ * Removes a trailing YAML comment from a `uses:` value and trims the result.
+ *
+ * A `uses:` reference cannot contain whitespace, so the first whitespace-led `#`
+ * begins a comment. A leading `#` means the whole value is a comment, which
+ * yields an empty string for the caller to skip.
+ *
+ * @param raw - The raw capture from the `uses:` line, comment included.
+ * @returns The bare action reference, or `''` if the line carries no value.
+ */
+function stripYamlComment(raw: string): string {
+  return raw.replace(/\s+#.*$/, '').replace(/^#.*$/, '').trim();
+}
+
 export class DepPinningDockerScanner implements Scanner {
   readonly name = 'dep-pinning-docker';
   readonly displayName = 'Dependency Pinning - Docker & Workflows';
@@ -174,7 +188,16 @@ export class DepPinningDockerScanner implements Scanner {
         const usesMatch = line.match(/^-?\s*uses\s*:\s*(.+)/);
         if (!usesMatch) continue;
 
-        const actionRef = usesMatch[1].trim();
+        // Strip a trailing YAML comment before parsing. `uses:` values cannot
+        // contain whitespace, so the first ` #` always begins a comment.
+        //
+        // A trailing `# vX.Y.Z` is the documented OpenSSF convention and what
+        // Dependabot writes when it updates a SHA-pinned action. Capturing it as
+        // part of the ref made the 40-hex SHA test below never match, so
+        // correctly pinned actions were reported as unpinned — and mutable refs
+        // and missing versions misclassified too. See #221.
+        const actionRef = stripYamlComment(usesMatch[1]);
+        if (!actionRef) continue;
         const lineNum = i + 1;
 
         // Skip local actions (e.g., ./path/to/action)
