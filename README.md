@@ -214,7 +214,21 @@ tests/fixtures/term-corpus/**
 docs/vendor-spec.md
 ```
 
-This file is read at scan time from the target repo root. Absence is graceful — the scanner skips it silently and applies its built-in defaults (`node_modules/`, `vendor/`, `.git/`, `dist/`, `build/`).
+This file is read at scan time from the target repo root. Absence is graceful — the scanner skips it silently and applies its built-in defaults.
+
+> **Scope:** `.quaid-scanner-ignore` currently applies **only to the inclusive-language scanners**.
+> The security scanners (`binary-artifacts`, `dependency-pinning`, `token-permissions`) do not yet
+> read it, so their findings cannot be suppressed this way. Extending it to every scanner, and
+> honouring `.gitignore` by default, is tracked in
+> [#231](https://github.com/quaid/quaid-scanner/issues/231).
+
+**Built-in defaults**, applied by every scanner regardless of the ignore file:
+
+| | |
+|---|---|
+| JS/TS | `node_modules/`, `vendor/`, `dist/`, `build/`, `out/`, `.next/`, `.nuxt/` |
+| Python | `.venv/`, `venv/`, `site-packages/`, `__pycache__/`, `.tox/`, `.mypy_cache/`, `.pytest_cache/`, `.ruff_cache/` |
+| Other | `.git/`, `coverage/`, `.dvc/`, `.claude/`, `.ainative/`, and quaid-scanner's own `quaid-scan-*.{md,json,html}` output |
 
 ## Configuration
 
