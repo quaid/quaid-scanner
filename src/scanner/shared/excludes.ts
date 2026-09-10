@@ -31,6 +31,19 @@ export const DEFAULT_SCAN_EXCLUDES: readonly string[] = [
   '.ainative',
   '__pycache__',
   '.dvc',
+  // Python virtualenvs and tool caches (#223). The baseline was JS/TS-centric —
+  // it carried `__pycache__` and `.dvc` but not the single most common Python
+  // directory, so any project with a local venv had its whole installed
+  // dependency tree walked. `site-packages` is the robust entry: `.venv`/`venv`
+  // are conventions, but a virtualenv always has a `site-packages` inside it,
+  // whatever the outer directory is called.
+  '.venv',
+  'venv',
+  'site-packages',
+  '.tox',
+  '.mypy_cache',
+  '.pytest_cache',
+  '.ruff_cache',
 ];
 
 /**
