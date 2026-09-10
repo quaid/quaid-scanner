@@ -293,6 +293,112 @@ jobs:
     });
   });
 
+  /**
+   * Bug #236 — the scanner read FROM lines in isolation, with no model of the
+   * Dockerfile as a whole. So an internal build-stage reference (`FROM base`,
+   * where `base` was declared earlier by `FROM ... AS base`) and an
+   * ARG-parameterised image (`FROM ${BASE_IMAGE}`) were both reported as
+   * untagged external images.
+   *
+   * On LMCache that was 13 of 15 Docker CRITICALs — enough on its own to floor
+   * the Security pillar, and the dominant remaining defect once #221 was fixed.
+   * "Docker base image `base` has no tag" is not true of a stage reference:
+   * there is no image to tag, so the advice is impossible to act on.
+   */
+  describe('#236: multi-stage builds and ARG-parameterised images', () => {
+    it('does not flag a FROM that references an earlier build stage', async () => {
+      writeFixture(tmpDir, 'Dockerfile', [
+        'FROM node:18.20.4 AS base',
+        'RUN npm ci',
+        'FROM base AS build',
+        'RUN npm run build',
+        'FROM base AS release',
+        'CMD ["node", "dist/index.js"]',
+      ].join('\n'));
+      const findings = await scanner.run(createContext(tmpDir));
+      expect(findings.filter((f) => f.message.includes('"base"'))).toHaveLength(0);
+    });
+
+    it('still judges the stage-defining FROM on its own image', async () => {
+      writeFixture(tmpDir, 'Dockerfile', [
+        'FROM node:18.20.4 AS base',
+        'FROM base AS build',
+      ].join('\n'));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('node:18.20.4'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.WARNING); // tag without digest
+    });
+
+    it('treats FROM base as external when no stage named base was declared', async () => {
+      // Order matters — a stage only exists once declared.
+      writeFixture(tmpDir, 'Dockerfile', 'FROM base\nRUN true\n');
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('"base"'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.CRITICAL);
+    });
+
+    it('resolves an ARG default and judges the resolved image', async () => {
+      writeFixture(tmpDir, 'Dockerfile', [
+        'ARG BASE_IMAGE=node:18.20.4',
+        'FROM ${BASE_IMAGE} AS base',
+      ].join('\n'));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('node:18.20.4'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.WARNING);
+    });
+
+    it('flags a resolved ARG default that is genuinely untagged', async () => {
+      writeFixture(tmpDir, 'Dockerfile', [
+        'ARG BASE_IMAGE=ubuntu',
+        'FROM ${BASE_IMAGE}',
+      ].join('\n'));
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('ubuntu'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.CRITICAL);
+    });
+
+    it('downgrades an unresolvable ARG to INFO rather than CRITICAL', async () => {
+      // No default declared, so pinning cannot be verified statically. Saying
+      // "has no tag (implies :latest)" would be an assertion we cannot support.
+      writeFixture(tmpDir, 'Dockerfile', 'ARG SOURCE_IMAGE\nFROM ${SOURCE_IMAGE}\n');
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.message.includes('SOURCE_IMAGE'));
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.INFO);
+    });
+
+    it('handles the LMCache shape end to end', async () => {
+      writeFixture(tmpDir, 'Dockerfile', [
+        'ARG CUDA_VERSION=12.4',
+        'ARG BASE_IMAGE=nvcr.io/nvidia/cuda-dl-base:${CUDA_VERSION}-devel',
+        'FROM ${BASE_IMAGE} AS base',
+        'FROM base AS image-build',
+        'FROM base AS image-release',
+        'FROM base AS image-release-cu129',
+      ].join('\n'));
+      const findings = await scanner.run(createContext(tmpDir));
+      // Three internal stage references produce nothing at all.
+      expect(findings.filter((f) => f.message.includes('"base"'))).toHaveLength(0);
+      // One finding remains, for the single real external image.
+      const real = findings.filter((f) => f.severity !== Severity.PASS);
+      expect(real).toHaveLength(1);
+      expect(real[0].message).toContain('nvcr.io/nvidia/cuda-dl-base');
+    });
+
+    it('scopes stage names per file', async () => {
+      writeFixture(tmpDir, 'Dockerfile', 'FROM node:18.20.4 AS base\n');
+      writeFixture(tmpDir, 'Dockerfile.other', 'FROM base\n');
+      const findings = await scanner.run(createContext(tmpDir));
+      const f = findings.find((f) => f.file === 'Dockerfile.other');
+      expect(f).toBeDefined();
+      expect(f!.severity).toBe(Severity.CRITICAL);
+    });
+  });
+
   describe('no dependency files', () => {
     it('returns empty findings when no Dockerfiles or workflows exist', async () => {
       writeFixture(tmpDir, 'README.md', '# Hello\n');

@@ -1,10 +1,10 @@
 ---
 title: "Bluesky Thread: quaid-scanner v0.1.5"
 author: Karsten Wade
-date: 2026-08-02
+date: 2026-09-10
 status: draft
 target: bluesky
-note: "8 posts. Audience knows the tool. Two beats: (1) session provenance for agent-run scans, (2) the tool took its own medicine and went 4.8 -> 8.1. Honest, invitational tone."
+note: "8 posts. Audience knows the tool. Two beats: (1) session provenance for agent-run scans, (2) fixing a broken scanner made the self-scan score go down, and we published that. Honest, invitational tone."
 ---
 
 # Bluesky Thread: quaid-scanner v0.1.5
@@ -14,8 +14,8 @@ note: "8 posts. Audience knows the tool. Two beats: (1) session provenance for a
 **1/8**
 quaid-scanner v0.1.5 is out.
 
-Two things: agent-run scans can now sign their work, and the scanner finally took its own medicine —
-its self-scan went from 4.8/10 (HIGH risk) to 8.1/10 (LOW risk).
+Two things: agent-run scans can now sign their work, and I fixed a broken scanner that made my own
+self-scan score go down.
 
 🧵
 
@@ -61,22 +61,22 @@ tokens it cost. When you review a backlog an agent filed last week, you can see 
 **6/8**
 The other half of this release is uncomfortable.
 
-A health scanner that scores badly on its own criteria is hard to trust. So I ran quaid-scanner
-against quaid-scanner and fixed what it flagged.
+A draft of these notes claimed 8.1/10, LOW risk. The real number is 6.5, MEDIUM.
 
-4.8/10 → 8.1/10. The scoring didn't change. The project did.
+Nothing regressed. This release also fixed the response-time scanners, which had been erroring
+against GitHub's GraphQL API and quietly contributing nothing. A pillar scores well when nothing
+is measuring it.
 
 ---
 
 **7/8**
-What changed:
+Now that they work, they report the truth about a solo-maintained project: 1237-hour median first
+response, 83% of issues with no reply at all.
 
-→ GOVERNANCE.md (how decisions get made, how to become a maintainer)
-→ A funding link
-→ CI that enforces lint + 80% coverage on every PR
-→ GitHub Actions pinned to commit SHAs
+Community health reads 0.0.
 
-Every one was a finding the scanner had been reporting about itself.
+It is easy to publish a number that went up. The test of a health tool is publishing the one that
+went down because you made the tool more honest.
 
 ---
 
