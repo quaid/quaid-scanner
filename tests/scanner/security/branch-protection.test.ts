@@ -38,6 +38,7 @@ function createContext(overrides: {
   githubToken?: string | null;
   remoteUrl?: string | null;
   branch?: string | null;
+  team?: ScanContext['team'];
 } = {}): ScanContext {
   const config = createConfig({
     githubToken: overrides.githubToken ?? null,
@@ -53,10 +54,27 @@ function createContext(overrides: {
       branch: overrides.branch ?? 'main',
       remoteUrl: overrides.remoteUrl ?? null,
     },
+    team: overrides.team,
     signal: AbortSignal.timeout(30_000),
     emit: () => {},
   };
 }
+
+/** A project with one practical maintainer — cannot satisfy a review requirement. */
+const SOLO_TEAM = {
+  committerCount: 1,
+  soloMaintainer: true,
+  dominantShare: 1,
+  historyAvailable: true,
+} as const;
+
+/** A project with two active maintainers — can. */
+const TEAM_OF_TWO = {
+  committerCount: 2,
+  soloMaintainer: false,
+  dominantShare: 0.6,
+  historyAvailable: true,
+} as const;
 
 /** Helper to create a mock fetch response. */
 function mockFetchResponse(status: number, body: unknown): Response {
@@ -696,5 +714,97 @@ describe('BranchProtectionScanner', () => {
       expect(withMeta.length).toBeGreaterThan(0);
       expect(withMeta[0].metadata!.branch).toBe('main');
     });
+  });
+});
+
+/**
+ * #245 — a solo-maintained project cannot satisfy a required-review rule.
+ *
+ * GitHub does not let you approve your own pull request, so "require 1
+ * approving review" on a one-person repo forces an admin override on every
+ * merge. That is worse than having no rule: it trains the only person holding
+ * the bypass to use it reflexively, and makes the setting meaningless to anyone
+ * reading the repo's protection settings.
+ *
+ * This happened to quaid-scanner itself — it raised the CRITICAL, the finding
+ * was acted on, and every merge since has required a bypass.
+ */
+describe('BranchProtectionScanner — solo-maintainer awareness (#245)', () => {
+  let scanner: BranchProtectionScanner;
+  const originalFetch = globalThis.fetch;
+
+  const noProtection = {
+    required_pull_request_reviews: null,
+    required_status_checks: null,
+    allow_force_pushes: { enabled: false },
+    allow_deletions: { enabled: false },
+    required_signatures: { enabled: true },
+  };
+
+  beforeEach(() => {
+    scanner = new BranchProtectionScanner();
+    globalThis.fetch = vi.fn().mockResolvedValue(mockFetchResponse(200, noProtection));
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  const run = (team?: ScanContext['team']) =>
+    scanner.run(
+      createContext({
+        githubToken: 'ghp_test123',
+        remoteUrl: 'https://github.com/owner/repo.git',
+        team,
+      }),
+    );
+
+  const reviewFinding = (findings: Awaited<ReturnType<typeof run>>) =>
+    findings.find((f) => f.message.toLowerCase().includes('pull request review'));
+
+  it('downgrades the required-reviews finding to INFO for a solo maintainer', async () => {
+    const f = reviewFinding(await run(SOLO_TEAM));
+    expect(f).toBeDefined();
+    expect(f!.severity).toBe(Severity.INFO);
+  });
+
+  it('explains that reviews are unsatisfiable solo and points at status checks instead', async () => {
+    const f = reviewFinding(await run(SOLO_TEAM));
+    expect(f!.suggestion).toMatch(/status check/i);
+    // Must not tell a solo maintainer to require an approving review.
+    expect(f!.suggestion).not.toMatch(/require at least 1 approving review/i);
+  });
+
+  it('records the team shape on the finding so a reader can see why it was adjusted', async () => {
+    const f = reviewFinding(await run(SOLO_TEAM));
+    expect(f!.metadata).toMatchObject({ soloMaintainer: true });
+  });
+
+  it('keeps CRITICAL for a project with two maintainers', async () => {
+    const f = reviewFinding(await run(TEAM_OF_TWO));
+    expect(f!.severity).toBe(Severity.CRITICAL);
+    expect(f!.suggestion).toMatch(/approving review/i);
+  });
+
+  it('keeps CRITICAL when team shape is unknown, so a check is never silently relaxed', async () => {
+    const f = reviewFinding(await run(undefined));
+    expect(f!.severity).toBe(Severity.CRITICAL);
+  });
+
+  it('leaves the missing status-checks finding at WARNING for a solo maintainer', async () => {
+    // Status checks ARE satisfiable by one person, so this ask is unchanged.
+    const findings = await run(SOLO_TEAM);
+    const f = findings.find((x) => x.message.toLowerCase().includes('status check'));
+    expect(f).toBeDefined();
+    expect(f!.severity).toBe(Severity.WARNING);
+  });
+
+  it('still reports total absence of branch protection at full severity for a solo maintainer', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(mockFetchResponse(404, { message: 'Branch not protected' }));
+    const findings = await run(SOLO_TEAM);
+    const f = findings.find((x) => x.message.toLowerCase().includes('no branch protection'));
+    expect(f).toBeDefined();
+    expect(f!.severity).toBe(Severity.CRITICAL);
   });
 });

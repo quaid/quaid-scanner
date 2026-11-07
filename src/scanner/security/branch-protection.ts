@@ -6,7 +6,7 @@
  * force push restrictions, deletion protection, and signed commits.
  */
 
-import { Pillar, Severity } from '../../types/index.js';
+import { Pillar, Severity, isSoloMaintainer } from '../../types/index.js';
 import type { Scanner, ScanContext, Finding } from '../../types/index.js';
 
 /** GitHub branch protection API response shape (partial). */
@@ -173,6 +173,20 @@ export class BranchProtectionScanner implements Scanner {
           `Required pull request reviews are enabled (${reviewCount} approving review${reviewCount !== 1 ? 's' : ''} required).`,
           'Pull request reviews are properly configured.',
           { branch, requiredReviewCount: reviewCount },
+        ),
+      );
+    } else if (isSoloMaintainer(context)) {
+      // A single maintainer cannot approve their own pull request, so this
+      // control is unsatisfiable rather than unmet — enabling it forces an
+      // admin override on every merge, which is worse than leaving it off.
+      // Required status checks give real protection and *are* satisfiable
+      // solo, so recommend those instead. See #245.
+      findings.push(
+        makeFinding(
+          Severity.INFO,
+          `Required pull request reviews are not enabled on branch "${branch}" — expected for a single-maintainer project.`,
+          'Leave reviews off until a second maintainer joins: GitHub does not allow approving your own pull request, so requiring one would force an admin override on every merge. Enable required status checks instead — they are satisfiable by one person and block merges when CI fails.',
+          { branch, soloMaintainer: true, committerCount: context.team?.committerCount ?? null },
         ),
       );
     } else {
