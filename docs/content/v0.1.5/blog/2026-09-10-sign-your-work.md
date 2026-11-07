@@ -1,9 +1,9 @@
 ---
 title: "Sign Your Work: Session Provenance for Agent-Run Scans"
 slug: session-provenance-agent-scans-v015
-description: quaid-scanner v0.1.5 lets an agent embed its session metadata — model, token cost, session ID — into every report, and takes its own medicine to go from HIGH to LOW risk.
+description: quaid-scanner v0.1.5 lets an agent embed its session metadata — model, token cost, session ID — into every report. It also fixed four scanner defects found by dogfooding, and watched its own score go down as a result.
 author: Karsten Wade
-date: 2026-08-02
+date: 2026-09-10
 status: draft
 target: iquaid.org
 tags: [quaid-scanner, provenance, agent-first, oss-health, ai-agents, supply-chain]
@@ -24,7 +24,7 @@ v0.1.5 closes that gap with session provenance.
 There is a new flag, `--provenance-file`, that accepts a small JSON record of the agent session:
 
 ```bash
-echo '{"models":["claude-opus-4-8"],"inputTokens":12450,"outputTokens":3210,"totalTokens":15660,"sessionId":"sess_abc123","agentId":"karsten-ospo","generatedAt":"2026-08-02T14:23:00-07:00"}' > /tmp/prov.json
+echo '{"models":["claude-opus-4-8"],"inputTokens":12450,"outputTokens":3210,"totalTokens":15660,"sessionId":"sess_abc123","agentId":"karsten-ospo","generatedAt":"2026-09-10T14:23:00-07:00"}' > /tmp/prov.json
 
 quaid-scanner . --format json --quiet --provenance-file /tmp/prov.json
 ```
@@ -58,10 +58,8 @@ A health scanner that scores badly on its own criteria is hard to trust.
 So this release did something uncomfortable: it ran quaid-scanner against quaid-scanner and fixed
 what it found.
 
-Between v0.1.4 and v0.1.5, the self-scan went from 4.8 out of 10 — HIGH risk — to 8.1 out of 10 —
-LOW risk.
-The scoring did not change.
-The project did.
+So this release did something uncomfortable: it ran quaid-scanner against quaid-scanner and fixed
+what it found.
 
 It added a [GOVERNANCE.md](https://github.com/quaid/quaid-scanner/blob/main/.github/GOVERNANCE.md)
 describing how decisions get made and how someone becomes a maintainer.
@@ -71,7 +69,24 @@ request, so the 80% coverage gate is enforced rather than merely hoped for.
 It pinned its GitHub Actions to commit SHAs instead of moving tags, closing a real supply-chain gap.
 
 Every one of those was a finding quaid-scanner had been reporting about itself.
-Dogfooding is only honest if you act on what the dog food tells you.
+
+And then the score went *down*.
+
+A draft of these notes claimed 8.1 out of 10, LOW risk.
+The real number is 6.5, MEDIUM.
+Not because anything regressed — because this release also fixed the response-time scanners, which
+had been erroring against GitHub's GraphQL API and quietly contributing nothing.
+A pillar scores well when nothing is measuring it.
+
+Now that they work, they report that the median first response on an issue here is 1237 hours and
+that 83% of issues have no response at all.
+Both are true.
+Community health reads 0.0.
+
+That is the more useful version of taking your own medicine.
+It is easy to publish a number that went up.
+The test of a health tool is whether you publish the one that went down because you made the tool
+more honest.
 
 ## Upgrading
 

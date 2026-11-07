@@ -1,7 +1,7 @@
 ---
 title: "Twitter/X Thread: quaid-scanner v0.1.5"
 author: Karsten Wade
-date: 2026-08-02
+date: 2026-09-10
 status: draft
 target: twitter
 note: "7 posts. Terser than Bluesky. Lead with the two hooks: provenance + the self-scan jump. Keep technical specifics tight."
@@ -14,8 +14,8 @@ note: "7 posts. Terser than Bluesky. Lead with the two hooks: provenance + the s
 **1/7**
 quaid-scanner v0.1.5 is out.
 
-Agent-run scans can now sign their work — and the scanner took its own medicine, going from 4.8/10
-(HIGH risk) to 8.1/10 (LOW risk) on its own self-scan.
+Agent-run scans can now sign their work — and I fixed a scanner bug that made my own self-scan
+score go *down*.
 
 🧵
 
@@ -53,22 +53,22 @@ filed last week — and see its receipts.
 ---
 
 **5/7**
-The other half: a health scanner that scores badly on its own criteria is hard to trust.
+The other half: I ran quaid-scanner on quaid-scanner and fixed what it flagged.
 
-So I ran quaid-scanner on quaid-scanner and fixed what it flagged.
+A draft of these notes claimed 8.1/10. Real number: 6.5.
 
-4.8 → 8.1. Scoring didn't change. The project did.
+This release also fixed the response-time scanners, which had been erroring silently. A pillar
+scores well when nothing is measuring it.
 
 ---
 
 **6/7**
-What changed:
-→ GOVERNANCE.md
-→ funding link
-→ CI enforcing lint + 80% coverage on every PR
-→ Actions pinned to commit SHAs (#123)
+Working scanners now report: 1237h median first response, 83% of issues unanswered.
 
-Every one was a finding the tool reported about itself.
+Both true. Community health reads 0.0.
+
+Easy to publish a number that went up. The test is publishing the one that went down because you
+made the tool more honest.
 
 ---
 

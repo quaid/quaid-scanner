@@ -7,7 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.5] - 2026-08-02
+## [0.1.5] - 2026-09-10
+
+### Fixed
+
+- **Globally installed binary was a silent no-op** — `npm install -g quaid-scanner` produced a
+  binary that printed nothing and exited 0 on every invocation. npm links `bin` as a symlink and
+  Node leaves `process.argv[1]` as the path the user invoked, so the entry-point guard, which
+  matched on the filename ending in `/cli.js`, never fired and `main()` never ran. Exit 0 with no
+  stderr is the worst available failure shape: a CI job gating on `--threshold` read it as a clean
+  pass and silently approved every repo. The guard now compares real paths. Fixing it exposed a
+  second defect at the same site — `exitOverride()` makes commander throw after writing
+  `--help`/`--version` output, and those successful terminations were reported as
+  `Error: 0.1.5` with exit 1. (#222)
+- **SHA-pinned GitHub Actions were reported as unpinned** — the `uses:` capture ran to end of line
+  and swallowed the trailing `# vX.Y.Z` comment, so the 40-hex SHA test never matched. That comment
+  is the documented OpenSSF convention and exactly what Dependabot writes when it updates a pinned
+  action, so the projects with the best supply-chain hygiene were penalised hardest and advised to
+  do what they had already done. The misparse affected every classification path: mutable refs were
+  downgraded from CRITICAL, and a missing version emitted the comment text inside the message. On a
+  LMCache scan this misclassified 142 of 166 findings. (#221)
+- **Multi-stage Docker builds and ARG-parameterised images flagged as unpinned** — `FROM` lines
+  were read in isolation, so an internal stage reference (`FROM base`, declared earlier by
+  `FROM ... AS base`) and an image supplied by an ARG with a default were both reported as untagged
+  external images. Advising a tag for a build stage is advising something impossible. Dockerfiles
+  are now parsed as a whole: stage names are collected as declared and scoped per file, ARG
+  substitution is resolved against defaults, and a genuinely unresolvable value is INFO rather than
+  CRITICAL. 13 of 15 Docker CRITICALs on LMCache were false. (#236)
+- **Python virtualenvs were scanned in full** — `DEFAULT_SCAN_EXCLUDES` was JS/TS-centric and
+  carried `__pycache__` but not `.venv`, so any Python project with a local virtualenv had its
+  entire installed dependency tree walked: 701 findings from third-party package source on one
+  LMCache run, including CRITICAL binary-artifact hits on pip's own bundled wheels. Added `.venv`,
+  `venv`, `site-packages`, `.tox`, `.mypy_cache`, `.pytest_cache` and `.ruff_cache`. (#223)
 
 ### Added
 
@@ -39,6 +70,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `__pycache__` visible so it can still flag committed `.pyc` bytecode. (#171)
 - **Supply-chain hardening** — GitHub Actions in the publish and CI workflows are pinned to full
   commit SHAs instead of moving tags. (#123)
+- **`.quaid-scanner-ignore` scope documented accurately** — the README presented it as the general
+  false-positive escape hatch, but it is threaded only through the inclusive-language scanners, so
+  security findings cannot be suppressed with it. The README now states the real scope and lists
+  the built-in defaults, which are what applies everywhere. Extending user excludes to every
+  scanner, and honouring `.gitignore`, is tracked in #231. (#223)
+- **Self-scan score restated: 6.5/10, down from the 8.1/10 drafted for this release.** The earlier
+  figure was measured while the response-time scanners were still broken by the GraphQL regression
+  fixed in #213. Now that they work, they report what is actually true of a solo-maintained
+  project — a 1237-hour median first response and 83% of issues unanswered — and the Community
+  pillar reads 0.0. Fixing a scanner lowered the score, which is the system working. See
+  [`docs/releases/v0.1.5.md`](docs/releases/v0.1.5.md) for the full breakdown.
 
 ## [0.1.4] - 2026-08-01
 

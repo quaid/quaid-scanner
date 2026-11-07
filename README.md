@@ -593,26 +593,29 @@ npm run test:coverage
 
 ## Project Health
 
-quaid-scanner scans itself. Current score as of v0.1.5:
+quaid-scanner scans itself. Current score as of v0.1.5 (`--depth standard`, pristine clone of `main`):
 
 | Pillar | Score | Weight | Weighted |
 |--------|-------|--------|---------|
-| Security & Supply Chain | 6.9/10 | 25% | 1.73 |
-| Governance & Legal | 7.8/10 | 20% | 1.56 |
-| Community Health | 7.6/10 | 15% | 1.14 |
+| Security & Supply Chain | 5.4/10 | 25% | 1.35 |
+| Governance & Legal | 7.6/10 | 20% | 1.52 |
+| Community Health | 0.0/10 | 15% | 0.00 |
 | AI-Native & Agentic Readiness | 9.6/10 | 15% | 1.44 |
-| Inclusive Language | 8.1/10 | 15% | 1.22 |
+| Inclusive Language | 8.1/10 | 15% | 1.21 |
 | Technical Rigor | 9.9/10 | 10% | 0.99 |
-| **Overall** | **8.1/10** | | |
+| **Overall** | **6.5/10** | | |
 
-The score is honest — and it moved. v0.1.5 took the project from **4.8/10 (HIGH risk) to 8.1/10 (LOW risk)** by closing its own gaps: a GOVERNANCE.md and Open Collective funding link, a CI workflow that enforces lint and 80%+ coverage on every PR, and GitHub Actions pinned to commit SHAs ([#123](https://github.com/quaid/quaid-scanner/issues/123)).
+The score is honest, including when that is unflattering. A draft of the v0.1.5 notes claimed 8.1/10, measured while the response-time scanners were still broken by the GraphQL regression fixed in [#213](https://github.com/quaid/quaid-scanner/issues/213) — a pillar scores well when nothing is measuring it. Now that they work, they report a 1237-hour median first response and 83% of issues unanswered, and Community reads 0.0. **Fixing a scanner lowered the score.** That is the system working.
 
 **Open findings being tracked:**
 
 | Finding | Severity | Issue |
 |---------|----------|-------|
+| Issue response time: 1237h median, 83% of issues unanswered | CRITICAL | [contribute](#contributing) |
+| Bus factor: 1 — 75% of commits from one domain | WARNING | [contribute](#contributing) |
+| No required status checks on `main` | WARNING | — |
 | OpenSSF Scorecard not yet indexed (new project) | WARNING | — |
-| Bus factor: 1 (solo maintainer) | WARNING | [contribute](#contributing) |
+| `publish.yml` grants `id-token: write` | WARNING | Deliberate — required for OIDC trusted publishing |
 
 **Known false positives being tracked:**
 
@@ -620,7 +623,9 @@ The score is honest — and it moved. v0.1.5 took the project from **4.8/10 (HIG
 |---------|--------|-------|
 | Inclusive WARNING: `"master"` in `dep-pinning-docker.ts` | Detection target string, not usage | [#124](https://github.com/quaid/quaid-scanner/issues/124) |
 
-The AI readiness (9.6) and technical rigor (9.9) scores reflect the tool's strengths: MCP server, Claude Code skill, dataset provenance scanner, and a CI-enforced 80%+ coverage gate. The remaining security and community gaps — OpenSSF Scorecard indexing and a bus factor of one — are exactly the kind that contributions and time close.
+The AI readiness (9.6) and technical rigor (9.9) scores reflect the tool's strengths: MCP server, Claude Code skill, dataset provenance scanner, and a CI-enforced 80%+ coverage gate. The community and security gaps are exactly the kind that contributions and time close.
+
+One caveat on reading any quaid-scanner score, this one included: Community reads 0.0 with 2 CRITICALs and would read 0.0 with 20. The pillar formula floors at four CRITICALs, so the bottom of the range does not discriminate. Tracked in [#241](https://github.com/quaid/quaid-scanner/issues/241).
 
 ---
 
