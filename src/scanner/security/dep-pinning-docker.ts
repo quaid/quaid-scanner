@@ -28,6 +28,42 @@ function stripYamlComment(raw: string): string {
   return raw.replace(/\s+#.*$/, '').replace(/^#.*$/, '').trim();
 }
 
+/**
+ * Substitutes `${VAR}` / `$VAR` references in a Dockerfile image reference
+ * against the ARG defaults declared above it.
+ *
+ * Substitution is applied repeatedly so that an ARG whose default itself
+ * references another ARG resolves — the LMCache shape, where `BASE_IMAGE`
+ * embeds `${CUDA_VERSION}`. The pass count is bounded to avoid looping on a
+ * self-referential default.
+ *
+ * @param raw - The image reference exactly as written after `FROM`.
+ * @param argDefaults - ARG names to their declared defaults; empty string means
+ *   the ARG was declared without one.
+ * @returns The resolved reference, and the name of the first ARG that could not
+ *   be resolved (`undefined` when fully resolved).
+ */
+function resolveArgs(
+  raw: string,
+  argDefaults: ReadonlyMap<string, string>,
+): { imageRef: string; unresolved?: string } {
+  let ref = raw;
+
+  for (let pass = 0; pass < 10 && /\$/.test(ref); pass++) {
+    const before = ref;
+    ref = ref.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g, (whole, braced, bare) => {
+      const name = (braced ?? bare) as string;
+      const value = argDefaults.get(name);
+      // Leave unknown or default-less ARGs in place; the caller reports them.
+      return value ? value : whole;
+    });
+    if (ref === before) break;
+  }
+
+  const leftover = ref.match(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/);
+  return leftover ? { imageRef: ref, unresolved: leftover[1] } : { imageRef: ref };
+}
+
 export class DepPinningDockerScanner implements Scanner {
   readonly name = 'dep-pinning-docker';
   readonly displayName = 'Dependency Pinning - Docker & Workflows';
@@ -100,16 +136,60 @@ export class DepPinningDockerScanner implements Scanner {
       }
 
       const lines = content.split('\n');
+
+      // A Dockerfile has to be read as a whole, not line by line: a FROM may
+      // name a stage declared earlier in the same file, or an image supplied by
+      // an ARG. Both were previously reported as untagged external images. See
+      // #236. Both maps are per-file — stage names do not cross Dockerfiles.
+      const stageNames = new Set<string>();
+      const argDefaults = new Map<string, string>();
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        const fromMatch = line.match(/^FROM\s+(\S+)/i);
+
+        // Record ARG defaults as they are declared, so a later FROM can resolve
+        // against them. An ARG with no default is recorded as an empty string:
+        // it exists, but its value is not knowable statically.
+        const argMatch = line.match(/^ARG\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*=\s*(.*))?$/i);
+        if (argMatch) {
+          argDefaults.set(argMatch[1], (argMatch[2] ?? '').trim());
+          continue;
+        }
+
+        const fromMatch = line.match(/^FROM\s+(\S+)(?:\s+AS\s+(\S+))?/i);
         if (!fromMatch) continue;
 
         const image = fromMatch[1];
         const lineNum = i + 1;
 
         // Strip AS alias
-        const imageRef = image.split(/\s+/)[0];
+        const rawRef = image.split(/\s+/)[0];
+
+        // Whatever this line evaluates to, it declares a stage that later FROM
+        // lines may reference. Record it before any `continue` below.
+        const declaredStage = fromMatch[2];
+        if (declaredStage) stageNames.add(declaredStage.toLowerCase());
+
+        // An internal stage reference is not a dependency — there is no image
+        // to pin. Order matters: `FROM base` before any `AS base` is external.
+        if (stageNames.has(rawRef.toLowerCase()) && rawRef !== declaredStage) {
+          continue;
+        }
+
+        const { imageRef, unresolved } = resolveArgs(rawRef, argDefaults);
+
+        // A parameterised image with no statically knowable value cannot be
+        // judged. Saying it "has no tag" would assert something unsupported.
+        if (unresolved) {
+          findings.push(makeFinding(
+            Severity.INFO,
+            `Docker base image "${rawRef}" is parameterised; pinning cannot be verified statically`,
+            relativePath,
+            lineNum,
+            `Give ${unresolved} a pinned default, or pass a digest at build time`,
+          ));
+          continue;
+        }
 
         // Check for @sha256: digest (PASS)
         if (imageRef.includes('@sha256:')) {
