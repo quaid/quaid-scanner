@@ -3,7 +3,7 @@ title: "Sign Your Work: Session Provenance for Agent-Run Scans"
 slug: session-provenance-agent-scans-v015
 description: quaid-scanner v0.1.5 lets an agent embed its session metadata — model, token cost, session ID — into every report. It also fixed four scanner defects found by dogfooding, and watched its own score go down as a result.
 author: Karsten Wade
-date: 2026-09-10
+date: 2026-11-07
 status: draft
 target: iquaid.org
 tags: [quaid-scanner, provenance, agent-first, oss-health, ai-agents, supply-chain]
@@ -24,7 +24,7 @@ v0.1.5 closes that gap with session provenance.
 There is a new flag, `--provenance-file`, that accepts a small JSON record of the agent session:
 
 ```bash
-echo '{"models":["claude-opus-4-8"],"inputTokens":12450,"outputTokens":3210,"totalTokens":15660,"sessionId":"sess_abc123","agentId":"karsten-ospo","generatedAt":"2026-09-10T14:23:00-07:00"}' > /tmp/prov.json
+echo '{"models":["claude-opus-4-8"],"inputTokens":12450,"outputTokens":3210,"totalTokens":15660,"sessionId":"sess_abc123","agentId":"karsten-ospo","generatedAt":"2026-11-07T14:23:00-07:00"}' > /tmp/prov.json
 
 quaid-scanner . --format json --quiet --provenance-file /tmp/prov.json
 ```
