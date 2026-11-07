@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.5] - 2026-11-07
 
+### Changed
+
+- **Findings are now differentiated for solo-maintained projects** — the scanner no longer
+  recommends controls a one-person project structurally cannot satisfy. Branch protection raised a
+  CRITICAL for missing required pull-request reviews; acting on it enables a rule that GitHub will
+  not let a single maintainer satisfy, since you cannot approve your own pull request, so every
+  merge then needs an admin override. That is worse than leaving the rule off: it trains the only
+  person holding the bypass to use it reflexively, and makes the setting meaningless to anyone
+  reading the repository's settings.
+
+  When a repository has no practical second reviewer, that finding is now `INFO` and recommends
+  **required status checks** instead — satisfiable by one person, and real protection. Required
+  status checks and the total absence of branch protection are unchanged by team shape: both are
+  satisfiable solo and both still matter.
+
+  The signal comes from a new optional `ScanContext.team`, derived once from git history. Identity
+  grouping merges one human committing under several addresses, which counting distinct emails
+  does not; bots are excluded, since a bot cannot review. Every ambiguity resolves toward "not
+  solo" — unknown team shape, a shallow clone, or a non-git directory all keep the original
+  severity — so the signal can never silently relax a check. Reports state when a finding was
+  adjusted and why. (#245)
+
 ### Fixed
 
 - **Globally installed binary was a silent no-op** — `npm install -g quaid-scanner` produced a
