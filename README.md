@@ -605,7 +605,11 @@ quaid-scanner scans itself. Current score as of v0.1.5 (`--depth standard`, pris
 | Technical Rigor | 9.9/10 | 10% | 0.99 |
 | **Overall** | **6.5/10** | | |
 
-The score is honest, including when that is unflattering. A draft of the v0.1.5 notes claimed 8.1/10, measured while the response-time scanners were still broken by the GraphQL regression fixed in [#213](https://github.com/quaid/quaid-scanner/issues/213) — a pillar scores well when nothing is measuring it. Now that they work, they report a 1237-hour median first response and 83% of issues unanswered, and Community reads 0.0. **Fixing a scanner lowered the score.** That is the system working.
+The score is honest, including when that is unflattering. A draft of the v0.1.5 notes claimed 8.1/10 — a figure produced by scanning **without a `GITHUB_TOKEN`**, which silently skips five API-backed scanners while still reporting `partial: false` ([#247](https://github.com/quaid/quaid-scanner/issues/247)). A pillar scores well when nothing is measuring it. Scanned with a token, the response-time scanners report a 1237-hour median first response and 83% of issues unanswered, and Community reads 0.0.
+
+**Measuring more lowered the score.** That is the system working — and it is why this table names the depth and the clone it came from.
+
+> **Scan with a token.** Without one, scores are inflated and not comparable to scans that had one. See [Prerequisites](#prerequisites).
 
 **Open findings being tracked:**
 

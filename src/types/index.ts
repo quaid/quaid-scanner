@@ -69,8 +69,39 @@ export interface ScanContext {
     branch: string | null;
     remoteUrl: string | null;
   };
+  /**
+   * Shape of the maintainer team, derived from git history (#245).
+   *
+   * Lets scanners distinguish a control a project has merely not adopted from
+   * one it structurally *cannot* satisfy — required pull-request reviews on a
+   * one-person repo being the motivating case.
+   *
+   * Optional: library callers constructing a context by hand get `undefined`,
+   * which every consumer must treat as unknown rather than solo, so an absent
+   * signal can never relax a check. Use `isSoloMaintainer()` rather than
+   * reading the flag directly.
+   */
+  team?: TeamShape;
   signal: AbortSignal;
   emit: (event: ScanEvent) => void;
+}
+
+/** Maintainer-team shape derived from git history. See `scanner/shared/team.ts`. */
+export interface TeamShape {
+  committerCount: number;
+  soloMaintainer: boolean;
+  dominantShare: number;
+  historyAvailable: boolean;
+}
+
+/**
+ * True only when the team shape is known *and* says there is no practical
+ * second reviewer. Unknown shape reads as not solo.
+ *
+ * @param context - The scan context.
+ */
+export function isSoloMaintainer(context: ScanContext): boolean {
+  return context.team?.historyAvailable === true && context.team.soloMaintainer;
 }
 
 export interface Scanner {

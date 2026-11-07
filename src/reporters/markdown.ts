@@ -65,6 +65,18 @@ function renderFindingExtras(f: Finding): string[] {
         if (f.metadata.overallScore !== undefined) {
             detailLines.push(`Overall score: ${String(f.metadata.overallScore)}`);
         }
+        // Say why a finding was adjusted for team shape, so the severity is not
+        // mistaken for the scanner missing something. See #245.
+        if (f.metadata.soloMaintainer === true) {
+            const count = f.metadata.committerCount;
+            const who =
+                typeof count === 'number' && count > 0
+                    ? `${count} active committer${count === 1 ? '' : 's'}`
+                    : 'a single active committer';
+            detailLines.push(
+                `Adjusted for team shape: ${who} in the last 12 months, so this control cannot be satisfied as written.`,
+            );
+        }
 
         if (detailLines.length > 0) {
             lines.push('');

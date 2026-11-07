@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { MaturityLevel, ScanDepth } from './types/index.js';
 import type { ScanContext, ScannerConfig } from './types/index.js';
+import { readTeamShape } from './scanner/shared/team.js';
 
 type ValidatedTarget = { type: 'local' | 'github'; value: string };
 
@@ -101,6 +102,10 @@ export function buildContext(
     depth: config.depth ?? ScanDepth.STANDARD,
     config,
     git,
+    // Derived once here rather than per-scanner: dependsOn is resolved within a
+    // pillar only, so security scanners cannot depend on the community
+    // scanners that analyse contributors. See #245.
+    team: readTeamShape(repoPath),
     signal: controller.signal,
     emit: () => {},
   };

@@ -76,10 +76,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the built-in defaults, which are what applies everywhere. Extending user excludes to every
   scanner, and honouring `.gitignore`, is tracked in #231. (#223)
 - **Self-scan score restated: 6.5/10, down from the 8.1/10 drafted for this release.** The earlier
-  figure was measured while the response-time scanners were still broken by the GraphQL regression
-  fixed in #213. Now that they work, they report what is actually true of a solo-maintained
-  project — a 1237-hour median first response and 83% of issues unanswered — and the Community
-  pillar reads 0.0. Fixing a scanner lowered the score, which is the system working. See
+  figure came from a scan run without a `GITHUB_TOKEN`, which silently skips five API-backed
+  scanners while still reporting `partial: false` — a bug in its own right, now filed as #247.
+  Scanned with a token, the response-time scanners (working again after the GraphQL regression
+  fixed in #213) report what is actually true of a solo-maintained project: a 1237-hour median
+  first response and 83% of issues unanswered. The Community pillar reads 0.0. Measuring more
+  lowered the score, which is the system working. See
   [`docs/releases/v0.1.5.md`](docs/releases/v0.1.5.md) for the full breakdown.
 
 ## [0.1.4] - 2026-08-01
