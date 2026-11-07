@@ -1,7 +1,7 @@
 ---
 title: "Bluesky Thread: quaid-scanner v0.1.5"
 author: Karsten Wade
-date: 2026-09-10
+date: 2026-11-07
 status: draft
 target: bluesky
 note: "8 posts. Audience knows the tool. Two beats: (1) session provenance for agent-run scans, (2) fixing a broken scanner made the self-scan score go down, and we published that. Honest, invitational tone."

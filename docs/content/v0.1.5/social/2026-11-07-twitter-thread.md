@@ -1,7 +1,7 @@
 ---
 title: "Twitter/X Thread: quaid-scanner v0.1.5"
 author: Karsten Wade
-date: 2026-09-10
+date: 2026-11-07
 status: draft
 target: twitter
 note: "7 posts. Terser than Bluesky. Lead with the two hooks: provenance + the self-scan jump. Keep technical specifics tight."
