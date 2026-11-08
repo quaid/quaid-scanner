@@ -58,9 +58,6 @@ A health scanner that scores badly on its own criteria is hard to trust.
 So this release did something uncomfortable: it ran quaid-scanner against quaid-scanner and fixed
 what it found.
 
-So this release did something uncomfortable: it ran quaid-scanner against quaid-scanner and fixed
-what it found.
-
 It added a [GOVERNANCE.md](https://github.com/quaid/quaid-scanner/blob/main/.github/GOVERNANCE.md)
 describing how decisions get made and how someone becomes a maintainer.
 It added a funding link.
@@ -74,12 +71,23 @@ And then the score went *down*.
 
 A draft of these notes claimed 8.1 out of 10, LOW risk.
 The real number is 6.5, MEDIUM.
-Not because anything regressed — because this release also fixed the response-time scanners, which
-had been erroring against GitHub's GraphQL API and quietly contributing nothing.
-A pillar scores well when nothing is measuring it.
 
-Now that they work, they report that the median first response on an issue here is 1237 hours and
-that 83% of issues have no response at all.
+Not because anything regressed.
+The 8.1 was produced by a scan run **without a `GITHUB_TOKEN`** — and that turns out to be a bug in
+its own right.
+Five API-backed scanners degrade to a harmless `INFO` when no token is present, instead of recording
+themselves as skipped.
+`report.partial` stays `false`, `failedScanners` stays empty, and the pillars those scanners feed
+score well by not being measured.
+
+A 1.6-point swing across a risk-level boundary, from an environment variable, with nothing in the
+report saying so.
+It is filed as [#247](https://github.com/quaid/quaid-scanner/issues/247) and it is the first thing
+the next release fixes.
+
+With a token, the response-time scanners — working again after the GraphQL regression fixed in this
+release — report what is actually true of a solo-maintained project: a 1237-hour median first
+response, and 83% of issues with no response at all.
 Both are true.
 Community health reads 0.0.
 
