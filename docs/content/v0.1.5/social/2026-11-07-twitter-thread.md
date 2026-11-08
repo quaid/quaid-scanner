@@ -4,80 +4,83 @@ author: Karsten Wade
 date: 2026-11-07
 status: draft
 target: twitter
-note: "7 posts. Terser than Bluesky. Lead with the two hooks: provenance + the self-scan jump. Keep technical specifics tight."
+note: "8 posts. Terser than Bluesky, same arc: solo-maintainer lead, LMCache defects, honest score. Corrected: the 8.1 → 6.5 drop is caused by scanning without a token (#247), NOT the GraphQL fix."
 ---
 
 # Twitter/X Thread: quaid-scanner v0.1.5
 
 ---
 
-**1/7**
-quaid-scanner v0.1.5 is out.
+**1/8**
+My OSS health scanner raised a CRITICAL on my own repo: no required PR reviews.
 
-Agent-run scans can now sign their work — and I fixed a scanner bug that made my own self-scan
-score go *down*.
+So I enabled them.
+
+I'm the only committer. GitHub won't let you approve your own PR.
 
 🧵
 
 ---
 
-**2/7**
-New: `--provenance-file <path>`
+**2/8**
+Every merge since has needed an admin override of the branch protection rule.
 
-Pass a JSON record of the agent session — models, token counts, session ID, timestamp — and it's
-embedded in the report:
-
-→ JSON: top-level `provenance` object
-→ Markdown: `## Report Provenance` table
+Worse than not having the rule. It trains the one person with the bypass to use it reflexively,
+and makes the protection meaningless to anyone reading the repo settings.
 
 ---
 
-**3/7**
-Fully opt-in.
+**3/8**
+The scanner recommended a control the project structurally cannot satisfy.
 
-No file → no provenance key, output unchanged.
-Missing or malformed file → warns and continues.
+The project got less safe by following the advice.
 
-A bad provenance file never aborts a scan.
-
----
-
-**4/7**
-Why: it makes agent-run workflows auditable.
-
-A report can say exactly which model generated it and at what token cost. Review a backlog an agent
-filed last week — and see its receipts.
-
-`ProvenanceInfo` is exported for library use.
+That's a class of bug. Only 2 of 43 scanners consulted project maturity — and maturity is the
+wrong axis. A project can be mature, widely used, and still have one committer.
 
 ---
 
-**5/7**
-The other half: I ran quaid-scanner on quaid-scanner and fixed what it flagged.
+**4/8**
+v0.1.5 adds team-shape awareness.
 
-A draft of these notes claimed 8.1/10. Real number: 6.5.
-
-This release also fixed the response-time scanners, which had been erroring silently. A pillar
-scores well when nothing is measuring it.
-
----
-
-**6/7**
-Working scanners now report: 1237h median first response, 83% of issues unanswered.
-
-Both true. Community health reads 0.0.
-
-Easy to publish a number that went up. The test is publishing the one that went down because you
-made the tool more honest.
+No practical second reviewer → "required reviews not enabled" goes CRITICAL → INFO, and
+recommends required status checks instead. Satisfiable by one person, and they actually block a
+bad merge.
 
 ---
 
-**7/7**
-`npm install -g quaid-scanner@0.1.5`
+**5/8**
+Detail I didn't expect: counting distinct commit emails doesn't work.
 
-Drive it from an agent? Start passing `--provenance-file`.
+This repo's history has 3 author addresses and 1 human. The naive version reports 3 committers
+and leaves the bug unfixed on the exact repo that hit it.
 
-github.com/quaid/quaid-scanner
+---
+
+**6/8**
+And every ambiguity has to resolve to "not solo."
+
+GitHub targets are cloned `--depth 1`. A naive reading marks *every* remote scan solo and quietly
+relaxes security checks everywhere.
+
+---
+
+**7/8**
+Rest of the release: 4 defects found by scanning a real project (LMCache). All the same shape —
+the scanner penalised the more sophisticated setup.
+
+Worst: the published binary did nothing. Printed nothing, exited 0. CI gating on `--threshold`
+read that as a clean pass.
+
+---
+
+**8/8**
+Also: a draft of these notes said 8.1/10 LOW. Published number is 6.5 MEDIUM.
+
+The 8.1 came from scanning with no `GITHUB_TOKEN` — 5 scanners degrade to a benign INFO instead
+of recording as skipped. Pillars score well by not being measured.
+
+`npm i -g quaid-scanner@0.1.5`
 
 ---
 
