@@ -1,4 +1,4 @@
-# Quaid's OSS Repo Scanner - PRD v2.10
+# Quaid's OSS Repo Scanner - PRD v2.11
 
 ## Executive Summary
 
@@ -10,16 +10,24 @@
 
 **Paradigm:** The most significant risks to modern projects are not syntactical errors in code, but sociotechnical failures—burnout, toxic exclusionary cultures, legal ambiguity, and supply chain fragility. Therefore, this tool prioritizes "Health as Code," treating community documentation and governance structures with the same rigor as the software itself.
 
-**Current release:** v0.1.4 (2026-08-01) — 43 scanners, 87 test files, 97.9% coverage. **v0.1.5 is merged to `main` but not yet tagged or published**, held by three field defects found in the 2026-09-09 LMCache dogfood (#221, #222, #223) plus #236. Status legend used throughout this document: ✅ Done · 🚧 Partial · 📋 Planned
+**Current release:** v0.1.5 (2026-11-07) — 43 scanners, 88 test files, 1761 tests, 97.6% statement coverage. Published to npm with sigstore provenance; `main` is protected by a required `build-lint-test` status check. Status legend used throughout this document: ✅ Done · 🚧 Partial · 📋 Planned
 
 **Release plan:**
 
-| Milestone | Theme |
-|---|---|
-| **0.1.5** | Accuracy & trust — #221, #222, #223, #236, plus the provenance work (8.7a/b/c) already merged |
-| **0.1.6** | Accuracy *infrastructure* — Epic 11 (Cross-Validation), Epic 12 (Ground-Truth Corpus), and the Epic 14 debt below |
-| **0.1.7** | Inclusive pillar expansion — Stories 6.4, 6.5, and Vale/Alex.js delegation |
-| **0.2.0** | Story 8.10 (unified artifact workdir) |
+| Milestone | Theme | Breaking |
+|---|---|---|
+| **0.1.5** ✅ | Accuracy & trust — #221, #222, #223, #236, the provenance work (8.7a/b/c), and solo-maintainer differentiation (#245). Released 2026-11-07 | no |
+| **0.1.6** | **Promises kept** — every feature the docs claim either works or is withdrawn. Six built-but-unwired subsystems (#226, #227, #228, #229, #231, #232) plus hygiene (#230, #233, #234, #246) | no |
+| **0.2.0** | **Measured accuracy** — the scoring formula changes (#241, #247) and Epic 11 (Cross-Validation) + Epic 12 (Ground-Truth Corpus) ship the evidence that earns the new numbers. Also #199, #204, #185 | **yes** |
+| **0.1.7** | Inclusive pillar expansion — Stories 6.4, 6.5, and Vale/Alex.js delegation | no |
+
+**Why 0.2.0 and not 0.1.6 for the accuracy work** (tracked in #250): #241 rebases every score,
+which changes what `--threshold N` does in an unchanged repo and makes stored scan history
+incomparable across the boundary. A score rebase does not belong in a patch release. Epics 11 and
+12 are the cross-validation and ground-truth evidence that justify the rebased numbers, so they
+ship in the same release rather than asking anyone to accept new scores on faith. #247 must land
+before Epic 12 is written, because corpus tests run with no network and no token — exactly the
+environment where five API-backed scanners currently degrade to a benign INFO.
 
 ---
 
@@ -2712,7 +2720,7 @@ honour `.gitignore` by default — a project's own ignore file is the best avail
 "this is not our source", and prevents the next instance of this bug class rather than patching one
 more name into a list. **3 pts**
 
-### Story 14.6: False-positive rate measurement 📋 (0.1.6)
+### Story 14.6: False-positive rate measurement 📋 (0.2.0)
 Make the Success Criteria target testable. Depends on Epic 11 (cross-validation) and Epic 12
 (corpus): define the measurement, run it in CI, and record the rate per release so "< 5%" becomes
 an enforced gate rather than an aspiration. **3 pts**
@@ -2735,8 +2743,8 @@ an enforced gate rather than an aspiration. **3 pts**
 | Epic 8: Reporting | 10 | 25 | JSON/Markdown/HTML, Historical Trends, Report Provenance, Artifact Workdir | 🚧 Partial (8.7a/b/c ✅ merged; 8.9 📋, 8.10 📋 → 0.2.0) |
 | Epic 9: Claude Integration | 2 | 5 | SKILL.md, MCP Server | ✅ Done |
 | Epic 10: Ecosystem Intelligence | 6 | 13 | Rivals, Partners, Communities, Strategy | ✅ Done |
-| Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned |
-| Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned |
+| Epic 11: Cross-Validation Harness | 4 | 9 | OpenSSF, licensee, accuracy regression CI | 📋 Planned (0.2.0) |
+| Epic 12: Ground-Truth Corpus | 4 | 10 | Fixture factory, synthetic repos, mutation tests | 📋 Planned (0.2.0, after #247) |
 | Epic 13: Trust & Evidence | 5 | 13 | referenceUrl, dataSource, score rationale, .quaid-scanner-ignore | ✅ Done |
 | Epic 14: Scanner Accuracy & Field Hardening | 6 | 14 | Entry-point, Actions/Docker parsing, exclusions, FP-rate measurement | 🚧 Partial (14.1–14.3 ✅ in 0.1.5) |
 | **Total** | **82** | **197** | | |
@@ -2757,6 +2765,23 @@ Recorded in v2.10 so they stop being invisible. Each has an issue; none is sched
 ---
 
 ### Change Log
+
+#### v2.11 Changes (from v2.10)
+
+Post-release reconcile after v0.1.5 shipped to npm on 2026-11-07. The 22 issues that had been
+milestoned to 0.1.6 were not one release; they were three work streams with different risk
+profiles, one of which is breaking. Split per #250.
+
+| Change | Impact |
+|--------|--------|
+| **Release plan rewritten: 0.1.6 and 0.2.0 re-scoped** | 0.1.6 becomes **"Promises kept"** — the six built-but-unwired subsystems (#226, #227, #228, #229, #231, #232) plus hygiene. 0.2.0 becomes **"Measured accuracy"** — #241, #247, and Epics 11 + 12 together. 0.1.7 unchanged |
+| **0.2.0 marked breaking** | #241 rebases every pillar score: `--threshold N` changes behaviour on an unchanged repo, and stored scan history is not comparable across the boundary. Requires a migration note in the release notes |
+| **Epics 11 + 12 moved 0.1.6 → 0.2.0** | They are the evidence that earns the rebased scores. Shipping them with #241 means nobody is asked to accept new numbers on faith |
+| **#247 sequenced before Epic 12** | Corpus tests run with no network and no token — exactly where five API-backed scanners degrade to a benign INFO. Writing the 8 fixture profiles first means writing their expected output twice. #241 does *not* have this problem: the corpus asserts on finding categories and severities, not scores |
+| Story 14.6 (FP-rate measurement) 0.1.6 → 0.2.0 | Depends on Epics 11 and 12 |
+| #199 and #185 moved 0.1.6 → 0.2.0 | #199 (HTML by default) pairs with the 0.2.0 report redesign. #229 makes the HTML reporter *reachable* in 0.1.6; making it *good* is 0.2.0 |
+| Executive Summary refreshed | v0.1.4 → **v0.1.5 released**; 87 → 88 test files; records the required `build-lint-test` check on `main` |
+| PRD version: v2.10 → v2.11 | |
 
 #### v2.10 Changes (from v2.9)
 
